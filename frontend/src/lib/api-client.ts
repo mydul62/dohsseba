@@ -31,6 +31,15 @@ export async function fetchApi<T>(
   options: RequestInit = {}
 ): Promise<{ success: boolean; message: string; data: T; meta?: any }> {
   let token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  if (!token && typeof window !== 'undefined') {
+    try {
+      const authStr = localStorage.getItem('auth-storage');
+      if (authStr) {
+        const parsed = JSON.parse(authStr);
+        token = parsed?.state?.token || null;
+      }
+    } catch (_) {}
+  }
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',

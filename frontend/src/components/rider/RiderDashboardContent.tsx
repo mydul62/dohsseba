@@ -375,21 +375,25 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
 
   // Filtered History Calculation
   const filteredHistory = orderHistory.filter((ord: any) => {
+    const stUpper = String(ord.status || '').toUpperCase();
     const matchesFilter =
       historyFilter === 'ALL'
         ? true
         : historyFilter === 'DELIVERED'
-        ? ord.status === 'DELIVERED' || ord.status === 'COMPLETED'
-        : ord.status === 'CANCELLED' || ord.status === 'REJECTED';
+        ? stUpper === 'DELIVERED' || stUpper === 'COMPLETED' || stUpper === 'DELIVERING'
+        : stUpper === 'CANCELLED' || stUpper === 'REJECTED' || stUpper === 'CANCELED';
 
     const q = historySearch.toLowerCase().trim();
     const matchesSearch =
       !q ||
-      ord.id?.toLowerCase().includes(q) ||
-      ord.customerName?.toLowerCase().includes(q) ||
-      ord.customer?.name?.toLowerCase().includes(q) ||
-      ord.address?.line1?.toLowerCase().includes(q) ||
-      ord.deliveryAddress?.toLowerCase().includes(q);
+      String(ord.id || '').toLowerCase().includes(q) ||
+      String(ord.trackingCode || '').toLowerCase().includes(q) ||
+      String(ord.customerName || '').toLowerCase().includes(q) ||
+      String(ord.customer?.name || '').toLowerCase().includes(q) ||
+      String(ord.guestName || '').toLowerCase().includes(q) ||
+      String(ord.customerPhone || '').toLowerCase().includes(q) ||
+      String(ord.address?.line1 || '').toLowerCase().includes(q) ||
+      String(ord.deliveryAddress || '').toLowerCase().includes(q);
 
     return matchesFilter && matchesSearch;
   });
