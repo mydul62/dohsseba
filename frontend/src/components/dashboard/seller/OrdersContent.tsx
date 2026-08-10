@@ -726,7 +726,7 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
                   <td className="p-4 text-center">
                     <div className="flex items-center justify-center gap-1.5 flex-wrap">
                       <StatusBadge status={o.status} />
-                      {(o.status === 'CANCELLED' || o.status === 'REJECTED' || o.notes) && (
+                      {(o.status === 'CANCELLED' || o.status === 'REJECTED') && (
                         <button
                           type="button"
                           onClick={() => setSelectedCancelledOrder(o)}
