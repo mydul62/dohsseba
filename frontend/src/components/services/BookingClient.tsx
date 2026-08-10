@@ -68,12 +68,16 @@ export function BookingClient({ service }: BookingClientProps) {
   };
 
   const handleNextFromStep3 = () => {
-    if (!address.trim()) {
-      setValidationError('Please enter your house/flat location address.');
+    const addressTrimmed = address.trim();
+    const cleanPhone = phone.replace(/[\s\-\+\(\)]/g, '').replace(/^88/, '');
+    const bdPhoneRegex = /^01[3-9]\d{8}$/;
+
+    if (!addressTrimmed) {
+      setValidationError('আপনার হাউজ ও সেক্টর এড্রেস দেওয়া আবশ্যক। (House & Flat location address is required.)');
       return;
     }
-    if (!phone.trim()) {
-      setValidationError('Please enter your contact phone number.');
+    if (!cleanPhone || !bdPhoneRegex.test(cleanPhone)) {
+      setValidationError('১১ ডিজিটের সঠিক মোবাইল নম্বর প্রদান করুন (যেমন: 01712345678)।');
       return;
     }
     setValidationError('');
@@ -82,8 +86,12 @@ export function BookingClient({ service }: BookingClientProps) {
 
   const handleConfirmOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dateSlot || !address.trim() || !phone.trim()) {
-      setValidationError('Please complete all required date, address, and phone fields.');
+    const addressTrimmed = address.trim();
+    const cleanPhone = phone.replace(/[\s\-\+\(\)]/g, '').replace(/^88/, '');
+    const bdPhoneRegex = /^01[3-9]\d{8}$/;
+
+    if (!dateSlot || !addressTrimmed || !cleanPhone || !bdPhoneRegex.test(cleanPhone)) {
+      setValidationError('১১ ডিজিটের সঠিক মোবাইল নম্বর এবং ডেলিভারি অ্যাড্রেস দেওয়া আবশ্যক।');
       return;
     }
 

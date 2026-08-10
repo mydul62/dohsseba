@@ -123,17 +123,45 @@ export function CheckoutClient() {
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) return;
-    setIsLoading(true);
+
     setOrderError('');
+
+    const nameTrimmed = customerName.trim();
+    const addressTrimmed = address.trim();
+    const cleanPhone = phone.replace(/[\s\-\+\(\)]/g, '').replace(/^88/, '');
+    const bdPhoneRegex = /^01[3-9]\d{8}$/;
+
+    if (!nameTrimmed) {
+      const msg = 'আপনার নাম দেওয়া আবশ্যক। (Customer Name is required)';
+      setOrderError(msg);
+      toastError('Validation Error', 'আপনার নাম দেওয়া আবশ্যক।');
+      return;
+    }
+
+    if (!addressTrimmed) {
+      const msg = 'আপনার ডেলিভারি ঠিকানা দেওয়া আবশ্যক। (Delivery Address is required)';
+      setOrderError(msg);
+      toastError('Validation Error', 'আপনার ডেলিভারি ঠিকানা দেওয়া আবশ্যক।');
+      return;
+    }
+
+    if (!cleanPhone || !bdPhoneRegex.test(cleanPhone)) {
+      const msg = '১১ ডিজিটের সঠিক মোবাইল নম্বর প্রদান করুন (যেমন: 01712345678)।';
+      setOrderError(msg);
+      toastError('Invalid Mobile Number', '১১ ডিজিটের সঠিক মোবাইল নম্বর প্রদান করুন (যেমন: 01712345678)।');
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       // ── Guest Checkout direct submission to /orders/guest ──
       if (!user) {
         const guestPayload = {
-          guestName: customerName || 'DOHS Resident',
-          guestPhone: phone || '01700000000',
+          guestName: nameTrimmed,
+          guestPhone: cleanPhone,
           guestEmail: undefined,
-          guestAddress: address || 'DOHS Mohakhali, Dhaka',
+          guestAddress: addressTrimmed,
           items: items.map((i: any) => ({
             productId: i.product?.id || i.id,
             quantity: i.quantity || 1,

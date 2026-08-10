@@ -74,28 +74,34 @@ export default function GuestCheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.guestName.trim()) {
-      setError('Please enter your full name.');
+    setError('');
+
+    const nameTrimmed = form.guestName.trim();
+    const addressTrimmed = form.guestAddress.trim();
+    const cleanPhone = form.guestPhone.replace(/[\s\-\+\(\)]/g, '').replace(/^88/, '');
+    const bdPhoneRegex = /^01[3-9]\d{8}$/;
+
+    if (!nameTrimmed) {
+      setError('আপনার নাম দেওয়া আবশ্যক। (Please enter your full name.)');
       return;
     }
-    if (!form.guestPhone.trim()) {
-      setError('Please enter your active phone number.');
+    if (!addressTrimmed) {
+      setError('আপনার ডেলিভারি ঠিকানা দেওয়া আবশ্যক। (Please enter your house & sector address.)');
       return;
     }
-    if (!form.guestAddress.trim()) {
-      setError('Please enter your delivery address in DOHS.');
+    if (!cleanPhone || !bdPhoneRegex.test(cleanPhone)) {
+      setError('১১ ডিজিটের সঠিক মোবাইল নম্বর প্রদান করুন (যেমন: 01712345678)।');
       return;
     }
 
     setSubmitting(true);
-    setError('');
 
     try {
       const payload = {
-        guestName: form.guestName.trim(),
-        guestPhone: form.guestPhone.trim(),
+        guestName: nameTrimmed,
+        guestPhone: cleanPhone,
         guestEmail: form.guestEmail.trim() || undefined,
-        guestAddress: form.guestAddress.trim(),
+        guestAddress: addressTrimmed,
         items: items.map((i: any) => ({
           productId: i.product?.id || i.id,
           quantity: i.quantity || 1,
