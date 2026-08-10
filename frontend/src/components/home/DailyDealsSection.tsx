@@ -58,27 +58,47 @@ export function DailyDealsSection() {
   // Fetch discounted / hot deal products from DB
   useEffect(() => {
     const API = getApiBaseUrl();
-    // Fetch only Flash Sale marked products from DB
+    const mapProduct = (p: any): DealProduct => ({
+      id:           p.id,
+      title:        p.name || p.title || 'Product',
+      slug:         p.slug || p.id,
+      price:        Number(p.price || 0),
+      originalPrice: p.originalPrice ? Number(p.originalPrice) : (p.discount && p.discount > 0 ? Math.round(Number(p.price) / (1 - Number(p.discount) / 100)) : undefined),
+      unit:         (p.unitAmount ?? p.amount) ? `${p.unitAmount ?? p.amount} ${p.unit || 'unit'}` : (p.unit || 'unit'),
+      image:        Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : (p.image || undefined),
+      rating:       p.rating ? Number(p.rating) : 4.5,
+      categorySlug: p.category?.slug || '',
+      categoryName: p.category?.name || '',
+      categoryId:   p.categoryId || p.category?.id || '',
+    });
+
+    // Fetch Flash Sale products from DB
     fetch(`${API}/products?flashSale=true&limit=12`)
       .then((r) => r.json())
       .then((res) => {
-        if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
-          const mapped: DealProduct[] = res.data.map((p: any) => ({
-            id:           p.id,
-            title:        p.name || p.title || 'Product',
-            slug:         p.slug || p.id,
-            price:        Number(p.price || 0),
-            originalPrice: p.originalPrice ? Number(p.originalPrice) : (p.discount && p.discount > 0 ? Math.round(Number(p.price) / (1 - Number(p.discount) / 100)) : undefined),
-            unit:         (p.unitAmount ?? p.amount) ? `${p.unitAmount ?? p.amount} ${p.unit || 'unit'}` : (p.unit || 'unit'),
-            image:        Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : (p.image || undefined),
-            rating:       p.rating ? Number(p.rating) : 4.5,
-            categorySlug: p.category?.slug || '',
-            categoryName: p.category?.name || '',
-            categoryId:   p.categoryId || p.category?.id || '',
-          }));
-          setProducts(mapped);
+        let list: any[] = [];
+        if (res?.success && Array.isArray(res.data)) {
+          list = res.data;
+        } else if (res?.success && Array.isArray(res.data?.products)) {
+          list = res.data.products;
+        }
+
+        if (list.length > 0) {
+          setProducts(list.map(mapProduct));
         } else {
-          setProducts([]); // no products in DB — show empty state
+          // Fallback to top discounted / popular products
+          fetch(`${API}/products?limit=12`)
+            .then((r2) => r2.json())
+            .then((res2) => {
+              if (res2?.success && Array.isArray(res2.data)) {
+                setProducts(res2.data.map(mapProduct));
+              } else if (res2?.success && Array.isArray(res2.data?.products)) {
+                setProducts(res2.data.products.map(mapProduct));
+              } else {
+                setProducts([]);
+              }
+            })
+            .catch(() => setProducts([]));
         }
       })
       .catch(() => setProducts([]));
