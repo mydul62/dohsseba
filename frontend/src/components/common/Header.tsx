@@ -370,15 +370,6 @@ export function Header() {
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-background p-4 space-y-4 animate-in slide-in-from-top duration-200">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search services or groceries..."
-              className="w-full h-10 px-3.5 pr-10 rounded-xl border border-input text-sm bg-secondary"
-            />
-            <Search className="w-4 h-4 absolute right-3 top-3 text-muted-foreground" />
-          </div>
-
           <div className="space-y-2">
             <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-1">
               Categories & Navigation
