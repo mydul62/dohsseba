@@ -33,6 +33,7 @@ export function CheckoutClient() {
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [deliverySpeed, setDeliverySpeed] = useState<'express' | 'scheduled'>('express');
+  const [customerName, setCustomerName] = useState(user?.name || 'Rahim Chowdhury');
   const [address, setAddress] = useState('House 42, Road 7, DOHS Mohakhali, Dhaka');
   const [phone, setPhone] = useState('+880 1712-345678');
   const [paymentMethod, setPaymentMethod] = useState<'bkash' | 'nagad' | 'card' | 'cod'>('cod');
@@ -129,7 +130,7 @@ export function CheckoutClient() {
       // ── Guest Checkout direct submission to /orders/guest ──
       if (!user) {
         const guestPayload = {
-          guestName: 'DOHS Resident',
+          guestName: customerName || user?.name || 'DOHS Resident',
           guestPhone: phone || '01700000000',
           guestEmail: undefined,
           guestAddress: address || 'DOHS Mohakhali, Dhaka',
@@ -431,6 +432,17 @@ export function CheckoutClient() {
                   DOHS Delivery Address
                 </h3>
                 <div className="space-y-3 text-xs font-semibold">
+                  <div>
+                    <label className="block text-muted-foreground mb-1">Customer Full Name</label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="e.g. Rahim Chowdhury"
+                      className="w-full h-11 px-3.5 rounded-xl border border-input bg-background font-medium focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                      required
+                    />
+                  </div>
                   <div>
                     <label className="block text-muted-foreground mb-1">House & Flat Location</label>
                     <input

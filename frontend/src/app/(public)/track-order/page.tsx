@@ -59,12 +59,9 @@ interface TrackingOrder {
 }
 
 const TIMELINE_STEPS = [
-  { key: 'PENDING', label: 'Order Placed', desc: 'Received & waiting for store confirmation', icon: Clock },
-  { key: 'SELLER_ACCEPTED', label: 'Confirmed by Merchant', desc: 'Store is packing your items', icon: Package },
-  { key: 'READY_FOR_RIDER', label: 'Rider Requested', desc: 'Broadcasting to nearest DOHS rider', icon: Navigation },
-  { key: 'RIDER_ASSIGNED', label: 'Rider Assigned', desc: 'Rider is heading to the store', icon: Bike },
-  { key: 'PICKED_UP', label: 'Picked Up from Store', desc: 'Rider picked up order & in transit', icon: Truck },
-  { key: 'ON_THE_WAY', label: 'Out for Delivery', desc: 'Rider is approaching your DOHS doorstep', icon: MapPin },
+  { key: 'ACCEPTED', label: 'Accepted', desc: 'Order accepted & packing items', icon: Package },
+  { key: 'PICKED_UP', label: 'Picked Up', desc: 'Rider picked up order from store', icon: Truck },
+  { key: 'ON_THE_WAY', label: 'On the way', desc: 'Rider is on the way to your delivery doorstep', icon: Navigation },
   { key: 'DELIVERED', label: 'Delivered', desc: 'Order successfully delivered to customer', icon: CheckCircle2 },
 ];
 
@@ -151,19 +148,30 @@ function TrackOrderContent() {
 
   const getStepIndex = (status: string) => {
     switch (status) {
-      case 'PENDING': return 0;
-      case 'SELLER_ACCEPTED': return 1;
+      case 'PENDING':
+      case 'SELLER_ACCEPTED':
       case 'READY_FOR_RIDER':
-      case 'WAITING_FOR_MANUAL_ASSIGNMENT': return 2;
-      case 'RIDER_ASSIGNED': return 3;
+      case 'WAITING_FOR_MANUAL_ASSIGNMENT':
+      case 'RIDER_ASSIGNED':
+      case 'ARRIVED_AT_STORE':
+      case 'ACCEPTED':
+        return 0;
       case 'PICKUP_STARTED':
-      case 'PICKED_UP': return 4;
+      case 'PICKED_UP':
+        return 1;
       case 'ON_THE_WAY':
-      case 'ARRIVED': return 5;
-      case 'DELIVERED': return 6;
+      case 'ARRIVED':
+      case 'ARRIVED_DESTINATION':
+      case 'DELIVERING':
+        return 2;
+      case 'DELIVERED':
+      case 'COMPLETED':
+        return 3;
       case 'CANCELLED':
-      case 'REJECTED': return -1;
-      default: return 0;
+      case 'REJECTED':
+        return -1;
+      default:
+        return 0;
     }
   };
 

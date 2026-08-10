@@ -35,48 +35,49 @@ import {
 
 // ─── Status Flow ──────────────────────────────────────────────────────────────
 
-const STATUS_FLOW = ['PENDING', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED'] as const;
+const STATUS_FLOW = ['ACCEPTED', 'PICKED_UP', 'ON_THE_WAY', 'DELIVERED'] as const;
 
 const FLOW_META: Record<string, { label: string; desc: string; icon: React.ReactNode; color: string }> = {
-  PENDING:    { label: 'Order Placed',   desc: 'Awaiting seller confirmation', icon: <Clock className="w-5 h-5" />,        color: 'text-amber-400 border-amber-500 bg-amber-500' },
-  PROCESSING: { label: 'Processing',    desc: 'Seller is preparing your order', icon: <RefreshCw className="w-5 h-5" />,   color: 'text-blue-400 border-blue-500 bg-blue-500' },
-  PACKED:     { label: 'Packed',         desc: 'Ready for pickup / handover',   icon: <Package className="w-5 h-5" />,     color: 'text-purple-400 border-purple-500 bg-purple-500' },
-  SHIPPED:    { label: 'Out for Delivery', desc: 'On the way to customer',      icon: <Truck className="w-5 h-5" />,       color: 'text-cyan-400 border-cyan-500 bg-cyan-500' },
-  DELIVERED:  { label: 'Delivered',      desc: 'Successfully delivered',        icon: <CheckCircle2 className="w-5 h-5" />, color: 'text-emerald-400 border-emerald-500 bg-emerald-500' },
+  ACCEPTED:   { label: 'Accepted',   desc: 'Order accepted & packing items', icon: <Package className="w-5 h-5" />, color: 'text-blue-400 border-blue-500 bg-blue-500' },
+  PICKED_UP:  { label: 'Picked Up',  desc: 'Rider picked up order from store', icon: <Truck className="w-5 h-5" />, color: 'text-purple-400 border-purple-500 bg-purple-500' },
+  ON_THE_WAY: { label: 'On the way', desc: 'Out for doorstep delivery', icon: <Truck className="w-5 h-5" />, color: 'text-cyan-400 border-cyan-500 bg-cyan-500' },
+  DELIVERED:  { label: 'Delivered',  desc: 'Successfully delivered', icon: <CheckCircle2 className="w-5 h-5" />, color: 'text-emerald-400 border-emerald-500 bg-emerald-500' },
 };
 
 const NEXT_STATUS: Record<string, string | null> = {
-  PENDING:    'PROCESSING',
-  PROCESSING: 'PACKED',
-  PACKED:     'SHIPPED',
-  SHIPPED:    'DELIVERED',
-  DELIVERED:  null,
-  CANCELLED:  null,
-  RETURNED:   null,
+  PENDING:          'ACCEPTED',
+  SELLER_ACCEPTED:  'PICKED_UP',
+  ACCEPTED:         'PICKED_UP',
+  PICKED_UP:        'ON_THE_WAY',
+  ON_THE_WAY:       'DELIVERED',
+  DELIVERED:        null,
+  CANCELLED:        null,
+  RETURNED:         null,
 };
 
 const getStatusIndex = (status: string): number => {
   switch (status) {
     case 'PENDING':
-      return 0;
     case 'SELLER_ACCEPTED':
-    case 'PROCESSING':
-      return 1;
-    case 'PACKED':
     case 'READY_FOR_RIDER':
-    case 'WAITING_FOR_MANUAL_ASSIGNMENT':
-      return 2;
     case 'RIDER_ASSIGNED':
     case 'ARRIVED_AT_STORE':
+    case 'ACCEPTED':
+    case 'PROCESSING':
+    case 'PACKED':
+      return 0;
     case 'PICKUP_STARTED':
     case 'PICKED_UP':
+      return 1;
     case 'ON_THE_WAY':
     case 'ARRIVED':
     case 'ARRIVED_DESTINATION':
+    case 'DELIVERING':
     case 'SHIPPED':
-      return 3;
+      return 2;
     case 'DELIVERED':
-      return 4;
+    case 'COMPLETED':
+      return 3;
     default:
       return 0;
   }
