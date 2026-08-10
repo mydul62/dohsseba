@@ -347,10 +347,13 @@ export const updateMissionStatus = async (
     console.warn(`Direct status update forced from ${order.status} to ${targetStatus}`);
   }
 
+  const riderUser = await prisma.user.findUnique({ where: { id: riderId } }).catch(() => null);
+
   const updateData: any = {
     status: targetStatus,
     riderId,
     assignedRiderId: riderId,
+    ...(riderUser?.name ? { riderName: riderUser.name } : {}),
   };
   if (targetStatus === 'PICKED_UP') {
     updateData.pickupAt = new Date();
@@ -480,8 +483,13 @@ export const getTodayStats = async (riderId: string) => {
 export const getDeliveryHistory = async (userId: string, page = 1, limit = 50) => {
   const skip = (page - 1) * limit;
 
-  const profile = await prisma.riderProfile.findUnique({ where: { userId } }).catch(() => null);
+  const [riderUser, profile] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId } }).catch(() => null),
+    prisma.riderProfile.findUnique({ where: { userId } }).catch(() => null),
+  ]);
+
   const profileId = profile?.id;
+  const riderName = riderUser?.name;
 
   const riderMatchConditions: any[] = [
     { riderId: userId },
@@ -493,6 +501,10 @@ export const getDeliveryHistory = async (userId: string, page = 1, limit = 50) =
     riderMatchConditions.push({ riderId: profileId });
     riderMatchConditions.push({ assignedRiderId: profileId });
     riderMatchConditions.push({ riderAssignment: { riderId: profileId } });
+  }
+
+  if (riderName) {
+    riderMatchConditions.push({ riderName: { equals: riderName, mode: 'insensitive' } });
   }
 
   const where: any = {

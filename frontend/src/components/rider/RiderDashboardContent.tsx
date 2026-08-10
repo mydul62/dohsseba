@@ -92,11 +92,30 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
   const [withdrawMethod, setWithdrawMethod] = useState<'bkash' | 'nagad' | 'bank'>('bkash');
   const [withdrawAccNo, setWithdrawAccNo] = useState<string>('');
   const [requestingWithdraw, setRequestingWithdraw] = useState<boolean>(false);
-
   // ── Order Detail Modal State ──────────────────────────────────────────────
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
   const [actionMsg, setActionMsg] = useState<string>('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // ── Load saved local history from localStorage on initial render ─────────
+  useEffect(() => {
+    if (typeof window !== 'undefined' && user?.id) {
+      const saved = localStorage.getItem(`rider_order_history_${user.id}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setOrderHistory((prev) => {
+              const map = new Map();
+              parsed.forEach((o: any) => map.set(o.id, o));
+              prev.forEach((o: any) => map.set(o.id, o));
+              return Array.from(map.values());
+            });
+          }
+        } catch (_) {}
+      }
+    }
+  }, [user?.id]);
 
   // Load All Rider Data Dynamically from Backend APIs
   const loadRiderData = useCallback(async () => {
@@ -136,11 +155,17 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
           const map = new Map();
           historyList.forEach((o: any) => map.set(o.id, o));
           prev.forEach((o: any) => {
-            if (!map.has(o.id) && (o.status === 'DELIVERED' || o.status === 'CANCELLED' || o.status === 'COMPLETED')) {
+            if (!map.has(o.id) && (o.status === 'DELIVERED' || o.status === 'CANCELLED' || o.status === 'COMPLETED' || o.status === 'REJECTED')) {
               map.set(o.id, o);
             }
           });
-          return Array.from(map.values());
+          const merged = Array.from(map.values());
+          if (typeof window !== 'undefined' && user?.id && merged.length > 0) {
+            try {
+              localStorage.setItem(`rider_order_history_${user.id}`, JSON.stringify(merged));
+            } catch (_) {}
+          }
+          return merged;
         });
       }
 
