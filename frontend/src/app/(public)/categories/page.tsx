@@ -1,29 +1,17 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { getApiBaseUrl } from '@/lib/api-client';
+import { GetAllProductCategories } from '@/services/category';
 import { SHOPPING_CATEGORIES } from '@/constants/products';
 import { BreadcrumbNav } from '@/components/common/BreadcrumbNav';
-import { Loader2, LayoutGrid } from 'lucide-react';
+import { LayoutGrid } from 'lucide-react';
 
-export default function AllCategoriesPage() {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const API = getApiBaseUrl();
-    fetch(`${API}/product-categories`)
-      .then((r) => r.json())
-      .then((res) => {
-        if (res?.success && Array.isArray(res.data)) {
-          const parents = res.data.filter((cat: any) => !cat.parentId);
-          setCategories(parents.length > 0 ? parents : res.data);
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+export default async function AllCategoriesPage() {
+  const res = await GetAllProductCategories();
+  let categories: any[] = [];
+  if (res?.success && Array.isArray(res.data)) {
+    const parents = res.data.filter((cat: any) => !cat.parentId);
+    categories = parents.length > 0 ? parents : res.data;
+  }
 
   const displayList = categories.length > 0 ? categories : SHOPPING_CATEGORIES;
 
@@ -51,44 +39,37 @@ export default function AllCategoriesPage() {
         </p>
       </div>
 
-      {/* Loading State */}
-      {loading ? (
-        <div className="py-16 flex items-center justify-center text-slate-400 gap-2 text-sm font-semibold">
-          <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-          <span>Loading categories...</span>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2.5 sm:gap-3.5">
-          {displayList.map((cat: any) => {
-            const subCount = Array.isArray(cat.children) ? cat.children.length : (cat.itemCount ?? 4);
-            const catImage = cat.image || 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500&auto=format&fit=crop&q=80';
+      {/* Categories Grid */}
+      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2.5 sm:gap-3.5">
+        {displayList.map((cat: any) => {
+          const subCount = Array.isArray(cat.children) ? cat.children.length : (cat.itemCount ?? 4);
+          const catImage = cat.image || 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500&auto=format&fit=crop&q=80';
 
-            return (
-              <Link
-                key={cat.id || cat.slug}
-                href={`/category/${cat.slug}`}
-                className="group flex flex-col bg-white border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs hover:shadow-md hover:border-emerald-500/50 transition-all duration-200 text-center"
-              >
-                <div className="relative aspect-square w-full bg-slate-50 overflow-hidden">
-                  <img
-                    src={catImage}
-                    alt={cat.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-                <div className="p-2 sm:p-2.5 flex flex-col items-center justify-center space-y-0.5">
-                  <h3 className="font-bold text-[11px] sm:text-xs text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1 leading-snug">
-                    {cat.name}
-                  </h3>
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    {subCount > 0 ? `${subCount} subcategories` : 'View items'}
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+          return (
+            <Link
+              key={cat.id || cat.slug}
+              href={`/category/${cat.slug}`}
+              className="group flex flex-col bg-white border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs hover:shadow-md hover:border-emerald-500/50 transition-all duration-200 text-center"
+            >
+              <div className="relative aspect-square w-full bg-slate-50 overflow-hidden">
+                <img
+                  src={catImage}
+                  alt={cat.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <div className="p-2 sm:p-2.5 flex flex-col items-center justify-center space-y-0.5">
+                <h3 className="font-bold text-[11px] sm:text-xs text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1 leading-snug">
+                  {cat.name}
+                </h3>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {subCount > 0 ? `${subCount} subcategories` : 'View items'}
+                </span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }
