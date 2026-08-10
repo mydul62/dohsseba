@@ -567,7 +567,7 @@ export const getDeliveryHistory = async (userId: string, page = 1, limit = 50) =
       take: limit,
       include: {
         customer: { select: { name: true, phone: true } },
-        address: { select: { line1: true, line2: true, area: true, city: true, phone: true } },
+        address: { select: { line1: true, line2: true, area: true, city: true, postCode: true } },
         items: {
           include: {
             product: { select: { id: true, name: true, images: true, unit: true, price: true, sellerId: true, seller: { select: { id: true, name: true, phone: true } } } },
@@ -591,7 +591,7 @@ export const getDeliveryHistory = async (userId: string, page = 1, limit = 50) =
         take: limit,
         include: {
           customer: { select: { name: true, phone: true } },
-          address: { select: { line1: true, line2: true, area: true, city: true, phone: true } },
+          address: { select: { line1: true, line2: true, area: true, city: true, postCode: true } },
           items: {
             include: {
               product: { select: { id: true, name: true, images: true, unit: true, price: true, sellerId: true, seller: { select: { id: true, name: true, phone: true } } } },
