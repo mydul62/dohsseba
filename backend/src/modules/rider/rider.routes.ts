@@ -23,6 +23,7 @@ router.get('/orders/:id/location-history', riderController.getLocationHistory);
 router.post('/orders/:id/accept',      riderController.acceptOrder);
 router.patch('/orders/:id/accept',     riderController.acceptOrder);
 router.patch('/orders/:id/status',     riderController.updateOrderStatus);
+router.delete('/orders/:id/items/:itemId', riderController.removeOrderItem);
 // ─── Withdrawal Requests ──────────────────────────────────────────────────────
 router.get('/withdraw',  riderController.getWithdrawalHistory);
 router.post('/withdraw', riderController.requestWithdrawal);

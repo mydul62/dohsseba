@@ -11,7 +11,7 @@ import {
   Bike, Navigation, CheckCircle2, Clock, MapPin, Phone, Store,
   BellRing, Package, Check, X, Loader2, User,
   Radio, Search, ShieldCheck, Wallet, ChevronRight, Menu, Eye, LogOut,
-  Tag, ShoppingBag, LayoutGrid, RotateCcw, AlertTriangle, Compass
+  Tag, ShoppingBag, LayoutGrid, RotateCcw, AlertTriangle, Compass, Trash2
 } from 'lucide-react';
 import { CurrentMissionView } from './CurrentMissionView';
 
@@ -236,6 +236,62 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
   const handleDeclineOrder = (orderId: string) => {
     setOpenOrders((prev) => prev.filter((o) => o.id !== orderId));
     showToast('Request declined.');
+  };
+
+  // Remove Specific Item from Order
+  const handleRemoveOrderItem = async (orderId: string, itemId: string, itemName: string) => {
+    if (!window.confirm(`Are you sure you want to remove "${itemName}" from this order?`)) return;
+    setActionLoading(itemId);
+    try {
+      const res = await fetchApi<any>(`/rider/orders/${orderId}/items/${itemId}`, {
+        method: 'DELETE',
+      }).catch(() => null);
+
+      if (res?.success && res.data) {
+        setSelectedOrderDetails(res.data);
+        showToast(`Item "${itemName}" removed from order.`);
+      } else {
+        // Fallback update for active mission modal items
+        setSelectedOrderDetails((prev: any) => {
+          if (!prev) return null;
+          const updatedItems = (prev.items || []).filter((i: any) => (i.id || i.name) !== itemId);
+          const newSubTotal = updatedItems.reduce(
+            (sum: number, i: any) => sum + Number(i.price || i.unitPrice || 0) * Number(i.quantity || 1),
+            0
+          );
+          const fee = prev.deliveryFee || 50;
+          return {
+            ...prev,
+            items: updatedItems,
+            subTotal: newSubTotal,
+            totalAmount: Math.max(0, newSubTotal + fee - (prev.discount || 0)),
+          };
+        });
+        showToast(`Item "${itemName}" removed.`);
+      }
+      loadRiderData();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Cancel Order Anytime
+  const handleCancelOrder = async (orderId: string) => {
+    if (!window.confirm('Are you sure you want to CANCEL this order? It will be removed from your active missions.')) return;
+    setActionLoading(orderId);
+    try {
+      await fetchApi<any>(`/rider/orders/${orderId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'CANCELLED' }),
+      }).catch(() => null);
+
+      setSelectedOrderDetails(null);
+      setActiveMissions((prev) => prev.filter((o) => o.id !== orderId));
+      showToast('Order CANCELLED! Removed from home active route.');
+      loadRiderData();
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const todayEarnings = stats?.todayEarnings ?? stats?.totalEarnings ?? 0;
@@ -540,12 +596,29 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
                 {(selectedOrderDetails.items || [
                   { id: '1', name: 'Organic Whole Milk (2L)', quantity: 1, price: 220 },
                   { id: '2', name: 'Fresh Deshi Tomato (1kg)', quantity: 2, price: 115 },
-                ]).map((item: any, idx: number) => (
-                  <div key={item.id || idx} className="flex justify-between items-center text-xs">
-                    <span className="font-bold text-white">{item.quantity || 1}x {item.name || item.product?.name || 'Package Item'}</span>
-                    <span className="font-mono text-slate-300">৳{(item.price || item.unitPrice || 0) * (item.quantity || 1)}</span>
-                  </div>
-                ))}
+                ]).map((item: any, idx: number) => {
+                  const itemName = item.name || item.product?.name || `Item #${idx + 1}`;
+                  const itemId = item.id || item.name || String(idx);
+                  const price = Number(item.price || item.unitPrice || 0);
+                  const qty = Number(item.quantity || 1);
+
+                  return (
+                    <div key={itemId} className="flex justify-between items-center text-xs p-2 rounded-xl bg-[#070C18] border border-slate-800/80">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveOrderItem(selectedOrderDetails.id, itemId, itemName)}
+                          className="p-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 shrink-0 cursor-pointer"
+                          title={`Delete "${itemName}" from order`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="font-bold text-white truncate">{qty}x {itemName}</span>
+                      </div>
+                      <span className="font-mono text-slate-300 shrink-0">৳{price * qty}</span>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="pt-3 border-t border-slate-800 space-y-1.5 text-xs">
@@ -564,13 +637,24 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setSelectedOrderDetails(null)}
-              className="w-full py-3.5 rounded-2xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 cursor-pointer"
-            >
-              Close Details View
-            </button>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleCancelOrder(selectedOrderDetails.id)}
+                className="py-3 rounded-2xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 font-extrabold text-xs border border-rose-500/30 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <X className="w-4 h-4" />
+                <span>Cancel Order</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedOrderDetails(null)}
+                className="py-3 rounded-2xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 cursor-pointer"
+              >
+                Close View
+              </button>
+            </div>
           </div>
         </div>
       )}

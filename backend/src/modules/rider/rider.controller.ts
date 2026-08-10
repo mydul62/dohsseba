@@ -102,3 +102,12 @@ export const getWithdrawalHistory = async (req: AuthRequest, res: Response, next
     return sendResponse(res, 200, 'Withdrawal history fetched', data);
   } catch (e) { next(e); }
 };
+
+// ─── DELETE /rider/orders/:id/items/:itemId ──────────────────────────────────
+export const removeOrderItem = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id, itemId } = req.params;
+    const order = await riderService.removeOrderItem(id as string, itemId as string, req.user!.id);
+    return sendResponse(res, 200, 'Item removed from order successfully', order);
+  } catch (e) { next(e); }
+};

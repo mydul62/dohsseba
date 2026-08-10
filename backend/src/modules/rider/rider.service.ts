@@ -330,12 +330,12 @@ export const updateMissionStatus = async (
     SELLER_ACCEPTED: ['RIDER_ASSIGNED', 'ARRIVED_AT_STORE', 'CANCELLED'],
     READY_FOR_RIDER: ['RIDER_ASSIGNED', 'ARRIVED_AT_STORE', 'CANCELLED'],
     RIDER_ASSIGNED: ['ARRIVED_AT_STORE', 'PICKUP_STARTED', 'PICKED_UP', 'ON_THE_WAY', 'CANCELLED'],
-    ARRIVED_AT_STORE: ['PICKUP_STARTED', 'PICKED_UP', 'ON_THE_WAY'],
-    PICKUP_STARTED: ['PICKED_UP', 'ON_THE_WAY'],
-    PICKED_UP: ['ON_THE_WAY', 'ARRIVED_DESTINATION', 'DELIVERED'],
-    ON_THE_WAY: ['ARRIVED', 'ARRIVED_DESTINATION', 'DELIVERED'],
-    ARRIVED: ['DELIVERED'],
-    ARRIVED_DESTINATION: ['DELIVERED'],
+    ARRIVED_AT_STORE: ['PICKUP_STARTED', 'PICKED_UP', 'ON_THE_WAY', 'CANCELLED'],
+    PICKUP_STARTED: ['PICKED_UP', 'ON_THE_WAY', 'CANCELLED'],
+    PICKED_UP: ['ON_THE_WAY', 'ARRIVED_DESTINATION', 'DELIVERED', 'CANCELLED'],
+    ON_THE_WAY: ['ARRIVED', 'ARRIVED_DESTINATION', 'DELIVERED', 'CANCELLED'],
+    ARRIVED: ['DELIVERED', 'CANCELLED'],
+    ARRIVED_DESTINATION: ['DELIVERED', 'CANCELLED'],
   };
 
   const valid = allowedTransitions[order.status]?.includes(targetStatus) || order.status === targetStatus;
@@ -562,4 +562,67 @@ export const getWithdrawalHistory = async (riderId: string) => {
   const availableBalance = Math.max(0, totalEarnings - totalWithdrawnOrPending);
 
   return { requests, totalEarnings, availableBalance };
+};
+
+// ─── Remove Item from Active Order ───────────────────────────────────────────
+
+export const removeOrderItem = async (orderId: string, itemId: string, riderId: string) => {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: true },
+  });
+
+  if (!order) throw new AppError('Order not found.', 404);
+  if (order.riderId !== riderId && order.assignedRiderId !== riderId) {
+    throw new AppError('This order is not assigned to you.', 403);
+  }
+
+  // Delete the specific item
+  await prisma.orderItem.delete({
+    where: { id: itemId },
+  });
+
+  // Re-fetch remaining items
+  const remainingItems = await prisma.orderItem.findMany({
+    where: { orderId },
+  });
+
+  // If no items left, mark order as CANCELLED
+  if (remainingItems.length === 0) {
+    return prisma.order.update({
+      where: { id: orderId },
+      data: { status: 'CANCELLED' },
+      include: {
+        customer: { select: { name: true, phone: true } },
+        address: true,
+        items: true,
+      },
+    });
+  }
+
+  // Recalculate financial breakdown
+  const newSubTotal = remainingItems.reduce(
+    (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+    0
+  );
+  const deliveryFee = order.deliveryFee ?? 50;
+  const discount = order.discount ?? 0;
+  const newTotal = Math.max(0, newSubTotal + deliveryFee - discount);
+
+  return prisma.order.update({
+    where: { id: orderId },
+    data: {
+      subTotal: newSubTotal,
+      totalAmount: newTotal,
+    },
+    include: {
+      customer: { select: { name: true, phone: true } },
+      address: true,
+      items: {
+        include: {
+          product: { select: { name: true, images: true, unit: true, seller: true } },
+        },
+      },
+    },
+  });
 };

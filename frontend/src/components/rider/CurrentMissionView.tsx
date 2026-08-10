@@ -20,6 +20,7 @@ import {
   Eye,
   Truck,
   Check,
+  X,
 } from 'lucide-react';
 
 interface CurrentMissionViewProps {
@@ -249,6 +250,20 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
             title="View Order Details"
           >
             <Eye className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm('Are you sure you want to CANCEL this delivery order? It will be removed from active missions.')) {
+                handleUpdateStatus('CANCELLED');
+              }
+            }}
+            disabled={actionLoading}
+            className="w-9 h-9 rounded-2xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/40 flex items-center justify-center transition-all active:scale-95"
+            title="Cancel Order"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
