@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Heart, Plus, Minus, Check, Star, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
-import { useToast } from '@/components/ui/Toast';
 
 export interface ProductCardProps {
   id: string;
@@ -46,7 +45,6 @@ export function ProductCard({
   const [isAdding, setIsAdding] = useState(false);
   const { addItem } = useCartStore();
   const { toggleWishlist, isInWishlist } = useWishlistStore();
-  const { success: toastSuccess } = useToast();
 
   const isLiked = isInWishlist(id);
 
@@ -86,7 +84,6 @@ export function ProductCard({
       image,
       stock: 50,
     });
-    toastSuccess('Added to cart!', `${title} × ${quantity}`);
     setAddedAnimation(true);
     setTimeout(() => {
       setAddedAnimation(false);
