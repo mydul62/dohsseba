@@ -32,6 +32,7 @@ import adminHomepageRoutes                    from './routes/adminHomepage.route
 import brandRoutes                            from './routes/brand.routes';
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ─── Security ─────────────────────────────────────────────────────────────────
 app.use(helmet({
@@ -61,10 +62,15 @@ app.use(cors({
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const limiter = rateLimit({
   windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max:      Number(process.env.RATE_LIMIT_MAX)        || 1000,
+  max:      Number(process.env.RATE_LIMIT_MAX)        || 10000,
   message:  { success: false, message: 'Too many requests. Please try again later.' },
   standardHeaders: true,
   legacyHeaders:   false,
+  skip: (req) => {
+    if (process.env.NODE_ENV === 'development') return true;
+    const url = req.originalUrl || req.url || '';
+    return url.includes('/seller') || url.includes('/rider') || url.includes('/dashboard') || url.includes('/orders');
+  },
 });
 app.use('/api', limiter);
 
