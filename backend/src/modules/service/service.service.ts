@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { AppError } from '../../middlewares/error.middleware';
 import { generateSlug } from '../../utils/auth.util';
+import { expandSearchTerms } from '../../utils/searchHelper';
 
 // ─── Auto-ensure Default Company Services & Categories ─────────────────────
 const ensureCompanyServices = async () => {
@@ -288,10 +289,13 @@ export const getServices = async (filters: ServiceFilter) => {
   }
 
   if (search) {
-    const searchCondition = [
-      { title:       { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } },
-    ];
+    const terms = expandSearchTerms(search);
+    const searchCondition = terms.flatMap((term) => [
+      { title:       { contains: term, mode: 'insensitive' } },
+      { description: { contains: term, mode: 'insensitive' } },
+      { category: { name: { contains: term, mode: 'insensitive' } } },
+      { category: { slug: { contains: term, mode: 'insensitive' } } },
+    ]);
     if (where.OR) {
       where.AND = [{ OR: where.OR }, { OR: searchCondition }];
       delete where.OR;

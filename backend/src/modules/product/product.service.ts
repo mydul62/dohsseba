@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { AppError } from '../../middlewares/error.middleware';
 import { generateSlug } from '../../utils/auth.util';
+import { expandSearchTerms } from '../../utils/searchHelper';
 
 interface ProductFilter {
   page?: number; limit?: number;
@@ -186,10 +187,13 @@ export const getProducts = async (filters: ProductFilter) => {
   if (featured)   where.isFeatured = true;
   if (flashSale)  where.isFlashSale = true;
   if (search) {
-    where.OR = [
-      { name:        { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } },
-    ];
+    const terms = expandSearchTerms(search);
+    where.OR = terms.flatMap((term) => [
+      { name:        { contains: term, mode: 'insensitive' } },
+      { description: { contains: term, mode: 'insensitive' } },
+      { category: { name: { contains: term, mode: 'insensitive' } } },
+      { category: { slug: { contains: term, mode: 'insensitive' } } },
+    ]);
   }
   if (minPrice !== undefined || maxPrice !== undefined) {
     where.price = {};

@@ -111,13 +111,15 @@ export function GlobalSearchModal() {
   if (!mounted || !isOpen) return null;
 
   const popularTags = [
-    { label: 'FROZEN', val: 'frozen' },
-    { label: 'MILK', val: 'milk' },
-    { label: 'MANGO', val: 'mango' },
-    { label: 'RICE', val: 'rice' },
-    { label: 'AC REPAIR', val: 'ac' },
+    { label: 'DIM (ডিম)', val: 'dim' },
+    { label: 'CHAL (চাল)', val: 'chal' },
+    { label: 'MURGI (মুরগি)', val: 'murgi' },
+    { label: 'MACH (মাছ)', val: 'mach' },
+    { label: 'TEL (তেল)', val: 'tel' },
+    { label: 'ALU (আলু)', val: 'alu' },
+    { label: 'PEYAJ (পেঁয়াজ)', val: 'peyaj' },
+    { label: 'AC REPAIR (এসি)', val: 'ac' },
     { label: 'ELECTRICIAN', val: 'electrician' },
-    { label: 'PLUMBING', val: 'plumbing' },
   ];
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
@@ -141,7 +143,7 @@ export function GlobalSearchModal() {
             </div>
             <div>
               <h2 className="font-black text-sm sm:text-base text-slate-900 leading-tight">Search DOHS Sheba</h2>
-              <p className="text-[11px] text-slate-400 font-semibold hidden sm:block">Find groceries, fresh fruits, vegetables, electrical & home services</p>
+              <p className="text-[11px] text-slate-400 font-semibold hidden sm:block">Search in English, Bangla, or Banglish (egg, dim, mach, chal...)</p>
             </div>
           </div>
 
@@ -179,7 +181,7 @@ export function GlobalSearchModal() {
                   autoFocus
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search products, groceries, or home services..."
+                  placeholder={language === 'BN' ? "সার্চ করুন বাংলা, English বা Banglish এ (যেমন: dim, ডিম, egg, mach, chal, ac...)" : "Search in English, Bangla or Banglish (e.g. egg, dim, mach, chal, ac...)"}
                   className="w-full text-xs sm:text-base font-medium text-slate-900 placeholder-slate-400 bg-transparent focus:outline-none min-w-0"
                 />
                 {searching && <Loader2 className="w-4 h-4 text-[#7eb343] animate-spin shrink-0" />}

@@ -167,7 +167,7 @@ export function Header() {
               type="text"
               readOnly
               onFocus={() => openSearch(searchQuery)}
-              placeholder={isBn ? 'সার্চ ইলেকট্রিশিয়ান, এসি রিপেয়ার, তাজা ফল, চাল...' : 'Search Electrician, AC Repair, Fresh Fruits, Rice...'}
+              placeholder={isBn ? 'সার্চ করুন বাংলা, English বা Banglish এ (যেমন: ডিম, dim, mach, chal, ac...)' : 'Search in English, Bangla or Banglish (e.g. egg, dim, mach, chal, ac...)'}
               className="w-full bg-transparent px-3.5 py-2.5 text-sm focus:outline-none text-foreground placeholder:text-muted-foreground cursor-pointer"
             />
             <button
@@ -354,7 +354,7 @@ export function Header() {
             type="text"
             readOnly
             onFocus={() => openSearch(searchQuery)}
-            placeholder="Search Electrician, AC Repair, Fresh Fruits, Rice..."
+            placeholder={isBn ? 'সার্চ করুন (ডিম, dim, mach, chal, ac...)' : 'Search in English, Bangla or Banglish...'}
             className="w-full bg-transparent px-3.5 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none cursor-pointer"
           />
           <button
