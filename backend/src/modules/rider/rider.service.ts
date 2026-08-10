@@ -508,13 +508,14 @@ export const getTodayStats = async (riderId: string) => {
       status: 'DELIVERED',
       updatedAt: { gte: startOfDay },
     },
-    _sum: { deliveryFee: true },
+    _sum: { deliveryFee: true, totalAmount: true },
   });
 
   return {
     todayDeliveries,
     activeOrders,
     todayEarnings: todayEarnings._sum.deliveryFee ?? 0,
+    todayOrderValue: todayEarnings._sum.totalAmount ?? 0,
     totalTrips: profile?.totalTrips ?? 0,
     totalEarnings: profile?.totalEarnings ?? 0,
     rating: profile?.rating ?? 5.0,

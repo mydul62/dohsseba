@@ -372,6 +372,13 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
   };
 
   const todayEarnings = stats?.todayEarnings ?? stats?.totalEarnings ?? 0;
+  const todayDeliveredOrderValue =
+    stats?.todayOrderValue ??
+    orderHistory.reduce((acc: number, ord: any) => {
+      const isDelivered = ord.status === 'DELIVERED' || ord.status === 'COMPLETED';
+      if (!isDelivered) return acc;
+      return acc + (Number(ord.totalAmount) || Number(ord.subTotal || 0) + Number(ord.deliveryFee || 50));
+    }, 0);
 
   // Filtered History Calculation
   const filteredHistory = orderHistory.filter((ord: any) => {
@@ -409,13 +416,13 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
         </div>
       )}
 
-      {/* ── TOP SUMMARY METRIC CARDS (ROW OF 3) ── */}
-      <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+      {/* ── TOP SUMMARY METRIC CARDS (ROW OF 4) ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
         
         {/* Card 1: Duty Status Toggle */}
         <div
           onClick={handleToggleDuty}
-          className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between h-24 ${
+          className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between h-24 ${
             isOnline
               ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-400 shadow-lg shadow-emerald-950/30'
               : 'bg-slate-900/80 border-slate-800 text-slate-500'
@@ -428,22 +435,28 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
           </div>
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">STATUS</span>
-            <strong className={`text-sm font-extrabold block mt-0.5 ${isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
+            <strong className={`text-xs font-extrabold block mt-0.5 ${isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
               {isOnline ? 'On Duty' : 'Off Duty'}
             </strong>
           </div>
         </div>
 
         {/* Card 2: Active Deliveries Count */}
-        <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex flex-col justify-between h-24">
+        <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex flex-col justify-between h-24">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ACTIVE</span>
           <div className="text-2xl font-black text-white font-mono">{activeMissions.length}</div>
         </div>
 
-        {/* Card 3: Today's Earnings */}
-        <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex flex-col justify-between h-24">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">TODAY</span>
-          <div className="text-xl font-black text-white font-mono">৳{todayEarnings}</div>
+        {/* Card 3: Today's Income (Commission) */}
+        <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex flex-col justify-between h-24">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">TODAY INCOME</span>
+          <div className="text-lg font-black text-emerald-400 font-mono">৳{todayEarnings}</div>
+        </div>
+
+        {/* Card 4: Today's Delivered Total Value (Product + Delivery Fee) */}
+        <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex flex-col justify-between h-24">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">DELIVERED VALUE</span>
+          <div className="text-lg font-black text-blue-400 font-mono">৳{todayDeliveredOrderValue}</div>
         </div>
       </div>
 
@@ -559,17 +572,28 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
                         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
                           Products ({itemsList.length} items):
                         </span>
-                        <div className="space-y-1">
-                          {itemsList.map((i: any, idx: number) => (
-                            <div key={i.id || idx} className="flex justify-between items-center text-[11px]">
-                              <span className="text-slate-300 truncate w-3/4">
-                                {i.quantity || 1}x {i.name || i.product?.name || `Item #${idx + 1}`}
-                              </span>
-                              <span className="font-mono text-slate-400">
-                                ৳{Number(i.price || i.unitPrice || 0) * Number(i.quantity || 1)}
-                              </span>
-                            </div>
-                          ))}
+                        <div className="space-y-1.5">
+                          {itemsList.map((i: any, idx: number) => {
+                            const pImg = i.product?.images?.[0] || i.image || i.productImage || null;
+                            const pName = i.name || i.product?.name || `Item #${idx + 1}`;
+                            return (
+                              <div key={i.id || idx} className="flex justify-between items-center text-xs p-1.5 rounded-xl bg-[#0B1120] border border-slate-800/80">
+                                <div className="flex items-center gap-2 min-w-0 pr-2">
+                                  {pImg ? (
+                                    <img src={pImg} alt={pName} className="w-7 h-7 rounded-lg object-cover border border-slate-700/80 shrink-0" />
+                                  ) : (
+                                    <div className="w-7 h-7 rounded-lg bg-slate-800 border border-slate-700/80 flex items-center justify-center text-[10px] shrink-0">📦</div>
+                                  )}
+                                  <span className="text-slate-200 font-medium truncate">
+                                    {i.quantity || 1}x {pName}
+                                  </span>
+                                </div>
+                                <span className="font-mono font-bold text-slate-300 shrink-0">
+                                  ৳{Number(i.price || i.unitPrice || 0) * Number(i.quantity || 1)}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -861,6 +885,7 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
                     const itemId = item.id || item.name || String(idx);
                     const price = Number(item.price || item.unitPrice || 0);
                     const qty = Number(item.quantity || 1);
+                    const pImg = item.product?.images?.[0] || item.image || item.productImage || null;
 
                     return (
                       <div key={itemId} className="flex justify-between items-center text-xs p-2 rounded-xl bg-[#070C18] border border-slate-800/80">
@@ -873,6 +898,11 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
+                          {pImg ? (
+                            <img src={pImg} alt={itemName} className="w-8 h-8 rounded-lg object-cover border border-slate-700/80 shrink-0" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700/80 flex items-center justify-center text-[10px] text-slate-500 shrink-0">📦</div>
+                          )}
                           <span className="font-bold text-white truncate">{qty}x {itemName}</span>
                         </div>
                         <span className="font-mono text-slate-300 shrink-0">৳{price * qty}</span>
