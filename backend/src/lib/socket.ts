@@ -189,7 +189,14 @@ export const emitToOnlineRiders = (event: string, payload: any) => {
 };
 
 export const emitToSellerRoom = (sellerId: string, event: string, payload: any) => {
-  if (io) io.to(`seller_${sellerId}`).emit(event, payload);
+  if (io) {
+    if (sellerId) {
+      io.to(`seller_${sellerId}`).emit(event, payload);
+      io.to(`user_${sellerId}`).emit(event, payload);
+    }
+    io.to('role_SELLER').emit(event, payload);
+    io.emit(event, payload);
+  }
 };
 
 export const emitToOrderRoom = (orderId: string, event: string, payload: any) => {

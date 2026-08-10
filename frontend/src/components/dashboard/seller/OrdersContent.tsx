@@ -91,6 +91,8 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
 
   const { user } = useAuthStore();
 
+  const { socket } = useSocket();
+
   const fetchOrders = (silent = false) => {
     if (!silent) setLoading(true);
     const params = new URLSearchParams({ page: '1', limit: '100' });
@@ -118,7 +120,7 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
 
   // Instant Real-Time Socket.IO Updates without page reload
   useEffect(() => {
-    const socketInstance = getSocket();
+    const socketInstance = socket || getSocket();
 
     if (user?.id) {
       socketInstance.emit('join_seller', user.id);
@@ -127,16 +129,16 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
     const handleOrderCreated = (data: any) => {
       console.log('⚡ [SELLER REALTIME] New order created in database:', data);
       const rawOrder = data?.order || data;
-      if (rawOrder && rawOrder.id) {
+      if (rawOrder && (rawOrder.id || rawOrder.trackingCode)) {
         const newOrder = {
           ...rawOrder,
           total: rawOrder.totalAmount ?? rawOrder.total ?? 0,
           createdAt: rawOrder.createdAt || new Date().toISOString(),
         };
         setApiOrders((prev) => {
-          const exists = prev.some((o) => o.id === newOrder.id);
+          const exists = prev.some((o) => o.id === newOrder.id || (o.trackingCode && o.trackingCode === newOrder.trackingCode));
           if (exists) {
-            return prev.map((o) => (o.id === newOrder.id ? { ...o, ...newOrder } : o));
+            return prev.map((o) => (o.id === newOrder.id || (o.trackingCode && o.trackingCode === newOrder.trackingCode) ? { ...o, ...newOrder } : o));
           }
           // ONLY play short "bip" sound when order is genuinely NEW
           playNewOrderBipSound();
@@ -169,16 +171,20 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
 
     socketInstance.on('ORDER_CREATED', handleOrderCreated);
     socketInstance.on('order:created', handleOrderCreated);
+    socketInstance.on('new_order', handleOrderCreated);
+    socketInstance.on('ORDER_PUSHED', handleOrderCreated);
     socketInstance.on('ORDER_STATUS_UPDATED', handleStatusUpdated);
     socketInstance.on('order:status_updated', handleStatusUpdated);
 
     return () => {
       socketInstance.off('ORDER_CREATED', handleOrderCreated);
       socketInstance.off('order:created', handleOrderCreated);
+      socketInstance.off('new_order', handleOrderCreated);
+      socketInstance.off('ORDER_PUSHED', handleOrderCreated);
       socketInstance.off('ORDER_STATUS_UPDATED', handleStatusUpdated);
       socketInstance.off('order:status_updated', handleStatusUpdated);
     };
-  }, [user?.id]);
+  }, [socket, user?.id]);
 
   const mappedStoreOrders = useMemo(() => {
     return storeOrders.map((o) => {
