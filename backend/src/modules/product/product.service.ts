@@ -419,8 +419,15 @@ export const updateProduct = async (
 };
 
 export const deleteProduct = async (sellerId: string, productId: string, role: string) => {
-  const existing = await prisma.product.findUnique({ where: { id: productId } });
+  const existing = await prisma.product.findUnique({ where: { id: productId }, include: { category: true } });
   if (!existing) throw new AppError('Product not found.', 404);
+
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+  if (!isAdmin && existing.sellerId && existing.sellerId !== sellerId) {
+    if (existing.category?.slug !== 'uncategorized') {
+      throw new AppError('Unauthorized to delete this product.', 403);
+    }
+  }
 
   // Permanently clean up relations and hard-delete product from database
   await prisma.cartItem.deleteMany({ where: { productId } }).catch(() => null);
@@ -439,6 +446,7 @@ export const getSellerProducts = async (sellerId: string) => {
   const where: any = isAdmin ? {} : {
     OR: [
       { sellerId },
+      { sellerId: null },
       { category: { slug: 'uncategorized' } },
     ],
   };
@@ -487,7 +495,14 @@ export const bulkDeleteProducts = async (sellerId: string, productIds: string[],
 
   const whereCondition: any = isAdmin
     ? { id: { in: productIds } }
-    : { id: { in: productIds }, OR: [{ sellerId }, { category: { slug: 'uncategorized' } }] };
+    : {
+        id: { in: productIds },
+        OR: [
+          { sellerId },
+          { sellerId: null },
+          { category: { slug: 'uncategorized' } },
+        ],
+      };
 
   const productsToDelete = await prisma.product.findMany({
     where: whereCondition,
@@ -508,5 +523,6 @@ export const bulkDeleteProducts = async (sellerId: string, productIds: string[],
 
   return { count: result.count };
 };
+
 
 

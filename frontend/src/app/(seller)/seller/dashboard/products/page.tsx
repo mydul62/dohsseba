@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useAuthStore } from '@/store/useAuthStore';
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────────
 
@@ -57,6 +58,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search,   setSearch]   = useState('');
   const [catFilter, setCatFilter] = useState('');
@@ -64,11 +66,14 @@ export default function ProductsPage() {
   const [sortKey,  setSortKey]  = useState('newest');
   const [page,     setPage]     = useState(1);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const { confirm, dialogProps } = useConfirm();
+  const { token } = useAuthStore();
 
   const loadProducts = () => {
     setLoading(true);
+    setError(null);
     fetchApi<any>('/products/seller/my-products')
       .then((res) => {
         if (res && res.success && Array.isArray(res.data)) {
@@ -90,9 +95,14 @@ export default function ProductsPage() {
             createdAt: p.createdAt || new Date().toISOString(),
           }));
           setProducts(mapped);
+          setError(null);
+        } else {
+          setError(res?.message || 'Failed to fetch products from database.');
         }
       })
-      .catch(() => {})
+      .catch((err: any) => {
+        setError(err?.message || 'Failed to connect to backend server. Please verify your connection.');
+      })
       .finally(() => setLoading(false));
   };
 
@@ -109,9 +119,13 @@ export default function ProductsPage() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     loadProducts();
     loadCategories();
-  }, []);
+  }, [mounted, token]);
 
   // ─── Filters ────────────────────────────────────────────────────────────────
 
@@ -400,8 +414,12 @@ export default function ProductsPage() {
           <div className="flex items-center gap-2 ml-auto flex-wrap">
             <button onClick={() => setSelected(new Set())} className="px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/5 transition-all">Deselect All</button>
             <button className="px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/5 transition-all">Deactivate</button>
-            <button onClick={handleBulkDelete} className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-bold hover:bg-red-500/30 transition-all flex items-center gap-1">
-              <Trash2 className="w-3 h-3" /> Delete Selected
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-bold hover:bg-red-500/30 transition-all flex items-center gap-1 disabled:opacity-50"
+            >
+              {bulkDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} Delete Selected
             </button>
           </div>
         </div>
@@ -429,7 +447,27 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {pageItems.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={9} className="py-16 text-center text-slate-400">
+                    <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin text-indigo-400" />
+                    <p className="font-bold">Loading products from database...</p>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center text-amber-300">
+                    <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-amber-400" />
+                    <p className="font-bold text-sm">{error}</p>
+                    <button
+                      onClick={loadProducts}
+                      className="mt-4 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all inline-flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" /> Retry Loading Products
+                    </button>
+                  </td>
+                </tr>
+              ) : pageItems.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-16 text-center text-slate-500">
                     <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
