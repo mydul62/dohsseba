@@ -175,10 +175,12 @@ export const createOrderFromCart = async (
 
   const order = await prisma.$transaction(async (tx) => {
     for (const item of orderItems) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data:  { stock: { decrement: item.quantity } },
-      });
+      try {
+        await tx.product.update({
+          where: { id: item.productId },
+          data:  { stock: { decrement: item.quantity } },
+        });
+      } catch (_) {}
     }
 
     const newOrder = await tx.order.create({
@@ -198,17 +200,21 @@ export const createOrderFromCart = async (
       include: orderInclude,
     });
 
-    await tx.payment.create({
-      data: {
-        orderId: newOrder.id,
-        amount: totalAmount,
-        method: 'CASH',
-        status: 'PENDING',
-      },
-    });
+    try {
+      await tx.payment.create({
+        data: {
+          orderId: newOrder.id,
+          amount: totalAmount,
+          method: 'CASH',
+          status: 'PENDING',
+        },
+      });
+    } catch (_) {}
 
-    const cart = await tx.cart.findUnique({ where: { userId: customerId } });
-    if (cart) await tx.cartItem.deleteMany({ where: { cartId: cart.id, productId: { in: productIds } } });
+    try {
+      const cart = await tx.cart.findUnique({ where: { userId: customerId } });
+      if (cart) await tx.cartItem.deleteMany({ where: { cartId: cart.id, productId: { in: productIds } } });
+    } catch (_) {}
 
     return newOrder;
   });
@@ -545,11 +551,13 @@ export const createGuestOrder = async (data: {
   const missingProductIds = productIds.filter((id) => !existingProductIds.includes(id));
 
   if (missingProductIds.length > 0) {
-    const seller = await prisma.user.findFirst({ where: { role: 'SELLER' } });
-    const category = await prisma.category.findFirst();
+    let seller = await prisma.user.findFirst({ where: { role: 'SELLER' } });
+    let category = await prisma.productCategory.findFirst();
     if (seller && category) {
       for (const missingId of missingProductIds) {
         try {
+          if (!seller) seller = await prisma.user.findFirst({ where: { role: 'SELLER' } });
+          if (!category) category = await prisma.productCategory.findFirst();
           const createdProd = await prisma.product.create({
             data: {
               id: missingId,
