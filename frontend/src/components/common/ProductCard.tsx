@@ -49,7 +49,9 @@ export function ProductCard({
   const [quantity, setQuantity] = useState(1);
   const [addedAnimation, setAddedAnimation] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const { addItem, items } = useCartStore();
+  const cartStore = useCartStore();
+  const addItem = cartStore?.addItem || (() => {});
+  const items = cartStore?.items || [];
   const { toggleWishlist, isInWishlist } = useWishlistStore();
   const { success: toastSuccess } = useToast();
 

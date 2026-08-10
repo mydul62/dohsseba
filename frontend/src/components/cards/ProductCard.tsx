@@ -20,7 +20,9 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { addItem, items } = useCartStore();
+  const cartStore = useCartStore();
+  const addItem = cartStore?.addItem || (() => {});
+  const items = cartStore?.items || [];
   const { toggleWishlist, isInWishlist } = useWishlistStore();
   const { success: toastSuccess } = useToast();
 
