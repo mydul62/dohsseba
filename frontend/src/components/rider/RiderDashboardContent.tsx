@@ -7,6 +7,7 @@ import { formatCurrency } from '@/utils/cn';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSocket } from '@/hooks/useSocket';
+import { getSocket } from '@/lib/socket';
 import {
   Bike, Navigation, CheckCircle2, Clock, MapPin, Phone, Store,
   Package, Check, X, Loader2, User, Eye, Trash2, Tag, ShoppingBag,
@@ -151,23 +152,52 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
 
   // Realtime Socket Listener
   useEffect(() => {
-    if (!socket) return;
+    const socketInstance = socket || getSocket();
 
-    socket.emit('register_rider', { riderId: user?.id });
+    if (user?.id) {
+      socketInstance.emit('register_rider', { riderId: user?.id });
+    }
 
-    socket.on('new_order_dispatched', (order: any) => {
-      setOpenOrders((prev) => [order, ...prev]);
-      triggerOrderAlert();
-      showToast('New Dispatch Request Received!');
-    });
-
-    socket.on('order_status_updated', () => {
+    const handleNewOrder = (data: any) => {
+      console.log('⚡ [RIDER REALTIME] New dispatch request received:', data);
+      const rawOrder = data?.order || data;
+      if (rawOrder && (rawOrder.id || rawOrder.orderId)) {
+        setOpenOrders((prev) => {
+          const exists = prev.some((o) => o.id === (rawOrder.id || rawOrder.orderId));
+          if (exists) return prev;
+          return [rawOrder, ...prev];
+        });
+        triggerOrderAlert();
+        showToast('⚡ New Dispatch Request Received!');
+      }
       loadRiderData();
-    });
+    };
+
+    const handleStatusUpdate = (data: any) => {
+      console.log('⚡ [RIDER REALTIME] Order status update event:', data);
+      loadRiderData();
+    };
+
+    socketInstance.on('RIDER_ORDER_BROADCAST', handleNewOrder);
+    socketInstance.on('new_order_dispatched', handleNewOrder);
+    socketInstance.on('NEW_ORDER_DISPATCHED', handleNewOrder);
+    socketInstance.on('ORDER_CREATED', handleNewOrder);
+    socketInstance.on('order:created', handleNewOrder);
+    socketInstance.on('ORDER_STATUS_UPDATED', handleStatusUpdate);
+    socketInstance.on('order:status_updated', handleStatusUpdate);
+    socketInstance.on('RIDER_ORDER_ACCEPTED', handleStatusUpdate);
+    socketInstance.on('MISSION_COMPLETED', handleStatusUpdate);
 
     return () => {
-      socket.off('new_order_dispatched');
-      socket.off('order_status_updated');
+      socketInstance.off('RIDER_ORDER_BROADCAST', handleNewOrder);
+      socketInstance.off('new_order_dispatched', handleNewOrder);
+      socketInstance.off('NEW_ORDER_DISPATCHED', handleNewOrder);
+      socketInstance.off('ORDER_CREATED', handleNewOrder);
+      socketInstance.off('order:created', handleNewOrder);
+      socketInstance.off('ORDER_STATUS_UPDATED', handleStatusUpdate);
+      socketInstance.off('order:status_updated', handleStatusUpdate);
+      socketInstance.off('RIDER_ORDER_ACCEPTED', handleStatusUpdate);
+      socketInstance.off('MISSION_COMPLETED', handleStatusUpdate);
     };
   }, [socket, user?.id, loadRiderData]);
 
@@ -256,9 +286,12 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
 
   // Cancel Order Anytime
   const handleCancelOrder = async (orderId: string) => {
-    if (!window.confirm('Are you sure you want to CANCEL this order? It will be removed from your active missions.')) return;
+    if (!window.confirm('Are you sure you want to CANCEL this order? It will be saved in your delivery history.')) return;
     setActionLoading(orderId);
     try {
+      const targetOrder = activeMissions.find((o) => o.id === orderId) || selectedOrderDetails;
+      const cancelledObj = targetOrder ? { ...targetOrder, status: 'CANCELLED', updatedAt: new Date().toISOString() } : null;
+
       await fetchApi<any>(`/rider/orders/${orderId}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'CANCELLED' }),
@@ -266,6 +299,9 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
 
       setSelectedOrderDetails(null);
       setActiveMissions((prev) => prev.filter((o) => o.id !== orderId));
+      if (cancelledObj) {
+        setOrderHistory((prev) => [cancelledObj, ...prev.filter((o) => o.id !== orderId)]);
+      }
       showToast('Order CANCELLED! Saved in Delivery History.');
       loadRiderData();
     } finally {

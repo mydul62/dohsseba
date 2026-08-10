@@ -347,7 +347,11 @@ export const updateMissionStatus = async (
     console.warn(`Direct status update forced from ${order.status} to ${targetStatus}`);
   }
 
-  const updateData: any = { status: targetStatus };
+  const updateData: any = {
+    status: targetStatus,
+    riderId,
+    assignedRiderId: riderId,
+  };
   if (targetStatus === 'PICKED_UP') {
     updateData.pickupAt = new Date();
   }
@@ -359,8 +363,13 @@ export const updateMissionStatus = async (
     where: { id: orderId },
     data: updateData,
     include: {
-      customer: { select: { id: true, name: true } },
+      customer: { select: { id: true, name: true, phone: true } },
       address: true,
+      items: {
+        include: {
+          product: { select: { id: true, name: true, images: true, unit: true, price: true, sellerId: true } },
+        },
+      },
     },
   });
 
