@@ -446,7 +446,6 @@ export const getSellerProducts = async (sellerId: string) => {
   const where: any = isAdmin ? {} : {
     OR: [
       { sellerId },
-      { sellerId: null },
       { category: { slug: 'uncategorized' } },
     ],
   };
