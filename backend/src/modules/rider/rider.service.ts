@@ -570,7 +570,7 @@ export const getDeliveryHistory = async (userId: string, page = 1, limit = 50) =
         address: { select: { line1: true, line2: true, area: true, city: true, phone: true } },
         items: {
           include: {
-            product: { select: { name: true, images: true, unit: true, seller: true } },
+            product: { select: { id: true, name: true, images: true, unit: true, price: true, sellerId: true, seller: { select: { id: true, name: true, phone: true } } } },
           },
         },
       },
