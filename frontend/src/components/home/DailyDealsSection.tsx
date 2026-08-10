@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ProductCard } from '@/components/common/ProductCard';
 import { Flame, Clock } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-client';
+import { ALL_PRODUCTS } from '@/constants/products';
 
 interface DealProduct {
   id: string;
@@ -87,18 +88,23 @@ export function DailyDealsSection() {
           setProducts(list.map(mapProduct));
         } else {
           // Fallback to top discounted / popular products
-          fetch(`${API}/products?limit=12`)
-            .then((r2) => r2.json())
-            .then((res2) => {
-              if (res2?.success && Array.isArray(res2.data)) {
-                setProducts(res2.data.map(mapProduct));
-              } else if (res2?.success && Array.isArray(res2.data?.products)) {
-                setProducts(res2.data.products.map(mapProduct));
-              } else {
-                setProducts([]);
-              }
-            })
-            .catch(() => setProducts([]));
+            fetch(`${API}/products?limit=12`)
+              .then((r2) => r2.json())
+              .then((res2) => {
+                let list2: any[] = [];
+                if (res2?.success && Array.isArray(res2.data)) {
+                  list2 = res2.data;
+                } else if (res2?.success && Array.isArray(res2.data?.products)) {
+                  list2 = res2.data.products;
+                }
+
+                if (list2.length > 0) {
+                  setProducts(list2.map(mapProduct));
+                } else {
+                  setProducts(ALL_PRODUCTS as any[]);
+                }
+              })
+              .catch(() => setProducts(ALL_PRODUCTS as any[]));
         }
       })
       .catch(() => setProducts([]));

@@ -156,12 +156,14 @@ export async function runMeatFishSeed() {
   return { success: true, addedCount, updatedCount, totalCategories: subcatList.length };
 }
 
-runMeatFishSeed()
-  .then(() => {
-    console.log('🎉 Meat & Fish Seed Completed!');
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error('Seed Error:', err);
-    process.exit(1);
-  });
+if (require.main === module) {
+  runMeatFishSeed()
+    .then(() => {
+      console.log('🎉 Meat & Fish Seed Completed!');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('Seed Error:', err);
+      process.exit(1);
+    });
+}

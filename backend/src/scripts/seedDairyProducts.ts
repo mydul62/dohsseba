@@ -160,12 +160,14 @@ export async function runDairySeed() {
   return { success: true, addedCount, updatedCount, totalCategories: subcatList.length };
 }
 
-runDairySeed()
-  .then(() => {
-    console.log('🎉 Dairy Seed Completed!');
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error('Seed Error:', err);
-    process.exit(1);
-  });
+if (require.main === module) {
+  runDairySeed()
+    .then(() => {
+      console.log('🎉 Dairy Seed Completed!');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('Seed Error:', err);
+      process.exit(1);
+    });
+}

@@ -18,6 +18,8 @@ interface CategoryNode {
   };
 }
 
+import { SHOPPING_CATEGORIES } from '@/constants/products';
+
 export function PopularCategoriesSection() {
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,14 +32,14 @@ export function PopularCategoriesSection() {
         if (res?.success && Array.isArray(res.data)) {
           // Filter to top-level parent categories
           const parents = res.data.filter((c: any) => !c.parentId);
-          setCategories(parents);
+          setCategories(parents.length > 0 ? parents : res.data);
         }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  if (!loading && categories.length === 0) return null;
+  const displayList = categories.length > 0 ? categories : (SHOPPING_CATEGORIES as any[]);
 
   return (
     <section className="py-6 px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 bg-white font-sans text-slate-800">
@@ -67,8 +69,8 @@ export function PopularCategoriesSection() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4">
-            {categories.slice(0, 12).map((cat) => (
-              <CategoryCard key={cat.id} category={cat} basePath="/category" />
+            {displayList.slice(0, 12).map((cat) => (
+              <CategoryCard key={cat.id || cat.slug} category={cat} basePath="/category" />
             ))}
           </div>
         )}

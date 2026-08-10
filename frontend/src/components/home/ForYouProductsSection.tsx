@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProductCard } from '@/components/common/ProductCard';
 import { getApiBaseUrl } from '@/lib/api-client';
+import { ALL_PRODUCTS } from '@/constants/products';
 
 const PAGE_SIZE = 10;
 
@@ -57,19 +58,24 @@ export function ForYouProductsSection() {
           };
         });
 
-        setProducts((prev) => append ? [...prev, ...mapped] : mapped);
-
-        // If fewer than PAGE_SIZE returned, no more pages
-        const meta = data.meta;
-        if (meta) {
-          setHasMore(pageNum < Math.ceil(meta.total / PAGE_SIZE));
+        if (mapped.length === 0 && !append && pageNum === 1) {
+          setProducts(ALL_PRODUCTS as any[]);
+          setHasMore(false);
         } else {
-          setHasMore(data.data.length === PAGE_SIZE);
+          setProducts((prev) => append ? [...prev, ...mapped] : mapped);
+          const meta = data.meta;
+          if (meta) {
+            setHasMore(pageNum < Math.ceil(meta.total / PAGE_SIZE));
+          } else {
+            setHasMore(data.data.length === PAGE_SIZE);
+          }
         }
       } else {
+        if (!append && pageNum === 1) setProducts(ALL_PRODUCTS as any[]);
         setHasMore(false);
       }
     } catch {
+      if (!append && pageNum === 1) setProducts(ALL_PRODUCTS as any[]);
       setHasMore(false);
     }
   };

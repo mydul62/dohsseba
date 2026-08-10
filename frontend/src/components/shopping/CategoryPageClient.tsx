@@ -6,6 +6,7 @@ import { SubCategoryCard } from '@/components/shopping/SubCategoryCard';
 import { BreadcrumbNav } from '@/components/common/BreadcrumbNav';
 import { ProductCard } from '@/components/common/ProductCard';
 import { ShoppingBag, Package, ArrowUpDown } from 'lucide-react';
+import { ALL_PRODUCTS } from '@/constants/products';
 
 interface CategoryPageClientProps {
   categorySlug: string;
@@ -19,7 +20,19 @@ export function CategoryPageClient({
   initialProducts,
 }: CategoryPageClientProps) {
   const [category] = useState<any>(initialCategory);
-  const [products] = useState<any[]>(initialProducts);
+  
+  const fallbackList = useMemo(() => {
+    if (initialProducts && initialProducts.length > 0) return initialProducts;
+    const lower = categorySlug.toLowerCase();
+    const matched = ALL_PRODUCTS.filter((p: any) =>
+      p.categorySlug?.toLowerCase().includes(lower) ||
+      p.categoryName?.toLowerCase().includes(lower) ||
+      lower.includes(p.categorySlug?.toLowerCase() || 'xyz')
+    );
+    return matched.length > 0 ? matched : ALL_PRODUCTS.slice(0, 12);
+  }, [initialProducts, categorySlug]);
+
+  const [products] = useState<any[]>(fallbackList);
 
   // Filters & Sorting
   const [sortBy, setSortBy] = useState('newest');

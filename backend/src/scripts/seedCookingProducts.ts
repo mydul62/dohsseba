@@ -209,12 +209,14 @@ export async function runCookingSeed() {
   return { success: true, addedCount, updatedCount, totalCategories: subcatList.length };
 }
 
-runCookingSeed()
-  .then(() => {
-    console.log('🎉 Cooking Seed Completed!');
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error('Seed Error:', err);
-    process.exit(1);
-  });
+if (require.main === module) {
+  runCookingSeed()
+    .then(() => {
+      console.log('🎉 Cooking Seed Completed!');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('Seed Error:', err);
+      process.exit(1);
+    });
+}

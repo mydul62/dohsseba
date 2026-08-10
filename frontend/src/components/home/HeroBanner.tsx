@@ -19,12 +19,17 @@ import { useCategoryDrawerStore } from '@/store/useCategoryDrawerStore';
 import { useHomepage } from '@/hooks/useHomepage';
 
 export function HeroBanner({ initialData }: { initialData?: any }) {
+  const [mounted, setMounted] = useState(false);
   const { language } = useLanguageStore();
-  const isBn = language === 'BN';
+  const isBn = mounted ? language === 'BN' : false;
   const { openSearch } = useSearchStore();
   const { openDrawer } = useCategoryDrawerStore();
 
-  const { heroSlides: apiHeroSlides, promoCards: apiPromoCards, featuredShortcuts: apiShortcuts, isLoading } = useHomepage(initialData);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const { heroSlides: apiHeroSlides, promoCards: apiPromoCards, isLoading } = useHomepage(initialData);
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,32 +85,7 @@ export function HeroBanner({ initialData }: { initialData?: any }) {
     },
   ];
 
-  const shortcuts = apiShortcuts.length > 0 ? apiShortcuts : [
-    {
-      id: 'fs_1',
-      title: '-35% on Energy Drinks',
-      icon: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=100&auto=format&fit=crop&q=80',
-      link: '/category/snacks-beverages-drinks',
-    },
-    {
-      id: 'fs_2',
-      title: 'New Frozen Veg',
-      icon: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=100&auto=format&fit=crop&q=80',
-      link: '/category/fresh-fruits-vegetables',
-    },
-    {
-      id: 'fs_3',
-      title: 'Save up 30% on milk',
-      icon: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=100&auto=format&fit=crop&q=80',
-      link: '/category/dairy-eggs-bakery',
-    },
-    {
-      id: 'fs_4',
-      title: 'Free Delivery',
-      icon: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=100&auto=format&fit=crop&q=80',
-      link: '/offers',
-    },
-  ];
+
 
   // Auto slide carousel loop
   useEffect(() => {
@@ -117,7 +97,7 @@ export function HeroBanner({ initialData }: { initialData?: any }) {
   }, [heroSlides.length]);
 
   return (
-    <div className="relative w-full bg-white text-slate-900 overflow-hidden font-sans">
+    <div className="relative w-full bg-white text-slate-900 overflow-hidden font-sans" suppressHydrationWarning>
       
       {/* ── Top Toolbar: All Categories & Quick Shortcuts ── */}
       <div className="w-full max-w-[1720px] mx-auto px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 pt-3 pb-2 border-b border-slate-100">
@@ -151,29 +131,7 @@ export function HeroBanner({ initialData }: { initialData?: any }) {
         </div>
       </div>
 
-      {/* ── Dynamic Top Circular Shortcuts Row ── */}
-      <div className="w-full max-w-[1720px] mx-auto px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 py-4">
-        <div className="flex items-center justify-start gap-8 overflow-x-auto no-scrollbar">
-          {shortcuts.map((item: any) => (
-            <Link
-              key={item.id}
-              href={item.link}
-              className="flex items-center gap-3 group shrink-0"
-            >
-              <div className="w-16 h-16 rounded-full overflow-hidden border border-slate-200 p-0.5 group-hover:border-[#7eb343] transition-all bg-slate-100 shrink-0">
-                <img
-                  src={item.icon}
-                  alt={item.title}
-                  className="w-full h-full object-cover rounded-full group-hover:scale-105 transition-transform"
-                />
-              </div>
-              <span className="font-bold text-xs text-slate-800 group-hover:text-[#7eb343] transition-colors whitespace-nowrap">
-                {item.title}
-              </span>
-            </Link>
-          ))}
-        </div>
-      </div>
+
 
       {/* ── Main Hero Section (Dynamic Database Hero Slide + App Mobile Promo Grid) ── */}
       <div className="w-full max-w-[1720px] mx-auto px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 pb-6">

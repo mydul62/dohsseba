@@ -158,12 +158,14 @@ export async function runFruitsVegetablesSeed() {
   return { success: true, addedCount, updatedCount, totalCategories: subcatList.length };
 }
 
-runFruitsVegetablesSeed()
-  .then(() => {
-    console.log('🎉 Fruits & Vegetables Seed Completed!');
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error('Seed Error:', err);
-    process.exit(1);
-  });
+if (require.main === module) {
+  runFruitsVegetablesSeed()
+    .then(() => {
+      console.log('🎉 Fruits & Vegetables Seed Completed!');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('Seed Error:', err);
+      process.exit(1);
+    });
+}

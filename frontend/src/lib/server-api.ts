@@ -1,11 +1,6 @@
 export const getServerApiBaseUrl = (): string => {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  if (process.env.INTERNAL_API_URL) {
-    return process.env.INTERNAL_API_URL;
-  }
-  return 'http://localhost:5000/api/v1';
+  const url = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api/v1';
+  return url.replace('localhost', '127.0.0.1');
 };
 
 export async function fetchServerApi<T>(
@@ -40,7 +35,6 @@ export async function fetchServerApi<T>(
     const json = await res.json();
     return json;
   } catch (error: any) {
-    console.error(`[fetchServerApi Error] Endpoint: ${endpoint}`, error?.message || error);
     return {
       success: false,
       message: error?.message || 'Server network error',
