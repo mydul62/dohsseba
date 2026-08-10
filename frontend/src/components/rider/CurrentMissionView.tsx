@@ -129,13 +129,13 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
   }, []);
 
   // Direct Status Update Function
-  const handleUpdateStatus = async (targetStatus: string) => {
+  const handleUpdateStatus = async (targetStatus: string, note?: string) => {
     setActionLoading(true);
     setStatusMsg('');
     try {
       const res = await fetchApi<any>(`/rider/orders/${mission.id}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ status: targetStatus }),
+        body: JSON.stringify({ status: targetStatus, note }),
       });
       if (res?.success) {
         setCurrentMission((prev: any) => ({ ...prev, status: targetStatus }));
@@ -148,6 +148,13 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleCancelMission = async () => {
+    const reason = window.prompt('Please enter the reason for cancelling this order (e.g. Customer unreachable / Wrong address):');
+    if (reason === null) return;
+    const note = reason.trim() || 'Rider cancelled order without extra notes.';
+    await handleUpdateStatus('CANCELLED', note);
   };
 
   // 4 Milestone Progression Sequence
@@ -254,11 +261,7 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
 
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm('Are you sure you want to CANCEL this delivery order? It will be removed from active missions.')) {
-                handleUpdateStatus('CANCELLED');
-              }
-            }}
+            onClick={handleCancelMission}
             disabled={actionLoading}
             className="w-9 h-9 rounded-2xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/40 flex items-center justify-center transition-all active:scale-95"
             title="Cancel Order"

@@ -318,15 +318,17 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
 
   // Cancel Order Anytime
   const handleCancelOrder = async (orderId: string) => {
-    if (!window.confirm('Are you sure you want to CANCEL this order? It will be saved in your delivery history.')) return;
+    const reason = window.prompt('Please enter the reason for cancelling this order (e.g. Customer unreachable / Wrong address):');
+    if (reason === null) return;
+    const note = reason.trim() || 'Rider cancelled order without extra notes.';
     setActionLoading(orderId);
     try {
       const targetOrder = activeMissions.find((o) => o.id === orderId) || selectedOrderDetails;
-      const cancelledObj = targetOrder ? { ...targetOrder, status: 'CANCELLED', updatedAt: new Date().toISOString() } : null;
+      const cancelledObj = targetOrder ? { ...targetOrder, status: 'CANCELLED', notes: `Rider Cancellation Note: ${note}`, updatedAt: new Date().toISOString() } : null;
 
       await fetchApi<any>(`/rider/orders/${orderId}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ status: 'CANCELLED' }),
+        body: JSON.stringify({ status: 'CANCELLED', note }),
       }).catch(() => null);
 
       setSelectedOrderDetails(null);
@@ -334,7 +336,7 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
       if (cancelledObj) {
         setOrderHistory((prev) => [cancelledObj, ...prev.filter((o) => o.id !== orderId)]);
       }
-      showToast('Order CANCELLED! Saved in Delivery History.');
+      showToast('Order CANCELLED! Reason saved & sent to Seller.');
       loadRiderData();
     } finally {
       setActionLoading(null);

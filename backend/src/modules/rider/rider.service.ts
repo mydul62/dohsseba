@@ -306,7 +306,8 @@ export const getActiveMissions = async (riderId: string) => {
 export const updateMissionStatus = async (
   orderId: string,
   riderId: string,
-  targetStatusInput: string
+  targetStatusInput: string,
+  cancellationNote?: string
 ) => {
   const [order, riderUser, profile] = await Promise.all([
     prisma.order.findUnique({
@@ -366,6 +367,11 @@ export const updateMissionStatus = async (
     assignedRiderId: riderId,
     ...(riderUser?.name ? { riderName: riderUser.name } : {}),
   };
+  if (cancellationNote && targetStatus === 'CANCELLED') {
+    updateData.notes = cancellationNote.startsWith('Rider Cancellation Note:')
+      ? cancellationNote
+      : `Rider Cancellation Note: ${cancellationNote}`;
+  }
   if (targetStatus === 'PICKED_UP') {
     updateData.pickupAt = new Date();
   }

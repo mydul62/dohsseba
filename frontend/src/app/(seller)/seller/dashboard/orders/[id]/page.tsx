@@ -30,7 +30,7 @@ import {
   ArrowLeft, Printer, Download, CheckCircle2, Package,
   Truck, Clock, RefreshCw, Check, User, MapPin, CreditCard,
   PhoneCall, Mail, Loader2, AlertTriangle, XCircle, RotateCcw,
-  ShoppingBag, ChevronRight, Info,
+  ShoppingBag, ChevronRight, Info, AlertCircle,
 } from 'lucide-react';
 
 // ─── Status Flow ──────────────────────────────────────────────────────────────
@@ -410,6 +410,22 @@ export default function OrderDetailPage() {
           {!canUpdateStatus && order.status === 'DELIVERED' && (
             <div className="mt-4 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-300">
               <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> This order was successfully delivered. No further action required.
+            </div>
+          )}
+          {order.status === 'CANCELLED' && (
+            <div className="mt-4 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 space-y-1.5 text-xs text-rose-200">
+              <div className="flex items-center gap-2 font-bold text-rose-400 text-sm">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>Rider Cancellation Reason / Note</span>
+              </div>
+              <p className="font-medium text-rose-200 leading-relaxed pl-6">
+                {order.notes || order.cancellationReason || 'Order was cancelled by rider/customer. No extra reason provided.'}
+              </p>
+              {order.riderName && (
+                <p className="text-[11px] text-slate-400 font-mono pl-6">
+                  Assigned Rider: {order.riderName}
+                </p>
+              )}
             </div>
           )}
         </div>

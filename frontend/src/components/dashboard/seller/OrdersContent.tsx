@@ -10,7 +10,7 @@ import {
   Search, Download, Eye, Loader2, ChevronLeft, ChevronRight,
   X, ShoppingBag, Check, Clock, RefreshCw, Archive, Truck,
   CheckCircle2, XCircle, AlertTriangle, RotateCcw, Package,
-  Calendar, User, Filter, ArrowUpDown, Banknote, Trash2,
+  Calendar, User, Filter, ArrowUpDown, Banknote, Trash2, AlertCircle,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -437,6 +437,7 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
 
   const [autoAcceptOrders, setAutoAcceptOrders] = useState<boolean>(false);
   const [togglingAutoAccept, setTogglingAutoAccept] = useState<boolean>(false);
+  const [selectedCancelledOrder, setSelectedCancelledOrder] = useState<any>(null);
 
   // Fetch Seller Store Profile Auto-Accept Preference
   useEffect(() => {
@@ -722,7 +723,22 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
                     <div className="font-black text-white">{formatCurrency(o.total)}</div>
                     {o.discount > 0 && <div className="text-[10px] text-emerald-400">-{formatCurrency(o.discount)}</div>}
                   </td>
-                  <td className="p-4 text-center"><StatusBadge status={o.status} /></td>
+                  <td className="p-4 text-center">
+                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                      <StatusBadge status={o.status} />
+                      {(o.status === 'CANCELLED' || o.status === 'REJECTED' || o.notes) && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCancelledOrder(o)}
+                          className="px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-bold hover:bg-rose-500/30 flex items-center gap-1 cursor-pointer"
+                          title="View Cancellation Reason Note"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>Note</span>
+                        </button>
+                      )}
+                    </div>
+                  </td>
                   <td className="p-4 hidden lg:table-cell">
                     <div className="text-slate-300">{new Date(o.createdAt).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                     <div className="text-[10px] text-slate-500">{new Date(o.createdAt).toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' })}</div>
@@ -774,6 +790,61 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
           </div>
         )}
       </div>
+
+      {/* ── Cancellation Reason Modal ── */}
+      {selectedCancelledOrder && (
+        <div className="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#1f2136] border border-rose-500/40 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-400" />
+                <h3 className="font-bold text-white text-base">Order Cancellation Details</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedCancelledOrder(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between text-slate-300">
+                <span>Order ID:</span>
+                <span className="font-mono font-bold text-white">#{selectedCancelledOrder.id?.slice(-6).toUpperCase()}</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Customer Name:</span>
+                <span className="font-bold text-white">{selectedCancelledOrder.customerName || selectedCancelledOrder.customer?.name || 'Customer'}</span>
+              </div>
+              {selectedCancelledOrder.riderName && (
+                <div className="flex justify-between text-slate-300">
+                  <span>Assigned Rider:</span>
+                  <span className="font-bold text-indigo-400">{selectedCancelledOrder.riderName}</span>
+                </div>
+              )}
+
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 space-y-1">
+                <span className="text-[10px] font-extrabold text-rose-400 uppercase tracking-wider block">Rider Cancellation Reason Note:</span>
+                <p className="text-xs text-rose-200 font-medium leading-relaxed">
+                  {selectedCancelledOrder.notes || selectedCancelledOrder.cancellationReason || 'Order was cancelled by rider/customer. No extra cancellation note provided.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedCancelledOrder(null)}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 cursor-pointer"
+              >
+                Close View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

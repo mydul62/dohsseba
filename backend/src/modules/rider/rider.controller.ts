@@ -55,8 +55,14 @@ export const getActiveMissions = async (req: AuthRequest, res: Response, next: N
 // ─── PATCH /rider/orders/:id/status ──────────────────────────────────────────
 export const updateOrderStatus = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { status } = req.body;
-    const order = await riderService.updateMissionStatus(req.params.id as string, req.user!.id, status);
+    const { status, note, reason, cancellationReason, notes } = req.body;
+    const cancellationNote = note || reason || cancellationReason || notes;
+    const order = await riderService.updateMissionStatus(
+      req.params.id as string,
+      req.user!.id,
+      status,
+      cancellationNote
+    );
     return sendResponse(res, 200, `Mission status updated to ${status}`, order);
   } catch (e) { next(e); }
 };
