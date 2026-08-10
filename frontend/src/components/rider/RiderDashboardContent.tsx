@@ -9,7 +9,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useSocket } from '@/hooks/useSocket';
 import {
   Bike, Navigation, CheckCircle2, Clock, MapPin, Phone, Store,
-  Package, Check, X, Loader2, User, Eye, Trash2, Tag, ShoppingBag
+  Package, Check, X, Loader2, User, Eye, Trash2, Tag, ShoppingBag,
+  Search, ShieldCheck, Filter, Wallet, LogOut, AlertTriangle, BellRing
 } from 'lucide-react';
 import { CurrentMissionView } from './CurrentMissionView';
 
@@ -61,6 +62,13 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
     setMounted(true);
   }, []);
 
+  // ── Tab State Synced with InitialTab Route ─────────────────────────────────
+  const [activeTab, setActiveTab] = useState<'orders' | 'history' | 'wallet' | 'notifications' | 'profile'>(initialTab);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
   // ── Core Rider State ──────────────────────────────────────────────────────
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [autoAccept, setAutoAccept] = useState<boolean>(false);
@@ -73,6 +81,16 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
   const [activeMissions, setActiveMissions] = useState<any[]>([]);
   const [openOrders, setOpenOrders] = useState<any[]>([]);
   const [orderHistory, setOrderHistory] = useState<any[]>([]);
+  const [historyFilter, setHistoryFilter] = useState<'ALL' | 'DELIVERED' | 'CANCELLED'>('ALL');
+  const [historySearch, setHistorySearch] = useState<string>('');
+
+  // ── Wallet & Withdraw State ───────────────────────────────────────────────
+  const [withdrawHistory, setWithdrawHistory] = useState<any[]>([]);
+  const [showWithdrawModal, setShowWithdrawModal] = useState<boolean>(false);
+  const [withdrawAmount, setWithdrawAmount] = useState<string>('');
+  const [withdrawMethod, setWithdrawMethod] = useState<'bkash' | 'nagad' | 'bank'>('bkash');
+  const [withdrawAccNo, setWithdrawAccNo] = useState<string>('');
+  const [requestingWithdraw, setRequestingWithdraw] = useState<boolean>(false);
 
   // ── Order Detail Modal State ──────────────────────────────────────────────
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
@@ -83,12 +101,13 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
   const loadRiderData = useCallback(async () => {
     setLoading(true);
     try {
-      const [pRes, sRes, actRes, opRes, hRes] = await Promise.all([
+      const [pRes, sRes, actRes, opRes, hRes, wRes] = await Promise.all([
         fetchApi<any>('/rider/profile').catch(() => null),
         fetchApi<any>('/rider/stats').catch(() => null),
         fetchApi<any>('/rider/orders/active').catch(() => null),
         fetchApi<any>('/rider/orders/open').catch(() => null),
-        fetchApi<any>('/rider/orders/history?limit=30').catch(() => null),
+        fetchApi<any>('/rider/orders/history?limit=50').catch(() => null),
+        fetchApi<any>('/rider/withdraw').catch(() => null),
       ]);
 
       if (pRes?.success && pRes.data) {
@@ -110,8 +129,16 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
         setOpenOrders([]);
       }
 
-      if (hRes?.success && Array.isArray(hRes.data)) {
-        setOrderHistory(hRes.data);
+      if (hRes?.success && hRes.data) {
+        const historyList = Array.isArray(hRes.data) ? hRes.data : (hRes.data.orders || []);
+        setOrderHistory(historyList);
+      } else {
+        setOrderHistory([]);
+      }
+
+      if (wRes?.success && wRes.data) {
+        const wList = Array.isArray(wRes.data) ? wRes.data : (wRes.data.requests || []);
+        setWithdrawHistory(wList);
       }
     } finally {
       setLoading(false);
@@ -239,14 +266,65 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
 
       setSelectedOrderDetails(null);
       setActiveMissions((prev) => prev.filter((o) => o.id !== orderId));
-      showToast('Order CANCELLED! Removed from active missions.');
+      showToast('Order CANCELLED! Saved in Delivery History.');
       loadRiderData();
     } finally {
       setActionLoading(null);
     }
   };
 
+  // Request Payout Submit
+  const handleRequestWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!withdrawAmount || Number(withdrawAmount) <= 0) return;
+
+    setRequestingWithdraw(true);
+    try {
+      const res = await fetchApi<any>('/rider/withdraw', {
+        method: 'POST',
+        body: JSON.stringify({
+          amount: Number(withdrawAmount),
+          paymentMethod: withdrawMethod,
+          accountNumber: withdrawAccNo,
+        }),
+      }).catch(() => null);
+
+      if (res?.success) {
+        setShowWithdrawModal(false);
+        setWithdrawAmount('');
+        setWithdrawAccNo('');
+        showToast('Withdrawal request submitted successfully!');
+        loadRiderData();
+      } else {
+        showToast(res?.message || 'Withdrawal request failed.');
+      }
+    } finally {
+      setRequestingWithdraw(false);
+    }
+  };
+
   const todayEarnings = stats?.todayEarnings ?? stats?.totalEarnings ?? 0;
+
+  // Filtered History Calculation
+  const filteredHistory = orderHistory.filter((ord: any) => {
+    const matchesFilter =
+      historyFilter === 'ALL'
+        ? true
+        : historyFilter === 'DELIVERED'
+        ? ord.status === 'DELIVERED' || ord.status === 'COMPLETED'
+        : ord.status === 'CANCELLED' || ord.status === 'REJECTED';
+
+    const q = historySearch.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      ord.id?.toLowerCase().includes(q) ||
+      ord.customerName?.toLowerCase().includes(q) ||
+      ord.customer?.name?.toLowerCase().includes(q) ||
+      ord.address?.line1?.toLowerCase().includes(q) ||
+      ord.deliveryAddress?.toLowerCase().includes(q);
+
+    return matchesFilter && matchesSearch;
+  });
 
   return (
     <div className="space-y-6 pb-24 select-none">
@@ -297,131 +375,366 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
         </div>
       </div>
 
-      {/* ── 1. ACTIVE DELIVERIES SECTION ── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <span>ACTIVE DELIVERIES</span>
-            <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-black flex items-center justify-center border border-blue-500/30">
-              {activeMissions.length}
-            </span>
-          </h2>
-        </div>
+      {/* ══════════════════════════════════════════════════════════════════════
+          DYNAMIC ROUTE VIEW HANDLER (5 TABS)
+         ══════════════════════════════════════════════════════════════════════ */}
 
-        {activeMissions.length === 0 ? (
-          <div className="p-8 rounded-3xl bg-[#0F172A] border border-slate-800 text-center space-y-2">
-            <Bike className="w-10 h-10 text-slate-600 mx-auto" />
-            <h3 className="font-extrabold text-sm text-white">No Active Deliveries</h3>
-            <p className="text-xs text-slate-500">Accept an incoming request below to start delivery.</p>
+      {/* TAB 1: HISTORY VIEW */}
+      {activeTab === 'history' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <span>DELIVERY & CANCELLED HISTORY</span>
+              <span className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 text-[10px] font-black flex items-center justify-center border border-indigo-500/30">
+                {filteredHistory.length}
+              </span>
+            </h2>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {activeMissions.map((ord, idx) => (
-              <CurrentMissionView
-                key={ord.id || idx}
-                mission={ord}
-                onMissionUpdate={loadRiderData}
-                onOpenDetails={(selectedOrd) => setSelectedOrderDetails(selectedOrd)}
-                isPinned={idx === 0 && activeMissions.length > 1}
-              />
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* ── 2. INCOMING REQUESTS SECTION ── */}
-      <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <span>INCOMING REQUESTS</span>
-            <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-black flex items-center justify-center border border-amber-500/30">
-              {openOrders.length}
-            </span>
-          </h2>
-          <button
-            type="button"
-            onClick={() => setAutoAccept(!autoAccept)}
-            className="text-[11px] font-bold text-blue-400 hover:text-blue-300"
-          >
-            {autoAccept ? 'Auto-accept ON' : 'Auto-accept off'}
-          </button>
-        </div>
-
-        {openOrders.length === 0 ? (
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/60 text-center text-xs text-slate-500">
-            No incoming dispatch requests right now.
-          </div>
-        ) : (
           <div className="space-y-3">
-            {openOrders.map((ord) => {
-              const cName = ord.customerName || ord.user?.name || ord.guestName || 'Customer';
-              const distance = ord.pickupDistance || '1.2 km';
-              const fee = ord.deliveryFee || 65;
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Search history by Order ID, customer or address..."
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                className="w-full h-10 pl-9 pr-4 rounded-xl bg-[#0F172A] border border-slate-800 text-xs font-semibold text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
 
-              return (
-                <div
-                  key={ord.id}
-                  className="p-4 rounded-3xl bg-[#0F172A] border-2 border-dashed border-amber-500/60 shadow-xl space-y-3.5 relative"
+            <div className="flex items-center gap-2">
+              {['ALL', 'DELIVERED', 'CANCELLED'].map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setHistoryFilter(st as any)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    historyFilter === st
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'
+                  }`}
                 >
-                  {/* Top Badge & Distance */}
-                  <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-wider border border-amber-500/30 flex items-center gap-1">
-                      ⏱ NEW REQUEST
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">Pickup {distance}</span>
-                  </div>
+                  {st}
+                </button>
+              ))}
+            </div>
+          </div>
 
-                  {/* Order ID & Customer Name + Fee */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-sm font-extrabold text-white">
-                        Order <span className="font-mono font-black">#{ord.id?.slice(-6).toUpperCase()}</span> — {cName}
+          {filteredHistory.length === 0 ? (
+            <div className="p-8 rounded-3xl bg-[#0F172A] border border-slate-800 text-center space-y-2">
+              <Clock className="w-10 h-10 text-slate-600 mx-auto" />
+              <h3 className="font-extrabold text-sm text-white">No Order History Found</h3>
+              <p className="text-xs text-slate-500">Delivered and cancelled orders will appear here.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredHistory.map((ord: any) => {
+                const isDelivered = ord.status === 'DELIVERED' || ord.status === 'COMPLETED';
+                const isCancelled = ord.status === 'CANCELLED' || ord.status === 'REJECTED';
+                const cName = ord.customerName || ord.customer?.name || ord.user?.name || ord.guestName || 'Resident Customer';
+                const cPhone = ord.phone || ord.customer?.phone || ord.user?.phone || ord.customerPhone || 'N/A';
+                const addr = ord.address?.line1 || ord.address || ord.deliveryAddress || 'DOHS Location, Dhaka';
+                const itemsList = ord.items || [];
+
+                return (
+                  <div key={ord.id} className="p-4 rounded-3xl bg-[#0F172A] border border-slate-800 space-y-3 shadow-xl">
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-xs text-slate-300">
+                          #{ord.id?.slice(-6).toUpperCase()}
+                        </span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border uppercase ${
+                            isDelivered
+                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                              : isCancelled
+                              ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                              : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                          }`}
+                        >
+                          {isDelivered ? '✓ Delivered' : isCancelled ? '✕ Cancelled' : ord.status}
+                        </span>
+                      </div>
+
+                      <span className={`font-mono font-black text-xs ${isDelivered ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {isDelivered ? `+৳${ord.deliveryFee || 50}` : '৳0 (Cancelled)'}
                       </span>
                     </div>
-                    <span className="text-base font-black text-emerald-400 font-mono">+৳{fee}</span>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <div>
+                        <strong className="text-white font-bold block">{cName}</strong>
+                        <span className="text-slate-400 font-mono">{cPhone}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrderDetails(ord)}
+                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 font-extrabold text-xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Products & Details</span>
+                      </button>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-[#0B1120] border border-slate-850 text-xs flex items-start gap-2 text-slate-300">
+                      <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                      <span className="truncate">{addr}</span>
+                    </div>
+
+                    {itemsList.length > 0 && (
+                      <div className="space-y-1.5 pt-1 border-t border-slate-850">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
+                          Products ({itemsList.length} items):
+                        </span>
+                        <div className="space-y-1">
+                          {itemsList.map((i: any, idx: number) => (
+                            <div key={i.id || idx} className="flex justify-between items-center text-[11px]">
+                              <span className="text-slate-300 truncate w-3/4">
+                                {i.quantity || 1}x {i.name || i.product?.name || `Item #${idx + 1}`}
+                              </span>
+                              <span className="font-mono text-slate-400">
+                                ৳{Number(i.price || i.unitPrice || 0) * Number(i.quantity || 1)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
-                  {/* Action Buttons: Decline | Eye Details | Accept */}
-                  <div className="grid grid-cols-12 gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => handleDeclineOrder(ord.id)}
-                      className="col-span-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold text-xs transition-all cursor-pointer"
-                    >
-                      Decline
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrderDetails(ord)}
-                      className="col-span-3 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-blue-400 font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer"
-                      title="Preview Order Details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleAcceptOrder(ord)}
-                      disabled={actionLoading === ord.id}
-                      className="col-span-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
-                    >
-                      {actionLoading === ord.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4 stroke-[3]" />
-                          <span>Accept</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+      {/* TAB 2: WALLET VIEW */}
+      {activeTab === 'wallet' && (
+        <div className="space-y-5">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-black text-slate-300 uppercase tracking-wider">
+              RIDER WALLET & PAYOUTS
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowWithdrawModal(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md cursor-pointer"
+            >
+              + Request Payout
+            </button>
           </div>
-        )}
-      </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-4 rounded-2xl bg-[#0F172A] border border-slate-800 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Available Balance</span>
+              <div className="text-xl font-black text-emerald-400 font-mono">
+                ৳{stats?.totalEarnings || todayEarnings}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#0F172A] border border-slate-800 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Total Completed Trips</span>
+              <div className="text-xl font-black text-blue-400 font-mono">
+                {stats?.totalTrips || 0} Trips
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="font-bold text-xs text-slate-400 uppercase tracking-wider px-1">Withdrawal Requests</h3>
+            {withdrawHistory.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-[#0F172A] border border-slate-800 text-center text-xs text-slate-500">
+                No payout withdrawal requests submitted yet.
+              </div>
+            ) : (
+              withdrawHistory.map((w: any) => (
+                <div key={w.id} className="p-3.5 rounded-2xl bg-[#0F172A] border border-slate-800 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-bold text-white block">৳{w.amount} via {w.paymentMethod}</span>
+                    <span className="text-[10px] text-slate-500">{new Date(w.createdAt || Date.now()).toLocaleDateString()}</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                    {w.status || 'PENDING'}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: PROFILE VIEW */}
+      {activeTab === 'profile' && (
+        <div className="space-y-5">
+          <div className="p-6 rounded-3xl bg-[#0F172A] border border-slate-800 space-y-4 text-center">
+            <div className="w-20 h-20 rounded-full bg-indigo-600 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-xl">
+              {user?.name?.[0] || 'R'}
+            </div>
+
+            <div>
+              <h3 className="font-black text-lg text-white">{user?.name || 'Assigned Rider'}</h3>
+              <p className="text-xs text-slate-400 font-mono">{user?.phone || '+880 1711-223344'}</p>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                NID & License Verified
+              </span>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-[#0F172A] border border-slate-800 space-y-3 text-xs">
+            <h4 className="font-bold text-slate-400 uppercase tracking-wider">Assigned Vehicle Roster</h4>
+            <div className="flex justify-between text-slate-300">
+              <span>Vehicle Type:</span>
+              <span className="font-bold text-white">Motorbike / Express Cycle</span>
+            </div>
+            <div className="flex justify-between text-slate-300">
+              <span>Plate Number:</span>
+              <span className="font-mono font-bold text-white">DHAKA METRO-HA 14-8891</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={logout}
+            className="w-full py-3.5 rounded-2xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 font-bold text-xs border border-rose-500/40 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Log Out Rider Session</span>
+          </button>
+        </div>
+      )}
+
+      {/* TAB 4: ORDERS VIEW (DEFAULT DISPATCH & ACTIVE MISSIONS) */}
+      {(activeTab === 'orders' || activeTab === 'notifications') && (
+        <>
+          {/* ── ACTIVE DELIVERIES SECTION ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                <span>ACTIVE DELIVERIES</span>
+                <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-black flex items-center justify-center border border-blue-500/30">
+                  {activeMissions.length}
+                </span>
+              </h2>
+            </div>
+
+            {activeMissions.length === 0 ? (
+              <div className="p-8 rounded-3xl bg-[#0F172A] border border-slate-800 text-center space-y-2">
+                <Bike className="w-10 h-10 text-slate-600 mx-auto" />
+                <h3 className="font-extrabold text-sm text-white">No Active Deliveries</h3>
+                <p className="text-xs text-slate-500">Accept an incoming request below to start delivery.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {activeMissions.map((ord, idx) => (
+                  <CurrentMissionView
+                    key={ord.id || idx}
+                    mission={ord}
+                    onMissionUpdate={loadRiderData}
+                    onOpenDetails={(selectedOrd) => setSelectedOrderDetails(selectedOrd)}
+                    isPinned={idx === 0 && activeMissions.length > 1}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── INCOMING REQUESTS SECTION ── */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                <span>INCOMING REQUESTS</span>
+                <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-black flex items-center justify-center border border-amber-500/30">
+                  {openOrders.length}
+                </span>
+              </h2>
+              <button
+                type="button"
+                onClick={() => setAutoAccept(!autoAccept)}
+                className="text-[11px] font-bold text-blue-400 hover:text-blue-300"
+              >
+                {autoAccept ? 'Auto-accept ON' : 'Auto-accept off'}
+              </button>
+            </div>
+
+            {openOrders.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/60 text-center text-xs text-slate-500">
+                No incoming dispatch requests right now.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {openOrders.map((ord) => {
+                  const cName = ord.customerName || ord.user?.name || ord.guestName || 'Customer';
+                  const distance = ord.pickupDistance || '1.2 km';
+                  const fee = ord.deliveryFee || 65;
+
+                  return (
+                    <div
+                      key={ord.id}
+                      className="p-4 rounded-3xl bg-[#0F172A] border-2 border-dashed border-amber-500/60 shadow-xl space-y-3.5 relative"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-wider border border-amber-500/30 flex items-center gap-1">
+                          ⏱ NEW REQUEST
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">Pickup {distance}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-sm font-extrabold text-white">
+                            Order <span className="font-mono font-black">#{ord.id?.slice(-6).toUpperCase()}</span> — {cName}
+                          </span>
+                        </div>
+                        <span className="text-base font-black text-emerald-400 font-mono">+৳{fee}</span>
+                      </div>
+
+                      <div className="grid grid-cols-12 gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleDeclineOrder(ord.id)}
+                          className="col-span-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold text-xs transition-all cursor-pointer"
+                        >
+                          Decline
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOrderDetails(ord)}
+                          className="col-span-3 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-blue-400 font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer"
+                          title="Preview Order Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAcceptOrder(ord)}
+                          disabled={actionLoading === ord.id}
+                          className="col-span-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                        >
+                          {actionLoading === ord.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4 stroke-[3]" />
+                              <span>Accept</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* ── ORDER DETAIL MODAL / BOTTOM SHEET (OPENED BY EYE ICON) ── */}
       {selectedOrderDetails && (
@@ -532,6 +845,68 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── WITHDRAWAL REQUEST MODAL ── */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <form onSubmit={handleRequestWithdraw} className="w-full max-w-sm bg-[#0F172A] border border-slate-800 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="font-black text-white text-base">Request Wallet Payout</h3>
+              <button type="button" onClick={() => setShowWithdrawModal(false)} className="p-1 text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs font-semibold">
+              <div>
+                <label className="block text-slate-400 mb-1 font-bold">Withdrawal Amount (৳)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 1000"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  className="w-full h-11 px-3.5 rounded-2xl bg-[#0B1120] border border-slate-700 text-white font-bold"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1 font-bold">Payout Channel</label>
+                <select
+                  value={withdrawMethod}
+                  onChange={(e) => setWithdrawMethod(e.target.value as any)}
+                  className="w-full h-11 px-3.5 rounded-2xl bg-[#0B1120] border border-slate-700 text-white font-bold"
+                >
+                  <option value="bkash">bKash Mobile Personal</option>
+                  <option value="nagad">Nagad Mobile Wallet</option>
+                  <option value="bank">Bank Account Transfer</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1 font-bold">Account / Phone Number</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 01711223344"
+                  value={withdrawAccNo}
+                  onChange={(e) => setWithdrawAccNo(e.target.value)}
+                  className="w-full h-11 px-3.5 rounded-2xl bg-[#0B1120] border border-slate-700 text-white font-bold"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={requestingWithdraw}
+              className="w-full py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-xl flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {requestingWithdraw && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>Submit Payout Request</span>
+            </button>
+          </form>
         </div>
       )}
 

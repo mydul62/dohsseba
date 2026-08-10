@@ -460,20 +460,33 @@ export const getTodayStats = async (riderId: string) => {
 
 // ─── Delivery History ─────────────────────────────────────────────────────────
 
-export const getDeliveryHistory = async (riderId: string, page = 1, limit = 20) => {
+export const getDeliveryHistory = async (riderId: string, page = 1, limit = 50) => {
   const skip = (page - 1) * limit;
   const [orders, total] = await Promise.all([
     prisma.order.findMany({
-      where: { riderId, status: 'DELIVERED' },
+      where: {
+        OR: [{ riderId }, { assignedRiderId: riderId }],
+        status: { in: ['DELIVERED', 'CANCELLED', 'REJECTED', 'COMPLETED'] as any[] },
+      },
       orderBy: { updatedAt: 'desc' },
       skip,
       take: limit,
       include: {
-        customer: { select: { name: true } },
-        address: { select: { line1: true, area: true, city: true } },
+        customer: { select: { name: true, phone: true } },
+        address: { select: { line1: true, line2: true, area: true, city: true, phone: true } },
+        items: {
+          include: {
+            product: { select: { name: true, images: true, unit: true, seller: true } },
+          },
+        },
       },
     }),
-    prisma.order.count({ where: { riderId, status: 'DELIVERED' } }),
+    prisma.order.count({
+      where: {
+        OR: [{ riderId }, { assignedRiderId: riderId }],
+        status: { in: ['DELIVERED', 'CANCELLED', 'REJECTED', 'COMPLETED'] as any[] },
+      },
+    }),
   ]);
 
   return { orders, total };
