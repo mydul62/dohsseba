@@ -48,7 +48,7 @@ function Stars({ r }: { r: number }) {
   );
 }
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 100;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
