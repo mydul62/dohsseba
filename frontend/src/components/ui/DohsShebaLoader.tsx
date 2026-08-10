@@ -179,9 +179,9 @@ export function DohsShebaLoader({
     );
   }
 
-  // Default: fullScreen
+  // Default: fullScreen / page loader
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-white via-emerald-50/20 to-white flex items-center justify-center">
+    <div className="w-full min-h-[70vh] flex items-center justify-center bg-gradient-to-b from-white via-emerald-50/20 to-white">
       {content}
     </div>
   );
