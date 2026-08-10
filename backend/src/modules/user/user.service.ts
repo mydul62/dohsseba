@@ -8,11 +8,12 @@ export const getUserProfile = async (userId: string) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
-      id: true, name: true, email: true, phone: true,
+      id: true, name: true, email: true, phone: true, bio: true,
       role: true, avatar: true, emailVerified: true,
       isActive: true, createdAt: true, updatedAt: true,
       providerProfile: true,
       sellerProfile: true,
+      riderProfile: true,
       wallet: { select: { id: true, balance: true } },
       _count: {
         select: { orders: true, bookings: true, reviews: true },
@@ -25,15 +26,25 @@ export const getUserProfile = async (userId: string) => {
 
 export const updateUserProfile = async (
   userId: string,
-  data: { name?: string; phone?: string; avatar?: string }
+  data: { name?: string; phone?: string; avatar?: string; bio?: string }
 ) => {
+  // Whitelist only editable profile fields to prevent unauthorized mutations
+  const updateData: any = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.phone !== undefined) updateData.phone = data.phone;
+  if (data.avatar !== undefined) updateData.avatar = data.avatar;
+  if (data.bio !== undefined) updateData.bio = data.bio;
+
   return prisma.user.update({
     where: { id: userId },
-    data,
+    data: updateData,
     select: {
-      id: true, name: true, email: true, phone: true,
+      id: true, name: true, email: true, phone: true, bio: true,
       role: true, avatar: true, emailVerified: true,
       isActive: true, createdAt: true, updatedAt: true,
+      sellerProfile: true,
+      riderProfile: true,
+      providerProfile: true,
     },
   });
 };

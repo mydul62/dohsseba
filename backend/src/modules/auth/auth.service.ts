@@ -361,6 +361,9 @@ export const changeUserPassword = async (
   if (!user.password) {
     throw new AppError('Password cannot be changed for accounts registered via Google.', 400);
   }
+  if (!newPassword || newPassword.length < 6) {
+    throw new AppError('New password must be at least 6 characters long.', 400);
+  }
 
   const isValid = await comparePassword(currentPassword, user.password);
   if (!isValid) throw new AppError('Current password is incorrect.', 400);

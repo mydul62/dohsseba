@@ -14,8 +14,8 @@ export const getProfile = async (req: AuthRequest, res: Response, next: NextFunc
 // PUT /api/v1/users/profile
 export const updateProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { name, phone, avatar } = req.body;
-    const user = await userService.updateUserProfile(req.user!.id, { name, phone, avatar });
+    const { name, phone, avatar, bio } = req.body;
+    const user = await userService.updateUserProfile(req.user!.id, { name, phone, avatar, bio });
     return sendResponse(res, 200, 'Profile updated', user);
   } catch (error) { next(error); }
 };

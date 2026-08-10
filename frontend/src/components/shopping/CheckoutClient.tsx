@@ -33,9 +33,9 @@ export function CheckoutClient() {
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [deliverySpeed, setDeliverySpeed] = useState<'express' | 'scheduled'>('express');
-  const [customerName, setCustomerName] = useState((user as any)?.name || 'Rahim Chowdhury');
-  const [address, setAddress] = useState('House 42, Road 7, DOHS Mohakhali, Dhaka');
-  const [phone, setPhone] = useState('+880 1712-345678');
+  const [customerName, setCustomerName] = useState((user as any)?.name || '');
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState(user?.phone || '');
   const [paymentMethod, setPaymentMethod] = useState<'bkash' | 'nagad' | 'card' | 'cod'>('cod');
   const [isPlaced, setIsPlaced] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState('');
@@ -438,7 +438,7 @@ export function CheckoutClient() {
                       type="text"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="e.g. Rahim Chowdhury"
+                      placeholder="Enter full name"
                       className="w-full h-11 px-3.5 rounded-xl border border-input bg-background font-medium focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                       required
                     />
@@ -449,6 +449,7 @@ export function CheckoutClient() {
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Enter house, road & DOHS sector address"
                       className="w-full h-11 px-3.5 rounded-xl border border-input bg-background font-medium focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                       required
                     />
@@ -459,6 +460,7 @@ export function CheckoutClient() {
                       type="text"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Enter 11-digit mobile number"
                       className="w-full h-11 px-3.5 rounded-xl border border-input bg-background font-medium focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                       required
                     />

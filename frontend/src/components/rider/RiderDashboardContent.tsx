@@ -14,6 +14,7 @@ import {
   Search, ShieldCheck, Filter, Wallet, LogOut, AlertTriangle, BellRing
 } from 'lucide-react';
 import { CurrentMissionView } from './CurrentMissionView';
+import ProfileManagementContent from '../dashboard/ProfileManagementContent';
 
 // Audio chime synthesis & Haptic Vibration for incoming dispatch request
 const triggerOrderAlert = () => {
@@ -664,46 +665,7 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
 
       {/* TAB 3: PROFILE VIEW */}
       {activeTab === 'profile' && (
-        <div className="space-y-5">
-          <div className="p-6 rounded-3xl bg-[#0F172A] border border-slate-800 space-y-4 text-center">
-            <div className="w-20 h-20 rounded-full bg-indigo-600 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-xl">
-              {user?.name?.[0] || 'R'}
-            </div>
-
-            <div>
-              <h3 className="font-black text-lg text-white">{user?.name || 'Assigned Rider'}</h3>
-              <p className="text-xs text-slate-400 font-mono">{user?.phone || '+880 1711-223344'}</p>
-            </div>
-
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                NID & License Verified
-              </span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-[#0F172A] border border-slate-800 space-y-3 text-xs">
-            <h4 className="font-bold text-slate-400 uppercase tracking-wider">Assigned Vehicle Roster</h4>
-            <div className="flex justify-between text-slate-300">
-              <span>Vehicle Type:</span>
-              <span className="font-bold text-white">Motorbike / Express Cycle</span>
-            </div>
-            <div className="flex justify-between text-slate-300">
-              <span>Plate Number:</span>
-              <span className="font-mono font-bold text-white">DHAKA METRO-HA 14-8891</span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={logout}
-            className="w-full py-3.5 rounded-2xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 font-bold text-xs border border-rose-500/40 flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Log Out Rider Session</span>
-          </button>
-        </div>
+        <ProfileManagementContent />
       )}
 
       {/* TAB 4: ORDERS VIEW (DEFAULT DISPATCH & ACTIVE MISSIONS) */}

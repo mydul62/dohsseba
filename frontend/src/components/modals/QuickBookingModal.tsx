@@ -13,7 +13,7 @@ interface QuickBookingModalProps {
 
 export function QuickBookingModal({ service, onClose }: QuickBookingModalProps) {
   const [selectedDate, setSelectedDate] = useState('Today (Within 2 Hours)');
-  const [address, setAddress] = useState('House 42, Road 7, DOHS Mohakhali, Dhaka');
+  const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [isBooked, setIsBooked] = useState(false);
 
