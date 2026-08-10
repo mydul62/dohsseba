@@ -176,11 +176,11 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     loadRiderData();
-  }, [loadRiderData]);
+  }, [loadRiderData, user?.id, activeTab]);
 
   // Realtime Socket Listener
   useEffect(() => {
