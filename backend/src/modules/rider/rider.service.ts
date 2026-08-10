@@ -477,14 +477,32 @@ export const getTodayStats = async (riderId: string) => {
 
 // ─── Delivery History ─────────────────────────────────────────────────────────
 
-export const getDeliveryHistory = async (riderId: string, page = 1, limit = 50) => {
+export const getDeliveryHistory = async (userId: string, page = 1, limit = 50) => {
   const skip = (page - 1) * limit;
+
+  const profile = await prisma.riderProfile.findUnique({ where: { userId } }).catch(() => null);
+  const profileId = profile?.id;
+
+  const riderMatchConditions: any[] = [
+    { riderId: userId },
+    { assignedRiderId: userId },
+    { riderAssignment: { riderId: userId } },
+  ];
+
+  if (profileId) {
+    riderMatchConditions.push({ riderId: profileId });
+    riderMatchConditions.push({ assignedRiderId: profileId });
+    riderMatchConditions.push({ riderAssignment: { riderId: profileId } });
+  }
+
+  const where: any = {
+    OR: riderMatchConditions,
+    status: { in: ['DELIVERED', 'CANCELLED', 'REJECTED', 'COMPLETED'] as any[] },
+  };
+
   const [orders, total] = await Promise.all([
     prisma.order.findMany({
-      where: {
-        OR: [{ riderId }, { assignedRiderId: riderId }],
-        status: { in: ['DELIVERED', 'CANCELLED', 'REJECTED', 'COMPLETED'] as any[] },
-      },
+      where,
       orderBy: { updatedAt: 'desc' },
       skip,
       take: limit,
@@ -498,12 +516,7 @@ export const getDeliveryHistory = async (riderId: string, page = 1, limit = 50) 
         },
       },
     }),
-    prisma.order.count({
-      where: {
-        OR: [{ riderId }, { assignedRiderId: riderId }],
-        status: { in: ['DELIVERED', 'CANCELLED', 'REJECTED', 'COMPLETED'] as any[] },
-      },
-    }),
+    prisma.order.count({ where }),
   ]);
 
   return { orders, total };

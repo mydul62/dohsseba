@@ -132,9 +132,16 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
 
       if (hRes?.success && hRes.data) {
         const historyList = Array.isArray(hRes.data) ? hRes.data : (hRes.data.orders || []);
-        setOrderHistory(historyList);
-      } else {
-        setOrderHistory([]);
+        setOrderHistory((prev) => {
+          const map = new Map();
+          historyList.forEach((o: any) => map.set(o.id, o));
+          prev.forEach((o: any) => {
+            if (!map.has(o.id) && (o.status === 'DELIVERED' || o.status === 'CANCELLED' || o.status === 'COMPLETED')) {
+              map.set(o.id, o);
+            }
+          });
+          return Array.from(map.values());
+        });
       }
 
       if (wRes?.success && wRes.data) {
