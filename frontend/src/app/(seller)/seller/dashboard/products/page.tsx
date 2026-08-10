@@ -270,18 +270,33 @@ export default function ProductsPage() {
   };
 
   const handleBulkDelete = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
     const ok = await confirm({
-      title: `Delete ${selected.size} Product(s)`,
-      message: `You are about to permanently delete ${selected.size} selected product(s). This cannot be undone.`,
-      confirmText: `Delete ${selected.size} Product(s)`,
+      title: `Delete ${ids.length} Product(s)`,
+      message: `You are about to permanently delete ${ids.length} selected product(s). This action is permanent and cannot be undone.`,
+      confirmText: `Delete ${ids.length} Product(s)`,
       variant: 'danger',
     });
     if (!ok) return;
-    setProducts((prev) => prev.filter((p) => !selected.has(p.id)));
-    for (const id of selected) {
-      try { await fetchApi(`/products/${id}`, { method: 'DELETE' }).catch(() => {}); } catch {}
+
+    setBulkDeleting(true);
+    try {
+      const res = await fetchApi<any>('/products/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+      });
+      if (res && res.success) {
+        setProducts((prev) => prev.filter((p) => !selected.has(p.id)));
+        setSelected(new Set());
+      } else {
+        alert(res?.message || 'Failed to delete selected products.');
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to delete selected products.');
+    } finally {
+      setBulkDeleting(false);
     }
-    setSelected(new Set());
   };
 
   const exportCSV = () => {

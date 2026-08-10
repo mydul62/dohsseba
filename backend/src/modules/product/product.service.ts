@@ -498,7 +498,6 @@ export const bulkDeleteProducts = async (sellerId: string, productIds: string[],
         id: { in: productIds },
         OR: [
           { sellerId },
-          { sellerId: null },
           { category: { slug: 'uncategorized' } },
         ],
       };
