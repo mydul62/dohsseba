@@ -316,10 +316,19 @@ function TrackOrderContent() {
                   <div>
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Assigned Rider</span>
                     <h4 className="font-extrabold text-white text-sm truncate">
-                      {order.rider?.name ? (
-                        <span className="text-emerald-400 flex items-center gap-1.5">
-                          {order.rider.name} {order.rider.phone && `(${order.rider.phone})`}
-                        </span>
+                      {(order.rider?.name || (order as any).riderName) ? (
+                        <div className="flex flex-col">
+                          <span className="text-emerald-400 font-extrabold text-sm">
+                            {order.rider?.name || (order as any).riderName}
+                          </span>
+                          <a
+                            href={`tel:${order.rider?.phone || (order as any).riderPhone || '01306031982'}`}
+                            className="text-xs text-indigo-300 hover:text-emerald-300 font-mono font-bold flex items-center gap-1 mt-0.5"
+                          >
+                            <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>{order.rider?.phone || (order as any).riderPhone || '01306031982'}</span>
+                          </a>
+                        </div>
                       ) : (
                         <span className="text-slate-400 font-normal">Waiting for rider pickup acceptance...</span>
                       )}

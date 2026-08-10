@@ -591,11 +591,11 @@ export default function OrderDetailPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400">Rider Phone:</span>
                       <a
-                        href={`tel:${order.rider?.phone || '01306031982'}`}
-                        className="font-bold text-emerald-400 hover:underline flex items-center gap-1"
+                        href={`tel:${order.rider?.phone || order.riderPhone || '01306031982'}`}
+                        className="font-bold text-emerald-400 hover:underline flex items-center gap-1 font-mono"
                       >
                         <PhoneCall className="w-3 h-3" />
-                        <span>{order.rider?.phone || '01306031982'}</span>
+                        <span>{order.rider?.phone || order.riderPhone || '01306031982'}</span>
                       </a>
                     </div>
 
