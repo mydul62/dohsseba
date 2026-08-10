@@ -33,7 +33,7 @@ export function CheckoutClient() {
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [deliverySpeed, setDeliverySpeed] = useState<'express' | 'scheduled'>('express');
-  const [customerName, setCustomerName] = useState(user?.name || 'Rahim Chowdhury');
+  const [customerName, setCustomerName] = useState((user as any)?.name || 'Rahim Chowdhury');
   const [address, setAddress] = useState('House 42, Road 7, DOHS Mohakhali, Dhaka');
   const [phone, setPhone] = useState('+880 1712-345678');
   const [paymentMethod, setPaymentMethod] = useState<'bkash' | 'nagad' | 'card' | 'cod'>('cod');
@@ -130,7 +130,7 @@ export function CheckoutClient() {
       // ── Guest Checkout direct submission to /orders/guest ──
       if (!user) {
         const guestPayload = {
-          guestName: customerName || user?.name || 'DOHS Resident',
+          guestName: customerName || 'DOHS Resident',
           guestPhone: phone || '01700000000',
           guestEmail: undefined,
           guestAddress: address || 'DOHS Mohakhali, Dhaka',
