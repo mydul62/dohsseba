@@ -138,3 +138,12 @@ export const patchStock = async (req: AuthRequest, res: Response, next: NextFunc
     return sendResponse(res, 200, 'Stock updated', product);
   } catch (err) { next(err); }
 };
+
+export const bulkDeleteProducts = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { ids } = req.body;
+    const result = await productService.bulkDeleteProducts(req.user!.id, ids, req.user!.role);
+    return sendResponse(res, 200, `Successfully deleted ${result.count} products`, result);
+  } catch (error) { next(error); }
+};
+

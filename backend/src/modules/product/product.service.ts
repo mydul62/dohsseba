@@ -478,3 +478,35 @@ export const adjustStock = async (
   });
 };
 
+export const bulkDeleteProducts = async (sellerId: string, productIds: string[], role: string) => {
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return { count: 0 };
+  }
+
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+
+  const whereCondition: any = isAdmin
+    ? { id: { in: productIds } }
+    : { id: { in: productIds }, OR: [{ sellerId }, { category: { slug: 'uncategorized' } }] };
+
+  const productsToDelete = await prisma.product.findMany({
+    where: whereCondition,
+    select: { id: true }
+  });
+
+  const validIds = productsToDelete.map(p => p.id);
+  if (validIds.length === 0) return { count: 0 };
+
+  await prisma.cartItem.deleteMany({ where: { productId: { in: validIds } } }).catch(() => null);
+  await prisma.wishlistItem.deleteMany({ where: { productId: { in: validIds } } }).catch(() => null);
+  await prisma.review.deleteMany({ where: { productId: { in: validIds } } }).catch(() => null);
+  await prisma.orderItem.deleteMany({ where: { productId: { in: validIds } } }).catch(() => null);
+
+  const result = await prisma.product.deleteMany({
+    where: { id: { in: validIds } }
+  });
+
+  return { count: result.count };
+};
+
+

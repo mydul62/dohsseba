@@ -26,6 +26,7 @@ router.get('/:id',  productController.getProduct);
 router.post('/',    protect, authorize('SELLER', 'ADMIN'), createProductValidator, validate, productController.createProduct);
 router.put('/:id',     protect, authorize('SELLER', 'ADMIN'), updateProductValidator, validate, productController.updateProduct);
 router.patch('/:id/stock', protect, authorize('SELLER', 'ADMIN'), productController.patchStock);
+router.post('/bulk-delete', protect, authorize('SELLER', 'ADMIN'), productController.bulkDeleteProducts);
 router.delete('/:id',  protect, authorize('SELLER', 'ADMIN'), productController.deleteProduct);
 
 export { categoryRouter };
