@@ -163,6 +163,7 @@ model SellerProfile {
   address     String?
   openingHours String?
   isVerified            Boolean  @default(false)
+  autoAcceptOrders      Boolean  @default(false)
   rating                Float    @default(0)
   freeDeliveryThreshold Float?   @default(500)
   deliveryFee           Float?   @default(50)

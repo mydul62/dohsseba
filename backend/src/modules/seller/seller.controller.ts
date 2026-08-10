@@ -40,3 +40,13 @@ export const updateStoreProfile = async (req: AuthRequest, res: Response, next: 
   }
 };
 
+export const toggleAutoAccept = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { autoAcceptOrders } = req.body;
+    const profile = await sellerService.toggleAutoAccept(req.user!.id, Boolean(autoAcceptOrders));
+    res.json({ success: true, message: `Auto-accept set to ${autoAcceptOrders}`, data: profile });
+  } catch (err) {
+    next(err);
+  }
+};
+

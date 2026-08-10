@@ -227,6 +227,16 @@ export const createOrderFromCart = async (
   if (sellerId) {
     emitToSellerRoom(sellerId, 'ORDER_CREATED', { order });
     emitToSellerRoom(sellerId, 'order:created', { order });
+
+    // Check Auto-Accept & Auto-Dispatch for Seller
+    prisma.sellerProfile.findUnique({ where: { userId: sellerId } }).then((sellerProf) => {
+      if (sellerProf?.autoAcceptOrders) {
+        console.log(`⚡ [AUTO-ACCEPT] Seller ${sellerId} has Auto-Accept ON. Auto-dispatching Order #${order.id}`);
+        setTimeout(() => {
+          updateOrderStatus(order.id, 'READY_FOR_RIDER').catch((e) => console.error('Error auto-dispatching order:', e));
+        }, 500);
+      }
+    }).catch(() => {});
   }
   emitToRole('SELLER', 'ORDER_CREATED', { order });
   emitToRole('SELLER', 'order:created', { order });
@@ -616,6 +626,16 @@ export const createGuestOrder = async (data: {
   if (sellerId) {
     emitToSellerRoom(sellerId, 'ORDER_CREATED', { order });
     emitToSellerRoom(sellerId, 'order:created', { order });
+
+    // Check Auto-Accept & Auto-Dispatch for Seller
+    prisma.sellerProfile.findUnique({ where: { userId: sellerId } }).then((sellerProf) => {
+      if (sellerProf?.autoAcceptOrders) {
+        console.log(`⚡ [AUTO-ACCEPT] Seller ${sellerId} has Auto-Accept ON. Auto-dispatching Guest Order #${order.id}`);
+        setTimeout(() => {
+          updateOrderStatus(order.id, 'READY_FOR_RIDER').catch((e) => console.error('Error auto-dispatching order:', e));
+        }, 500);
+      }
+    }).catch(() => {});
   }
   emitToRole('SELLER', 'ORDER_CREATED', { order });
   emitToRole('SELLER', 'order:created', { order });

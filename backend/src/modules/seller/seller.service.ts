@@ -218,3 +218,17 @@ export const updateStoreProfile = async (
   });
 };
 
+export const toggleAutoAccept = async (userId: string, autoAcceptOrders: boolean) => {
+  return prisma.sellerProfile.upsert({
+    where: { userId },
+    create: {
+      userId,
+      shopName: 'Fresh Bazaar',
+      autoAcceptOrders,
+    },
+    update: {
+      autoAcceptOrders,
+    },
+  });
+};
+

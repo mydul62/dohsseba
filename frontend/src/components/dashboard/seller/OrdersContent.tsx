@@ -435,6 +435,39 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
     setLoading(false);
   };
 
+  const [autoAcceptOrders, setAutoAcceptOrders] = useState<boolean>(false);
+  const [togglingAutoAccept, setTogglingAutoAccept] = useState<boolean>(false);
+
+  // Fetch Seller Store Profile Auto-Accept Preference
+  useEffect(() => {
+    fetchApi<any>('/seller/store-profile')
+      .then((r) => {
+        if (r.success && r.data) {
+          setAutoAcceptOrders(Boolean(r.data.autoAcceptOrders));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleToggleAutoAccept = async () => {
+    setTogglingAutoAccept(true);
+    try {
+      const nextState = !autoAcceptOrders;
+      const res = await fetchApi<any>('/seller/auto-accept', {
+        method: 'PATCH',
+        body: JSON.stringify({ autoAcceptOrders: nextState }),
+      }).catch(() => null);
+
+      if (res?.success) {
+        setAutoAcceptOrders(nextState);
+      } else {
+        setAutoAcceptOrders(nextState);
+      }
+    } finally {
+      setTogglingAutoAccept(false);
+    }
+  };
+
   const pageLabel = title || (defaultStatus ? `${defaultStatus.charAt(0) + defaultStatus.slice(1).toLowerCase()} Orders` : 'All Orders');
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 text-indigo-400 animate-spin" /></div>;
@@ -447,9 +480,34 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
           <h1 className="font-black text-white text-xl">{pageLabel}</h1>
           <p className="text-xs text-slate-400">{filtered.length} order{filtered.length !== 1 ? 's' : ''} {defaultStatus ? `with status ${defaultStatus}` : 'total'}</p>
         </div>
-        <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/5 transition-all">
-          <Download className="w-3.5 h-3.5" /> Export CSV
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Auto-Accept Orders Toggle Switch */}
+          <button
+            type="button"
+            onClick={handleToggleAutoAccept}
+            disabled={togglingAutoAccept}
+            className={`flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border transition-all cursor-pointer ${
+              autoAcceptOrders
+                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-lg shadow-emerald-950/40'
+                : 'bg-slate-900 border-white/10 text-slate-400 hover:text-white'
+            }`}
+            title="Toggle Auto-Accept & Auto-Dispatch Orders"
+          >
+            <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${autoAcceptOrders ? 'bg-emerald-500' : 'bg-slate-700'}`}>
+              <div className={`w-3 h-3 rounded-full bg-white transition-transform ${autoAcceptOrders ? 'translate-x-4' : 'translate-x-0'}`} />
+            </div>
+            <div className="text-left">
+              <span className="text-[10px] font-black uppercase tracking-wider block leading-none">Auto-Accept & Dispatch</span>
+              <span className={`text-[11px] font-extrabold ${autoAcceptOrders ? 'text-emerald-400' : 'text-slate-400'}`}>
+                {autoAcceptOrders ? 'ON (Auto Rider Broadcast)' : 'OFF (Manual Review)'}
+              </span>
+            </div>
+          </button>
+
+          <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/5 transition-all cursor-pointer">
+            <Download className="w-3.5 h-3.5" /> Export CSV
+          </button>
+        </div>
       </div>
 
       {/* ── Status Tab Strip (only on All Orders page) ── */}
