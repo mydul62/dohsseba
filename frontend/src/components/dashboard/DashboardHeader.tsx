@@ -375,26 +375,43 @@ export function DashboardHeader({ title = 'DASHBOARD', subtitle = 'Morvin > Dash
         </div>
 
         {/* User Profile Quick Info */}
-        <div className="flex items-center gap-2 pl-1.5 sm:pl-2.5 border-l border-white/10 shrink-0">
-          <div className="relative">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border border-indigo-400/50 flex items-center justify-center font-bold text-white text-xs overflow-hidden">
-              {mounted && user?.avatar ? (
-                <img src={user.avatar} alt={user?.name || 'User'} className="w-full h-full object-cover" />
-              ) : (
-                <span suppressHydrationWarning>{(mounted && user?.name && user.name[0]) || 'U'}</span>
-              )}
-            </div>
-            <span className="absolute bottom-0 right-0 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 border-2 border-[#181928]" />
-          </div>
-          <div className="hidden xl:block text-left">
-            <div className="text-xs font-bold text-white leading-tight" suppressHydrationWarning>
-              {(mounted && user?.name) || 'Account Workspace'}
-            </div>
-            <div className="text-[10px] text-indigo-300 capitalize" suppressHydrationWarning>
-              {(mounted && role && role !== 'GUEST') ? role.toLowerCase() : 'Account'}
-            </div>
-          </div>
-        </div>
+        {(() => {
+          const profileHref =
+            role === 'SUPER_ADMIN' || role === 'ADMIN'
+              ? '/admin/dashboard/profile'
+              : role === 'SELLER'
+              ? '/seller/dashboard/profile'
+              : role === 'RIDER'
+              ? '/rider/dashboard/profile'
+              : '/dashboard/profile';
+
+          return (
+            <Link
+              href={profileHref}
+              className="flex items-center gap-2 pl-1.5 sm:pl-2.5 border-l border-white/10 shrink-0 hover:opacity-90 transition-opacity group cursor-pointer"
+              title="My Profile & Security Settings"
+            >
+              <div className="relative">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border border-indigo-400/50 flex items-center justify-center font-bold text-white text-xs overflow-hidden group-hover:scale-105 transition-transform">
+                  {mounted && user?.avatar ? (
+                    <img src={user.avatar} alt={user?.name || 'User'} className="w-full h-full object-cover" />
+                  ) : (
+                    <span suppressHydrationWarning>{(mounted && user?.name && user.name[0]) || 'U'}</span>
+                  )}
+                </div>
+                <span className="absolute bottom-0 right-0 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 border-2 border-[#181928]" />
+              </div>
+              <div className="hidden xl:block text-left">
+                <div className="text-xs font-bold text-white leading-tight group-hover:text-indigo-300 transition-colors" suppressHydrationWarning>
+                  {(mounted && user?.name) || 'Account Workspace'}
+                </div>
+                <div className="text-[10px] text-indigo-300 capitalize" suppressHydrationWarning>
+                  {(mounted && role && role !== 'GUEST') ? role.toLowerCase() : 'Account'}
+                </div>
+              </div>
+            </Link>
+          );
+        })()}
 
         {/* Sign Out Button */}
         <button onClick={handleSignOut} className="p-1.5 sm:p-2 rounded-lg bg-[#202237] hover:bg-red-500/20 border border-white/10 text-slate-300 hover:text-red-400 transition-colors shrink-0" title="Sign Out">

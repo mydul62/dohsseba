@@ -215,6 +215,11 @@ export function DashboardSidebar({
               href: '/admin/dashboard/settings',
               icon: <Globe className="w-4 h-4 text-indigo-400" />,
             },
+            {
+              label: 'My Profile & Security',
+              href: '/admin/dashboard/profile',
+              icon: <User className="w-4 h-4 text-purple-400" />,
+            },
           ],
         },
       ];
@@ -427,6 +432,11 @@ export function DashboardSidebar({
               label: 'Settings',
               href: '/seller/dashboard/settings',
               icon: <Sliders className="w-4 h-4" />,
+            },
+            {
+              label: 'My Profile & Security',
+              href: '/seller/dashboard/profile',
+              icon: <User className="w-4 h-4 text-purple-400" />,
             },
           ],
         },
