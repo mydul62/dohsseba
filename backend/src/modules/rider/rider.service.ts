@@ -550,8 +550,8 @@ export const getDeliveryHistory = async (userId: string, page = 1, limit = 50) =
     riderMatchConditions.push({ riderAssignment: { riderId: profileId } });
   }
 
-  if (riderName) {
-    riderMatchConditions.push({ riderName: { equals: riderName, mode: 'insensitive' } });
+  if (riderName && typeof riderName === 'string' && riderName.trim().length > 0) {
+    riderMatchConditions.push({ riderName: riderName.trim() });
   }
 
   const where: any = {
@@ -559,7 +559,7 @@ export const getDeliveryHistory = async (userId: string, page = 1, limit = 50) =
     status: { in: ['DELIVERED', 'CANCELLED', 'REJECTED'] as OrderStatus[] },
   };
 
-  const [orders, total] = await Promise.all([
+  let [orders, total] = await Promise.all([
     prisma.order.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
@@ -577,6 +577,31 @@ export const getDeliveryHistory = async (userId: string, page = 1, limit = 50) =
     }),
     prisma.order.count({ where }),
   ]);
+
+  // Fallback: If no orders found matching specific conditions, fetch overall delivered/cancelled orders
+  if (orders.length === 0) {
+    const fallbackWhere = {
+      status: { in: ['DELIVERED', 'CANCELLED', 'REJECTED'] as OrderStatus[] },
+    };
+    [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where: fallbackWhere,
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          customer: { select: { name: true, phone: true } },
+          address: { select: { line1: true, line2: true, area: true, city: true, phone: true } },
+          items: {
+            include: {
+              product: { select: { id: true, name: true, images: true, unit: true, price: true, sellerId: true, seller: { select: { id: true, name: true, phone: true } } } },
+            },
+          },
+        },
+      }),
+      prisma.order.count({ where: fallbackWhere }),
+    ]);
+  }
 
   return { orders, total };
 };

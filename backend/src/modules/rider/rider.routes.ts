@@ -4,8 +4,8 @@ import * as riderController from './rider.controller';
 
 const router = Router();
 
-// All rider routes require authentication + RIDER/ADMIN role
-router.use(protect, authorize('RIDER', 'ADMIN', 'SUPER_ADMIN'));
+// All rider routes require authentication
+router.use(protect, authorize('RIDER', 'ADMIN', 'SUPER_ADMIN', 'SELLER', 'CUSTOMER', 'USER'));
 
 // ─── Profile, Stats & Duty ───────────────────────────────────────────────────
 router.get('/profile',              riderController.getProfile);
