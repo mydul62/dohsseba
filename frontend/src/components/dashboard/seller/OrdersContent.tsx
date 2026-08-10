@@ -15,10 +15,10 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export const ALL_STATUSES = ['PENDING', 'SELLER_ACCEPTED', 'READY_FOR_RIDER', 'RIDER_ASSIGNED', 'PICKUP_STARTED', 'PICKED_UP', 'ON_THE_WAY', 'ARRIVED', 'DELIVERED', 'CANCELLED', 'REJECTED'] as const;
+export const ALL_STATUSES = ['PENDING', 'SELLER_ACCEPTED', 'READY_FOR_RIDER', 'RIDER_ASSIGNED', 'PICKED_UP', 'ON_THE_WAY', 'DELIVERED', 'CANCELLED', 'REJECTED'] as const;
 export type OrderStatus = typeof ALL_STATUSES[number];
 
-const STATUS_META: Record<OrderStatus, { label: string; cls: string; icon: React.ReactNode }> = {
+const STATUS_META: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
   PENDING: { label: 'Pending', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/30', icon: <Clock className="w-3 h-3" /> },
   SELLER_ACCEPTED: { label: 'Accepted', cls: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30', icon: <CheckCircle2 className="w-3 h-3" /> },
   READY_FOR_RIDER: { label: 'Ready for Rider', cls: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30', icon: <Truck className="w-3 h-3" /> },
