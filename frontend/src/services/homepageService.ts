@@ -58,6 +58,21 @@ export interface HomepageFullResponse {
 }
 
 export const homepageService = {
+  // Server-side GET full aggregated homepage system
+  getFullHomepageDataServer: async (): Promise<HomepageFullResponse> => {
+    try {
+      const { fetchServerApi } = await import('@/lib/server-api');
+      const res = await fetchServerApi<HomepageFullResponse>('/homepage/full', {
+        next: { revalidate: 60 },
+      });
+      if (res.success && res.data) {
+        return res.data;
+      }
+    } catch (_) {}
+
+    return homepageService.getFullHomepageData();
+  },
+
   // Public GET full aggregated homepage system
   getFullHomepageData: async (): Promise<HomepageFullResponse> => {
     try {

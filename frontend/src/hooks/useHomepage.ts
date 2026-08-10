@@ -3,12 +3,13 @@ import { homepageService, HeroSlideData, PromoCardData } from '@/services/homepa
 
 export const HOMEPAGE_QUERY_KEY = ['homepage', 'full'];
 
-export function useHomepage() {
+export function useHomepage(initialData?: any) {
   const queryClient = useQueryClient();
 
   const homepageQuery = useQuery({
     queryKey: HOMEPAGE_QUERY_KEY,
     queryFn: () => homepageService.getFullHomepageData(),
+    initialData,
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 

@@ -99,4 +99,55 @@ export class ProductService {
     const { products } = await this.getProducts({ search: query, limit: 50 });
     return products;
   }
+
+  // ─── Server-Side Methods (For App Router Server Components) ─────────────────
+
+  static async getProductsServer(filters: ProductQueryFilters = {}): Promise<{ products: ProductItem[]; total: number }> {
+    try {
+      const { fetchServerApi } = await import('@/lib/server-api');
+      const params = new URLSearchParams();
+      if (filters.page) params.append('page', String(filters.page));
+      if (filters.limit) params.append('limit', String(filters.limit));
+      if (filters.category && filters.category !== 'all') params.append('category', filters.category);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.sort) params.append('sort', filters.sort);
+      if (filters.featured) params.append('featured', 'true');
+      if (filters.flashSale) params.append('flashSale', 'true');
+      if (filters.minPrice) params.append('minPrice', String(filters.minPrice));
+      if (filters.maxPrice) params.append('maxPrice', String(filters.maxPrice));
+
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetchServerApi<any>(`/products${queryStr}`, {
+        next: { revalidate: 60 },
+      });
+
+      if (res?.success && res.data) {
+        const rawList = Array.isArray(res.data) ? res.data : (res.data.products || []);
+        const total = res.meta?.total || rawList.length;
+        const products = rawList.map((p: any) => this.transformProduct(p));
+        return { products, total };
+      }
+      return { products: [], total: 0 };
+    } catch (err) {
+      console.error('🛒 ProductService.getProductsServer Error:', err);
+      return { products: [], total: 0 };
+    }
+  }
+
+  static async getProductBySlugServer(slug: string): Promise<ProductItem | null> {
+    try {
+      const { fetchServerApi } = await import('@/lib/server-api');
+      const res = await fetchServerApi<any>(`/products/${slug}`, {
+        next: { revalidate: 60 },
+      });
+      if (res?.success && res.data) {
+        return this.transformProduct(res.data);
+      }
+      return null;
+    } catch (err) {
+      console.error('🛒 ProductService.getProductBySlugServer Error:', err);
+      return null;
+    }
+  }
 }
+

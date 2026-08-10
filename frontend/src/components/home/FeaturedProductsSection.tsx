@@ -23,10 +23,11 @@ interface FeaturedProduct {
   category?: { name?: string; slug?: string };
 }
 
-export function FeaturedProductsSection() {
-  const [products, setProducts] = useState<FeaturedProduct[] | null>(null);
+export function FeaturedProductsSection({ initialProducts }: { initialProducts?: any[] }) {
+  const [products, setProducts] = useState<FeaturedProduct[] | null>(initialProducts && initialProducts.length > 0 ? initialProducts : null);
 
   useEffect(() => {
+    if (initialProducts && initialProducts.length > 0) return;
     const API = getApiBaseUrl();
     fetch(`${API}/products?featured=true&limit=10`)
       .then((r) => r.json())
@@ -57,7 +58,7 @@ export function FeaturedProductsSection() {
         }
       })
       .catch(() => setProducts([]));
-  }, []);
+  }, [initialProducts]);
 
   if (products !== null && products.length === 0) return null;
 

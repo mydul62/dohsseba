@@ -54,10 +54,10 @@ export default function AdminHomepageManagementPage() {
   const [activeTab, setActiveTab] = useState<'hero' | 'promo' | 'shortcuts' | 'locations'>('hero');
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
 
-  const displayHeroSlides = heroSlides.filter((s) => !deletedIds.includes(s.id));
-  const displayPromoCards = promoCards.filter((c) => !deletedIds.includes(c.id));
-  const displayShortcuts = featuredShortcuts.filter((s) => !deletedIds.includes(s.id));
-  const displayLocations = locations.filter((l) => !deletedIds.includes(l.id));
+  const displayHeroSlides = (heroSlides || []).filter((s: any) => !deletedIds.includes(s.id));
+  const displayPromoCards = (promoCards || []).filter((c: any) => !deletedIds.includes(c.id));
+  const displayShortcuts = (featuredShortcuts || []).filter((s: any) => !deletedIds.includes(s.id));
+  const displayLocations = (locations || []).filter((l: any) => !deletedIds.includes(l.id));
 
   // Hero Modals & Form State
   const [showHeroModal, setShowHeroModal] = useState(false);
@@ -431,7 +431,7 @@ export default function AdminHomepageManagementPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {displayHeroSlides.map((slide) => (
+            {displayHeroSlides.map((slide: any) => (
               <div
                 key={slide.id}
                 className="bg-slate-900/80 rounded-2xl border border-white/10 p-4 shadow-xl space-y-3 flex flex-col justify-between"
@@ -519,7 +519,7 @@ export default function AdminHomepageManagementPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {displayPromoCards.map((card) => (
+            {displayPromoCards.map((card: any) => (
               <div
                 key={card.id}
                 style={{ backgroundColor: card.backgroundColor || '#1e293b' }}
@@ -578,7 +578,7 @@ export default function AdminHomepageManagementPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {displayShortcuts.map((shortcut) => (
+            {displayShortcuts.map((shortcut: any) => (
               <div
                 key={shortcut.id}
                 className="bg-slate-900/80 rounded-2xl border border-white/10 p-4 shadow-xl flex items-center justify-between gap-3"
@@ -639,7 +639,7 @@ export default function AdminHomepageManagementPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {displayLocations.map((loc) => (
+            {displayLocations.map((loc: any) => (
               <div
                 key={loc.id}
                 className="bg-slate-900/80 rounded-2xl border border-white/10 p-4 shadow-xl flex items-center justify-between gap-3"

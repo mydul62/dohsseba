@@ -18,13 +18,13 @@ import { useSearchStore } from '@/store/useSearchStore';
 import { useCategoryDrawerStore } from '@/store/useCategoryDrawerStore';
 import { useHomepage } from '@/hooks/useHomepage';
 
-export function HeroBanner() {
+export function HeroBanner({ initialData }: { initialData?: any }) {
   const { language } = useLanguageStore();
   const isBn = language === 'BN';
   const { openSearch } = useSearchStore();
   const { openDrawer } = useCategoryDrawerStore();
 
-  const { heroSlides: apiHeroSlides, promoCards: apiPromoCards, featuredShortcuts: apiShortcuts, isLoading } = useHomepage();
+  const { heroSlides: apiHeroSlides, promoCards: apiPromoCards, featuredShortcuts: apiShortcuts, isLoading } = useHomepage(initialData);
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -154,7 +154,7 @@ export function HeroBanner() {
       {/* ── Dynamic Top Circular Shortcuts Row ── */}
       <div className="w-full max-w-[1720px] mx-auto px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 py-4">
         <div className="flex items-center justify-start gap-8 overflow-x-auto no-scrollbar">
-          {shortcuts.map((item) => (
+          {shortcuts.map((item: any) => (
             <Link
               key={item.id}
               href={item.link}
@@ -190,7 +190,7 @@ export function HeroBanner() {
               
               {/* Slide Dots */}
               <div className="flex items-center gap-2">
-                {heroSlides.map((_, idx) => (
+                {heroSlides.map((_: any, idx: number) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentSlide(idx)}
@@ -272,7 +272,7 @@ export function HeroBanner() {
 
           {/* Right/Bottom Promotional Cards Container (Mobile App 2-Column Side-by-Side Grid) */}
           <div className="lg:col-span-6 grid grid-cols-2 gap-3 sm:gap-4">
-            {promoCards.slice(0, 2).map((card, idx) => (
+            {promoCards.slice(0, 2).map((card: any, idx: number) => (
               <div
                 key={card.id || idx}
                 style={{ backgroundColor: card.backgroundColor || (idx === 0 ? '#b5d8f7' : '#f9da8b') }}
