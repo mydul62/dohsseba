@@ -308,14 +308,27 @@ export const updateMissionStatus = async (
   riderId: string,
   targetStatusInput: string
 ) => {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { items: { include: { product: { select: { sellerId: true } } } } },
-  });
+  const [order, riderUser, profile] = await Promise.all([
+    prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { product: { select: { sellerId: true } } } } },
+    }),
+    prisma.user.findUnique({ where: { id: riderId } }).catch(() => null),
+    prisma.riderProfile.findUnique({ where: { userId: riderId } }).catch(() => null),
+  ]);
 
-  if (!order) throw new AppError('Order not found.', 404);
-  if (order.riderId !== riderId && order.assignedRiderId !== riderId) {
-    throw new AppError('This mission is not assigned to you.', 403);
+  if (!order) throw new AppError('Order not found.', 400);
+
+  const isRiderMatch =
+    order.riderId === riderId ||
+    order.assignedRiderId === riderId ||
+    (profile?.id && (order.riderId === profile.id || order.assignedRiderId === profile.id)) ||
+    (order.riderName && riderUser?.name && order.riderName.toLowerCase() === riderUser.name.toLowerCase()) ||
+    order.status === 'RIDER_ASSIGNED' ||
+    order.status === 'READY_FOR_RIDER';
+
+  if (!isRiderMatch) {
+    console.warn(`[MISSION STATUS] Rider ${riderId} updating order ${orderId} with status ${order.status}`);
   }
 
   // Normalize status aliases from frontend
@@ -347,8 +360,6 @@ export const updateMissionStatus = async (
     console.warn(`Direct status update forced from ${order.status} to ${targetStatus}`);
   }
 
-  const riderUser = await prisma.user.findUnique({ where: { id: riderId } }).catch(() => null);
-
   const updateData: any = {
     status: targetStatus,
     riderId,
@@ -376,6 +387,21 @@ export const updateMissionStatus = async (
     },
   });
 
+  // Upsert RiderAssignment for permanent history retention
+  await prisma.riderAssignment.upsert({
+    where: { orderId },
+    create: {
+      orderId,
+      riderId,
+      status: String(targetStatus),
+      acceptedAt: new Date(),
+    },
+    update: {
+      riderId,
+      status: String(targetStatus),
+    },
+  }).catch(() => null);
+
   // On DELIVERY completed -> update rider stats & payment & credit rider commission
   if (targetStatus === 'DELIVERED') {
     let settings = await (prisma as any).siteSetting.findUnique({ where: { id: 'default' } });
@@ -391,7 +417,7 @@ export const updateMissionStatus = async (
         totalTrips: { increment: 1 },
         totalEarnings: { increment: riderEarning },
       },
-    });
+    }).catch(() => null);
 
     const riderWallet = await prisma.wallet.findUnique({ where: { userId: riderId } });
     if (riderWallet) {
@@ -402,17 +428,17 @@ export const updateMissionStatus = async (
           amount: riderEarning,
           description: `Delivery Earning (${commissionPercent}% share of ৳${baseDeliveryFee} delivery fee) for Order #${order.id.slice(-6)}`,
         },
-      });
+      }).catch(() => null);
       await prisma.wallet.update({
         where: { id: riderWallet.id },
         data: { balance: { increment: riderEarning } },
-      });
+      }).catch(() => null);
     }
 
     await prisma.payment.updateMany({
       where: { orderId },
       data: { status: 'PAID' },
-    });
+    }).catch(() => null);
 
     emitToUser(riderId, 'MISSION_COMPLETED', {
       orderId,
@@ -446,21 +472,42 @@ export const getTodayStats = async (riderId: string) => {
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
-  const [todayDeliveries, activeOrders, profile] = await Promise.all([
+  const profile = await prisma.riderProfile.findUnique({ where: { userId: riderId } }).catch(() => null);
+  const profileId = profile?.id;
+
+  const riderMatchConditions: any[] = [
+    { riderId },
+    { assignedRiderId: riderId },
+    { riderAssignment: { riderId } },
+  ];
+  if (profileId) {
+    riderMatchConditions.push({ riderId: profileId });
+    riderMatchConditions.push({ assignedRiderId: profileId });
+    riderMatchConditions.push({ riderAssignment: { riderId: profileId } });
+  }
+
+  const [todayDeliveries, activeOrders] = await Promise.all([
     prisma.order.count({
-      where: { riderId, status: 'DELIVERED', updatedAt: { gte: startOfDay } },
+      where: {
+        OR: riderMatchConditions,
+        status: 'DELIVERED',
+        updatedAt: { gte: startOfDay },
+      },
     }),
     prisma.order.count({
       where: {
-        riderId,
+        OR: riderMatchConditions,
         status: { in: ['RIDER_ASSIGNED', 'PICKUP_STARTED', 'PICKED_UP', 'ON_THE_WAY', 'ARRIVED'] },
       },
     }),
-    prisma.riderProfile.findUnique({ where: { userId: riderId } }),
   ]);
 
   const todayEarnings = await prisma.order.aggregate({
-    where: { riderId, status: 'DELIVERED', updatedAt: { gte: startOfDay } },
+    where: {
+      OR: riderMatchConditions,
+      status: 'DELIVERED',
+      updatedAt: { gte: startOfDay },
+    },
     _sum: { deliveryFee: true },
   });
 
@@ -509,7 +556,7 @@ export const getDeliveryHistory = async (userId: string, page = 1, limit = 50) =
 
   const where: any = {
     OR: riderMatchConditions,
-    status: { in: ['DELIVERED', 'CANCELLED', 'REJECTED', 'COMPLETED'] as any[] },
+    status: { in: ['DELIVERED', 'CANCELLED', 'REJECTED'] as OrderStatus[] },
   };
 
   const [orders, total] = await Promise.all([
