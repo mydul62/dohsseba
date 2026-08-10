@@ -50,3 +50,12 @@ export const toggleAutoAccept = async (req: AuthRequest, res: Response, next: Ne
   }
 };
 
+export const getRidersFleet = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const riders = await sellerService.getRidersFleetStats();
+    res.json({ success: true, message: 'Riders fleet stats fetched.', data: riders });
+  } catch (err) {
+    next(err);
+  }
+};
+

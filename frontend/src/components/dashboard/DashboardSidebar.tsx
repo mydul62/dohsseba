@@ -342,6 +342,16 @@ export function DashboardSidebar({
           ],
         },
         {
+          sectionTitle: 'FLEET & DISPATCH',
+          items: [
+            {
+              label: 'Riders Roster',
+              icon: <Bike className="w-4 h-4" />,
+              href: '/seller/dashboard/riders',
+            },
+          ],
+        },
+        {
           sectionTitle: 'CUSTOMERS',
           items: [
             {

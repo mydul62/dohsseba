@@ -232,3 +232,96 @@ export const toggleAutoAccept = async (userId: string, autoAcceptOrders: boolean
   });
 };
 
+// ─── Seller Riders Fleet ───────────────────────────────────────────────────────
+
+export const getRidersFleetStats = async () => {
+  const riders = await prisma.user.findMany({
+    where: {
+      OR: [
+        { role: 'RIDER' },
+        { riderProfile: { isNot: null } },
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      avatar: true,
+      createdAt: true,
+      riderProfile: {
+        select: {
+          id: true,
+          isOnline: true,
+          isAvailable: true,
+          vehicleType: true,
+          vehicleNo: true,
+          rating: true,
+          totalEarnings: true,
+          totalTrips: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const ridersWithMetrics = await Promise.all(
+    riders.map(async (r) => {
+      const profileId = r.riderProfile?.id;
+      const riderMatch: any[] = [
+        { riderId: r.id },
+        { assignedRiderId: r.id },
+      ];
+      if (profileId) {
+        riderMatch.push({ riderId: profileId });
+        riderMatch.push({ assignedRiderId: profileId });
+      }
+
+      const [deliveredAgg, deliveredCount, cancelledCount] = await Promise.all([
+        prisma.order.aggregate({
+          where: {
+            OR: riderMatch,
+            status: 'DELIVERED',
+          },
+          _sum: { totalAmount: true, deliveryFee: true, subtotal: true },
+        }),
+        prisma.order.count({
+          where: {
+            OR: riderMatch,
+            status: 'DELIVERED',
+          },
+        }),
+        prisma.order.count({
+          where: {
+            OR: riderMatch,
+            status: { in: ['CANCELLED', 'REJECTED'] },
+          },
+        }),
+      ]);
+
+      const totalDeliveredValue = Number(deliveredAgg._sum.totalAmount ?? 0);
+      const totalEarnings = r.riderProfile?.totalEarnings ?? Number(deliveredAgg._sum.deliveryFee ?? 0);
+      const totalDeliveries = Math.max(deliveredCount, r.riderProfile?.totalTrips ?? 0);
+
+      return {
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        phone: r.phone,
+        avatar: r.avatar,
+        isOnline: Boolean(r.riderProfile?.isOnline),
+        isAvailable: Boolean(r.riderProfile?.isAvailable ?? true),
+        vehicleType: r.riderProfile?.vehicleType || 'Motorbike',
+        vehicleNo: r.riderProfile?.vehicleNo || 'D-1234',
+        rating: r.riderProfile?.rating || 5.0,
+        totalDeliveredValue,
+        totalEarnings,
+        totalDeliveries,
+        totalCancellations: cancelledCount,
+      };
+    })
+  );
+
+  return ridersWithMetrics;
+};
+
