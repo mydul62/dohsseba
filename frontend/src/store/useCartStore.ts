@@ -31,7 +31,7 @@ export const useCartStore = create<CartState>()(
       applyCoupon: (code) => set({ appliedCoupon: code, isOpen: true }),
       removeCoupon: () => set({ appliedCoupon: null }),
 
-      addItem: (product, quantity = 1, openDrawer = true) => {
+      addItem: (product, quantity = 1, openDrawer = false) => {
         set((state) => {
           const existingIndex = state.items.findIndex(
             (item: any) => (item.product?.id || item.id) === product.id
@@ -40,12 +40,15 @@ export const useCartStore = create<CartState>()(
           if (existingIndex > -1) {
             const updatedItems = [...state.items];
             updatedItems[existingIndex].quantity += quantity;
-            return { items: updatedItems, isOpen: openDrawer ? true : false };
+            return {
+              items: updatedItems,
+              ...(openDrawer ? { isOpen: true } : {}),
+            };
           }
 
           return {
             items: [...state.items, { product, quantity }],
-            isOpen: openDrawer ? true : false,
+            ...(openDrawer ? { isOpen: true } : {}),
           };
         });
       },

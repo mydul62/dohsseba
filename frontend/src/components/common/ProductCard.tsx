@@ -5,6 +5,12 @@ import Link from 'next/link';
 import { Heart, Plus, Minus, Check, Star, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
+import { useToast } from '@/components/ui/Toast';
+
+function toBnDigit(num: number): string {
+  const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return String(num).replace(/\d/g, (d) => bnDigits[parseInt(d, 10)]);
+}
 
 export interface ProductCardProps {
   id: string;
@@ -43,8 +49,9 @@ export function ProductCard({
   const [quantity, setQuantity] = useState(1);
   const [addedAnimation, setAddedAnimation] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const { addItem } = useCartStore();
+  const { addItem, items } = useCartStore();
   const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const { success: toastSuccess } = useToast();
 
   const isLiked = isInWishlist(id);
 
@@ -83,7 +90,16 @@ export function ProductCard({
       reviewCount: 15,
       image,
       stock: 50,
-    });
+    }, quantity, false);
+
+    const totalCount = items.reduce((sum: number, item: any) => sum + item.quantity, 0) + quantity;
+    const bnCount = toBnDigit(totalCount);
+
+    toastSuccess(
+      'পণ্যটি কার্টে যোগ করা হয়েছে',
+      `বর্তমানে আপনার কার্টে মোট ${bnCount} টি পণ্য রয়েছে`
+    );
+
     setAddedAnimation(true);
     setTimeout(() => {
       setAddedAnimation(false);

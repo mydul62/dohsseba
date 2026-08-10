@@ -26,6 +26,13 @@ import {
   Package,
 } from 'lucide-react';
 
+import { useToast } from '@/components/ui/Toast';
+
+function toBnDigit(num: number): string {
+  const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return String(num).replace(/\d/g, (d) => bnDigits[parseInt(d, 10)]);
+}
+
 interface ProductDetailClientProps {
   product: ProductItem;
   slug?: string;
@@ -38,8 +45,9 @@ export function ProductDetailClient({ product: initialProduct, slug }: ProductDe
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [relatedItems, setRelatedItems] = useState<any[]>([]);
 
-  const { addItem, closeCart } = useCartStore();
+  const { addItem, items, closeCart } = useCartStore();
   const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const { success: toastSuccess } = useToast();
 
   // Fetch live API product from DB if slug is present or available
   useEffect(() => {
@@ -146,7 +154,13 @@ export function ProductDetailClient({ product: initialProduct, slug }: ProductDe
   const images = product.galleryImages || [product.image];
 
   const handleAddToCart = () => {
-    addItem(product, quantity, true);
+    addItem(product, quantity, false);
+    const totalCount = items.reduce((sum: number, item: any) => sum + item.quantity, 0) + quantity;
+    const bnCount = toBnDigit(totalCount);
+    toastSuccess(
+      'পণ্যটি কার্টে যোগ করা হয়েছে',
+      `বর্তমানে আপনার কার্টে মোট ${bnCount} টি পণ্য রয়েছে`
+    );
   };
 
   const handleBuyNow = (e: React.MouseEvent) => {

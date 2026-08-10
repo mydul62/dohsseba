@@ -6,8 +6,14 @@ import Image from 'next/image';
 import { ProductItem } from '@/types/shopping';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
+import { useToast } from '@/components/ui/Toast';
 import { formatCurrency } from '@/utils/cn';
 import { Plus, Check, Heart, Star, ShoppingBag } from 'lucide-react';
+
+function toBnDigit(num: number): string {
+  const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return String(num).replace(/\d/g, (d) => bnDigits[parseInt(d, 10)]);
+}
 
 interface ProductCardProps {
   product: ProductItem;
@@ -16,6 +22,7 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem, items } = useCartStore();
   const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const { success: toastSuccess } = useToast();
 
   const inCart = items.find((i) => i.product.id === product.id);
   const isFavorite = isInWishlist(product.id);
@@ -123,7 +130,13 @@ export function ProductCard({ product }: ProductCardProps) {
               if (typeof window !== 'undefined' && 'navigator' in window && navigator.vibrate) {
                 try { navigator.vibrate(10); } catch (_) {}
               }
-              addItem(product);
+              addItem(product, 1, false);
+              const totalCount = items.reduce((sum: number, item: any) => sum + item.quantity, 0) + 1;
+              const bnCount = toBnDigit(totalCount);
+              toastSuccess(
+                'পণ্যটি কার্টে যোগ করা হয়েছে',
+                `বর্তমানে আপনার কার্টে মোট ${bnCount} টি পণ্য রয়েছে`
+              );
             }}
             className={`min-h-[44px] px-3 py-2 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 text-xs font-bold active:scale-95 ${
               inCart
