@@ -105,7 +105,15 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
             total: o.totalAmount ?? o.total ?? 0,
             createdAt: o.createdAt || new Date().toISOString(),
           }));
-          setApiOrders(mapped);
+          setApiOrders((prev) => {
+            const map = new Map();
+            mapped.forEach((item: any) => map.set(String(item.id).toUpperCase(), item));
+            prev.forEach((item: any) => {
+              const k = String(item.id).toUpperCase();
+              if (!map.has(k)) map.set(k, item);
+            });
+            return Array.from(map.values());
+          });
         }
       })
       .catch((err) => console.error('Orders fetch failed:', err))
@@ -144,6 +152,7 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
           playNewOrderBipSound();
           return [newOrder, ...prev];
         });
+        setPage(1); // Jump to page 1 to see the new order at the top
       }
       fetchOrders(true); // Silent background sync
     };
@@ -156,7 +165,7 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
       if (targetId && targetStatus) {
         setApiOrders((prev) =>
           prev.map((o) =>
-            o.id === targetId
+            o.id === targetId || (o.trackingCode && o.trackingCode === targetId)
               ? {
                   ...o,
                   ...(data.order || {}),
@@ -188,7 +197,6 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
 
   const mappedStoreOrders = useMemo(() => {
     return storeOrders.map((o) => {
-      // Parse date safely — handle both ISO strings and legacy formatted dates
       let createdAt: string;
       try {
         const d = new Date(o.date);
@@ -223,6 +231,7 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
   }, [storeOrders]);
 
   const allCombinedOrders = useMemo(() => {
+    // Put apiOrders SECOND so real database orders override store orders in Map
     const combined = [...mappedStoreOrders, ...apiOrders];
     const uniqueMap = new Map();
     combined.forEach((o) => uniqueMap.set(String(o.id).toUpperCase(), o));
@@ -244,8 +253,15 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
         (o.guestPhone && o.guestPhone.includes(q))
       );
     }
-    if (sortKey === 'newest') list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    if (sortKey === 'oldest') list.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+    const getTime = (dateVal: any) => {
+      if (!dateVal) return 0;
+      const t = new Date(dateVal).getTime();
+      return isNaN(t) ? 0 : t;
+    };
+
+    if (sortKey === 'newest') list.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt));
+    if (sortKey === 'oldest') list.sort((a, b) => getTime(a.createdAt) - getTime(b.createdAt));
     if (sortKey === 'amount_desc') list.sort((a, b) => b.total - a.total);
     if (sortKey === 'amount_asc') list.sort((a, b) => a.total - b.total);
     return list;

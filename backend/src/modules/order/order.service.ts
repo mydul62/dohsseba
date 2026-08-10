@@ -615,9 +615,12 @@ export const createGuestOrder = async (data: {
   const sellerId = order.items[0]?.product?.sellerId;
   if (sellerId) {
     emitToSellerRoom(sellerId, 'ORDER_CREATED', { order });
+    emitToSellerRoom(sellerId, 'order:created', { order });
   }
   emitToRole('SELLER', 'ORDER_CREATED', { order });
+  emitToRole('SELLER', 'order:created', { order });
   emitToAdminRoom('ORDER_CREATED', { order });
+  emitToAdminRoom('order:created', { order });
 
   return order;
 };
