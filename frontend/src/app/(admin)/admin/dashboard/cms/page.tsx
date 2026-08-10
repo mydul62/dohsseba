@@ -7,7 +7,7 @@ import { useLanguageStore } from '@/store/useLanguageStore';
 import {
   Image as ImageIcon, Tag, Plus, Trash2, Edit2,
   CheckCircle2, AlertCircle, Percent, DollarSign, ExternalLink, X, Copy, Check, Save,
-  Link as LinkIcon, Eye, EyeOff
+  Link as LinkIcon, Eye, EyeOff, Search, Filter, RefreshCw, ToggleLeft, ToggleRight, Loader2
 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -24,7 +24,8 @@ const DEFAULT_BANNER_FORM = {
 
 const DEFAULT_COUPON_FORM = {
   code: '',
-  discount: '৳100 OFF',
+  discount: '',
+  discountType: 'FIXED',
   discountValue: '100',
   minSpend: '500',
   maxUses: '',
@@ -43,6 +44,11 @@ export default function AdminCMSPage() {
   const [copiedCode, setCopiedCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Search & Filter States
+  const [bannerSearch, setBannerSearch] = useState('');
+  const [couponSearch, setCouponSearch] = useState('');
+  const [couponFilter, setCouponFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
 
   // Banner Modal
   const [showBannerModal, setShowBannerModal] = useState(false);
@@ -77,17 +83,41 @@ export default function AdminCMSPage() {
 
   useEffect(() => {
     loadData();
+
     const handleHash = () => {
       if (typeof window !== 'undefined') {
         const hash = window.location.hash.replace('#', '');
-        if (hash === 'coupons') setActiveTab('coupons');
-        else if (hash === 'banners') setActiveTab('banners');
+        if (hash === 'coupons') {
+          setActiveTab('coupons');
+          setTimeout(() => {
+            document.getElementById('coupons-section')?.scrollIntoView({ behavior: 'smooth' });
+          }, 100);
+        } else if (hash === 'banners') {
+          setActiveTab('banners');
+          setTimeout(() => {
+            document.getElementById('banners-section')?.scrollIntoView({ behavior: 'smooth' });
+          }, 100);
+        }
       }
     };
+
     handleHash();
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
+
+  const handleTabChange = (tab: 'banners' | 'coupons') => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      window.location.hash = tab;
+    }
+  };
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(''), 2000);
+  };
 
   // ── Banner Handlers ──────────────────────────────────────────────────────────
 
@@ -143,6 +173,16 @@ export default function AdminCMSPage() {
     }
   };
 
+  const handleToggleBanner = async (id: string) => {
+    setBanners((prev) => prev.map((b) => b.id === id ? { ...b, isActive: !b.isActive } : b));
+    try {
+      await fetchApi(`/admin/banners/${id}/toggle`, { method: 'PATCH' });
+      showMsg(isBn ? 'ব্যানার স্ট্যাটাস আপডেট হয়েছে।' : 'Banner status updated.');
+    } catch {
+      loadData();
+    }
+  };
+
   const handleDeleteBanner = async (id: string) => {
     const ok = await confirm({
       title: isBn ? 'ব্যানার মুছুন' : 'Delete Banner',
@@ -164,9 +204,10 @@ export default function AdminCMSPage() {
       setCouponForm({
         code: coupon.code || '',
         discount: coupon.discount || '',
-        discountValue: String(coupon.discountValue || ''),
-        minSpend: String(coupon.minOrderAmount || coupon.minSpend || ''),
-        maxUses: String(coupon.maxUses || ''),
+        discountType: coupon.discountType || 'FIXED',
+        discountValue: String(coupon.discountValue || '100'),
+        minSpend: String(coupon.minOrderAmount || coupon.minSpend || '0'),
+        maxUses: coupon.maxUses ? String(coupon.maxUses) : '',
         isActive: coupon.isActive !== false,
       });
     } else {
@@ -182,7 +223,8 @@ export default function AdminCMSPage() {
     try {
       const payload = {
         code: couponForm.code.trim().toUpperCase(),
-        discount: couponForm.discount.trim(),
+        discount: couponForm.discount.trim() || `৳${couponForm.discountValue || 100} OFF`,
+        discountType: couponForm.discountType || 'FIXED',
         discountValue: Number(couponForm.discountValue) || 0,
         minSpend: Number(couponForm.minSpend) || 0,
         maxUses: couponForm.maxUses ? Number(couponForm.maxUses) : undefined,
@@ -217,10 +259,20 @@ export default function AdminCMSPage() {
     }
   };
 
+  const handleToggleCoupon = async (id: string) => {
+    setCoupons((prev) => prev.map((c) => c.id === id ? { ...c, isActive: !c.isActive } : c));
+    try {
+      await fetchApi(`/admin/coupons/${id}/toggle`, { method: 'PATCH' });
+      showMsg(isBn ? 'কুপন স্ট্যাটাস আপডেট হয়েছে।' : 'Coupon status updated.');
+    } catch {
+      loadData();
+    }
+  };
+
   const handleDeleteCoupon = async (id: string) => {
     const ok = await confirm({
-      title: isBn ? 'কুপন মুছুন' : 'Delete Coupon',
-      message: isBn ? 'আপনি কি এই কুপনটি মুছে ফেলতে চান?' : 'Are you sure you want to delete this coupon?',
+      title: isBn ? 'কুপন কোড মুছুন' : 'Delete Coupon',
+      message: isBn ? 'আপনি কি এই কুপন কোডটি মুছে ফেলতে চান?' : 'Are you sure you want to delete this coupon code?',
       confirmText: isBn ? 'মুছে ফেলুন' : 'Delete Coupon',
       variant: 'danger',
     });
@@ -230,263 +282,302 @@ export default function AdminCMSPage() {
     showMsg(isBn ? 'কুপন মুছে ফেলা হয়েছে।' : 'Coupon deleted.');
   };
 
-  const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(''), 3000);
-  };
+  // Filtered lists
+  const filteredBanners = banners.filter((b) =>
+    (b.title || '').toLowerCase().includes(bannerSearch.toLowerCase()) ||
+    (b.category || '').toLowerCase().includes(bannerSearch.toLowerCase())
+  );
+
+  const filteredCoupons = coupons.filter((c) => {
+    const matchesSearch =
+      (c.code || '').toLowerCase().includes(couponSearch.toLowerCase()) ||
+      (c.discount || '').toLowerCase().includes(couponSearch.toLowerCase());
+    const matchesFilter =
+      couponFilter === 'ALL' ||
+      (couponFilter === 'ACTIVE' && c.isActive) ||
+      (couponFilter === 'INACTIVE' && !c.isActive);
+    return matchesSearch && matchesFilter;
+  });
 
   return (
-    <div className="space-y-6 text-white">
-
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6 text-white max-w-7xl mx-auto">
+      {/* ── Page Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
         <div>
-          <p className="text-xs text-indigo-400 font-semibold mb-0.5">Admin / Content &amp; Promotions</p>
+          <p className="text-xs text-indigo-400 font-semibold mb-0.5">Admin / Content & Promotions</p>
           <h1 className="font-black text-white text-2xl flex items-center gap-2">
             <ImageIcon className="w-6 h-6 text-indigo-400" />
-            <span>{isBn ? 'ব্যানার, প্রমোশন ও কুপনস' : 'Banners, CMS & Coupons'}</span>
+            <span>{isBn ? 'সিএমএস এবং প্রমোশনাল কুপন ম্যানেজার' : 'CMS Banners & Coupons Manager'}</span>
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            {isBn ? 'হোমপেজ ব্যানার স্লাইডার, প্রমোশনাল অফার এবং কুপন কোড ম্যানেজমেন্ট' : 'Homepage hero banners, promotional offers, and discount coupon codes'}
+            {isBn ? 'ওয়েবসাইটের ব্যানার স্লাইডার এবং প্রমোশনাল কুপন কোডসমূহ এখান থেকে লাইভ পরিচালনা করুন' : 'Manage promotional banners and discount coupon codes in real-time across the platform'}
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {activeTab === 'banners' ? (
             <button
               onClick={() => openBannerModal()}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg transition-all flex items-center gap-2"
+              className="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-lg transition-all flex items-center gap-2 cursor-pointer shadow-indigo-600/20"
             >
-              <Plus className="w-4 h-4" />
-              <span>{isBn ? 'নতুন ব্যানার যুক্ত করুন' : 'Add New Banner'}</span>
+              <Plus className="w-4 h-4" /> <span>{isBn ? 'নতুন ব্যানার' : 'Add New Banner'}</span>
             </button>
           ) : (
             <button
               onClick={() => openCouponModal()}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg transition-all flex items-center gap-2"
+              className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg transition-all flex items-center gap-2 cursor-pointer shadow-emerald-600/20"
             >
-              <Plus className="w-4 h-4" />
-              <span>{isBn ? 'নতুন কুপন কোড তৈরি করুন' : 'Create Coupon Code'}</span>
+              <Plus className="w-4 h-4" /> <span>{isBn ? 'নতুন কুপন কোড' : 'Create Coupon Code'}</span>
             </button>
           )}
         </div>
       </div>
 
       {actionMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" /> {actionMsg}
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2 shadow-lg animate-in fade-in-50">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+          <span>{actionMsg}</span>
         </div>
       )}
 
-      {/* Top Metrics Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
-            <span>{isBn ? 'সক্রিয় ব্যানার' : 'Active Hero Banners'}</span>
-            <ImageIcon className="w-4 h-4 text-indigo-400" />
-          </div>
-          <div className="text-2xl font-black text-indigo-400">{banners.length} {isBn ? 'টি স্লাইডার' : 'Banners'}</div>
-          <div className="text-[11px] text-indigo-300 font-bold">Homepage Carousel</div>
+      {/* ── Navigation Tabs & Search Toolbar ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#1f2136] p-2 sm:p-3 rounded-2xl border border-white/10">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleTabChange('banners')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'banners'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <ImageIcon className="w-4 h-4" />
+            <span>{isBn ? 'ব্যানার স্লাইডার' : 'Banners'} ({banners.length})</span>
+          </button>
+
+          <button
+            onClick={() => handleTabChange('coupons')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'coupons'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Tag className="w-4 h-4" />
+            <span>{isBn ? 'কুপন ও ডিসকাউন্ট' : 'Coupons'} ({coupons.length})</span>
+          </button>
         </div>
 
-        <div className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
-            <span>{isBn ? 'সক্রিয় কুপন কোড' : 'Active Coupon Codes'}</span>
-            <Tag className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="text-2xl font-black text-emerald-400">{coupons.length} {isBn ? 'টি কুপন' : 'Coupons'}</div>
-          <div className="text-[11px] text-emerald-400 font-bold">Live Redemption</div>
-        </div>
+        {/* Filter Controls */}
+        <div className="flex items-center gap-2">
+          {activeTab === 'banners' ? (
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={bannerSearch}
+                onChange={(e) => setBannerSearch(e.target.value)}
+                placeholder="Search banners..."
+                className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#181928] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-56">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={couponSearch}
+                  onChange={(e) => setCouponSearch(e.target.value)}
+                  placeholder="Search coupons..."
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#181928] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
 
-        <div className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
-            <span>{isBn ? 'মোট কুপন ব্যবহার' : 'Total Coupon Uses'}</span>
-            <Percent className="w-4 h-4 text-amber-400" />
-          </div>
-          <div className="text-2xl font-black text-amber-400">
-            {coupons.reduce((s: number, c: any) => s + (c.usedCount || 0), 0)}+ {isBn ? 'বার ব্যবহার' : 'Times Used'}
-          </div>
-          <div className="text-[11px] text-slate-400 font-bold">Resident Discounts</div>
+              <select
+                value={couponFilter}
+                onChange={(e) => setCouponFilter(e.target.value as any)}
+                className="px-3 py-1.5 rounded-xl bg-[#181928] border border-white/10 text-xs text-slate-300 font-bold focus:outline-none focus:border-emerald-500"
+              >
+                <option value="ALL">All Status</option>
+                <option value="ACTIVE">Active Only</option>
+                <option value="INACTIVE">Inactive Only</option>
+              </select>
+            </div>
+          )}
         </div>
-
-        <div className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
-            <span>{isBn ? 'ছাড়কৃত মোট অর্থ' : 'Total Discount Granted'}</span>
-            <DollarSign className="w-4 h-4 text-cyan-400" />
-          </div>
-          <div className="text-2xl font-black text-cyan-400">৳{formatCurrency(coupons.reduce((s: number, c: any) => s + (c.discountValue || 0) * (c.usedCount || 0), 0))}</div>
-          <div className="text-[11px] text-slate-400 font-bold">Saved by Residents</div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-1 p-1.5 rounded-2xl bg-[#1e1f32] border border-white/10 text-xs font-semibold w-fit">
-        <button
-          onClick={() => setActiveTab('banners')}
-          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
-            activeTab === 'banners' ? 'bg-indigo-600 text-white font-bold shadow-md' : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <ImageIcon className="w-3.5 h-3.5" />
-          <span>{isBn ? 'হোমপেজ ব্যানার স্লাইডার' : 'Hero Banners & Sliders'}</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('coupons')}
-          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
-            activeTab === 'coupons' ? 'bg-indigo-600 text-white font-bold shadow-md' : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Tag className="w-3.5 h-3.5" />
-          <span>{isBn ? 'কুপন কোড ও অফার সমূহ' : 'Coupons & Offers'}</span>
-        </button>
       </div>
 
       {/* ── BANNERS TAB ── */}
       {activeTab === 'banners' && (
-        loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => <div key={i} className="h-52 rounded-3xl bg-[#1e1f32] border border-white/10 animate-pulse" />)}
-          </div>
-        ) : banners.length === 0 ? (
-          <div className="p-12 rounded-3xl bg-[#1e1f32] border border-white/10 text-center space-y-3">
-            <ImageIcon className="w-12 h-12 text-slate-500 mx-auto opacity-50" />
-            <p className="text-slate-300 font-bold text-sm">{isBn ? 'কোনো হোমপেজ ব্যানার পাওয়া যায়নি' : 'No Hero Banners Found'}</p>
-            <p className="text-xs text-slate-400">{isBn ? 'আপনার প্রথম ব্যানার তৈরি করুন' : 'Create your first homepage slider banner to feature promotions.'}</p>
-            <button
-              onClick={() => openBannerModal()}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg inline-flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" /> <span>{isBn ? 'ব্যানার যুক্ত করুন' : 'Add Banner'}</span>
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {banners.map((b) => (
-              <div key={b.id} className="rounded-3xl bg-[#1e1f32] border border-white/10 overflow-hidden hover:border-indigo-500/40 transition-all shadow-xl flex flex-col">
-                {/* Banner Image Preview */}
-                {b.image && (b.image.startsWith('http') || b.image.startsWith('/')) ? (
-                  <div className="w-full h-36 overflow-hidden bg-slate-900">
-                    <img src={b.image} alt={b.title} className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="w-full h-36 bg-gradient-to-br from-indigo-900 to-slate-900 flex items-center justify-center text-4xl">
-                    {b.image && b.image.length < 5 ? b.image : '🛍️'}
-                  </div>
-                )}
+        <div id="banners-section">
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-64 rounded-3xl bg-[#1f2136] border border-white/10 animate-pulse" />
+              ))}
+            </div>
+          ) : filteredBanners.length === 0 ? (
+            <div className="p-12 rounded-3xl bg-[#1f2136] border border-white/10 text-center space-y-3">
+              <ImageIcon className="w-12 h-12 text-slate-500 mx-auto opacity-50" />
+              <p className="text-slate-300 font-bold text-sm">{isBn ? 'কোনো ব্যানার পাওয়া যায়নি' : 'No Banners Found'}</p>
+              <p className="text-xs text-slate-400">{isBn ? 'হোমপেজ ও সার্ভিস পেজের জন্য ব্যানার যোগ করুন' : 'Add promotional banners for homepage and shopping catalog.'}</p>
+              <button
+                onClick={() => openBannerModal()}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg inline-flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> <span>{isBn ? 'নতুন ব্যানার তৈরি করুন' : 'Create Banner'}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredBanners.map((b) => (
+                <div
+                  key={b.id}
+                  className="rounded-3xl bg-[#1f2136] border border-white/10 overflow-hidden shadow-xl hover:border-indigo-500/40 transition-all flex flex-col justify-between group"
+                >
+                  {/* Banner Image Preview */}
+                  <div className="relative h-44 bg-[#181928] overflow-hidden flex items-center justify-center">
+                    {b.image && (b.image.startsWith('http') || b.image.startsWith('/')) ? (
+                      <img src={b.image} alt={b.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <span className="text-5xl">{b.image || '🖼️'}</span>
+                    )}
 
-                <div className="p-4 space-y-2 flex-1 flex flex-col">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${b.isActive !== false ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                      {b.isActive !== false ? 'Active' : 'Inactive'}
+                    <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-bold border border-white/10">
+                      {b.category || 'Grocery'}
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 text-[10px] font-bold">
-                      {b.category || 'General'}
-                    </span>
+
+                    <button
+                      onClick={() => handleToggleBanner(b.id)}
+                      className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold border backdrop-blur-md transition-all cursor-pointer ${
+                        b.isActive !== false ? 'bg-emerald-500/80 text-white border-emerald-400' : 'bg-rose-500/80 text-white border-rose-400'
+                      }`}
+                    >
+                      {b.isActive !== false ? '🟢 Active' : '🔴 Inactive'}
+                    </button>
                   </div>
 
-                  <h3 className="font-bold text-white text-sm leading-snug">{b.title}</h3>
-                  {b.subtitle && <p className="text-xs text-slate-400 line-clamp-1">{b.subtitle}</p>}
-
-                  {b.link && (
-                    <div className="flex items-center gap-1 text-[11px] font-mono text-indigo-400 truncate">
-                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{b.link}</span>
+                  {/* Banner Info */}
+                  <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-extrabold text-white text-base leading-snug line-clamp-2">{b.title}</h3>
+                      {b.subtitle && <p className="text-xs text-slate-400 mt-1 line-clamp-2">{b.subtitle}</p>}
                     </div>
-                  )}
 
-                  <div className="mt-auto pt-2 border-t border-white/5 flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => openBannerModal(b)}
-                      className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center transition-all"
-                      title="Edit"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteBanner(b.id)}
-                      className="w-8 h-8 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center transition-all"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+                      <span className="font-mono text-slate-400 text-[11px] truncate max-w-[150px]">
+                        {b.link || '/services/shopping'}
+                      </span>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => openBannerModal(b)}
+                          className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center transition-all cursor-pointer"
+                          title="Edit Banner"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBanner(b.id)}
+                          className="w-8 h-8 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center transition-all cursor-pointer"
+                          title="Delete Banner"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
-      {/* ── COUPONS TAB ── */}
+      {/* ── COUPONS TAB (#coupons) ── */}
       {activeTab === 'coupons' && (
-        loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => <div key={i} className="h-40 rounded-3xl bg-[#1e1f32] border border-white/10 animate-pulse" />)}
-          </div>
-        ) : coupons.length === 0 ? (
-          <div className="p-12 rounded-3xl bg-[#1e1f32] border border-white/10 text-center space-y-3">
-            <Tag className="w-12 h-12 text-slate-500 mx-auto opacity-50" />
-            <p className="text-slate-300 font-bold text-sm">{isBn ? 'কোনো কুপন কোড পাওয়া যায়নি' : 'No Coupon Codes Found'}</p>
-            <p className="text-xs text-slate-400">{isBn ? 'আপনার প্রথম ডিসকাউন্ট কুপন তৈরি করুন' : 'Create your first discount coupon code to reward customers.'}</p>
-            <button
-              onClick={() => openCouponModal()}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg inline-flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" /> <span>{isBn ? 'কুপন তৈরি করুন' : 'Create Coupon'}</span>
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {coupons.map((c) => (
-              <div key={c.id} className="p-5 rounded-3xl bg-[#1e1f32] border border-white/10 space-y-3 flex flex-col justify-between hover:border-emerald-500/40 transition-all shadow-xl">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono font-black text-emerald-400 text-lg tracking-wider bg-emerald-500/10 px-3 py-1 rounded-xl border border-emerald-500/20">
-                      {c.code}
-                    </span>
-                    <button
-                      onClick={() => handleCopyCode(c.code)}
-                      className="p-1.5 rounded-lg bg-white/5 text-slate-300 hover:bg-white/10 transition-colors"
-                      title="Copy Code"
-                    >
-                      {copiedCode === c.code ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <div className="font-black text-xl text-white">{c.discount || (c.discountValue ? `৳${c.discountValue} OFF` : 'Discount')}</div>
-                  <div className="text-xs text-slate-400">
-                    {isBn ? 'সর্বনিম্ন কেনাকাটা' : 'Min Spend'}: <strong>৳{formatCurrency(c.minOrderAmount || 0)}</strong>
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-semibold">
-                    {isBn ? 'ব্যবহার' : 'Used'}: {c.usedCount || 0}{c.maxUses ? `/${c.maxUses}` : ''} times
-                  </div>
-                </div>
+        <div id="coupons-section">
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => <div key={i} className="h-44 rounded-3xl bg-[#1f2136] border border-white/10 animate-pulse" />)}
+            </div>
+          ) : filteredCoupons.length === 0 ? (
+            <div className="p-12 rounded-3xl bg-[#1f2136] border border-white/10 text-center space-y-3">
+              <Tag className="w-12 h-12 text-slate-500 mx-auto opacity-50" />
+              <p className="text-slate-300 font-bold text-sm">{isBn ? 'কোনো কুপন কোড পাওয়া যায়নি' : 'No Coupon Codes Found'}</p>
+              <p className="text-xs text-slate-400">{isBn ? 'আপনার প্রথম ডিসকাউন্ট কুপন তৈরি করুন' : 'Create your first discount coupon code to reward resident shoppers.'}</p>
+              <button
+                onClick={() => openCouponModal()}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg inline-flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> <span>{isBn ? 'কুপন তৈরি করুন' : 'Create Coupon'}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {filteredCoupons.map((c) => (
+                <div key={c.id} className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 space-y-4 flex flex-col justify-between hover:border-emerald-500/40 transition-all shadow-xl">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-black text-emerald-400 text-base tracking-wider bg-emerald-500/10 px-3 py-1 rounded-xl border border-emerald-500/20">
+                        {c.code}
+                      </span>
+                      <button
+                        onClick={() => handleCopyCode(c.code)}
+                        className="p-1.5 rounded-lg bg-white/5 text-slate-300 hover:bg-white/10 transition-colors cursor-pointer"
+                        title="Copy Code"
+                      >
+                        {copiedCode === c.code ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
 
-                <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${c.isActive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                    {c.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                  <div className="flex gap-1.5">
+                    <div className="font-black text-xl text-white">{c.discount || (c.discountValue ? `৳${c.discountValue} OFF` : 'Discount')}</div>
+                    
+                    <div className="text-xs text-slate-400 space-y-1">
+                      <div>{isBn ? 'সর্বনিম্ন কেনাকাটা' : 'Min Spend'}: <strong className="text-white">৳{formatCurrency(c.minOrderAmount || 0)}</strong></div>
+                      <div>{isBn ? 'ব্যবহারের তথ্য' : 'Uses'}: <strong className="text-slate-200">{c.usedCount || 0}{c.maxUses ? `/${c.maxUses}` : ' (Unlimited)'}</strong></div>
+                      {c.expiresAt && (
+                        <div className="text-[10px] text-slate-500">
+                          Expires: {new Date(c.expiresAt).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-white/5 flex items-center justify-between">
                     <button
-                      onClick={() => openCouponModal(c)}
-                      className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center transition-all"
-                      title="Edit"
+                      type="button"
+                      onClick={() => handleToggleCoupon(c.id)}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
+                        c.isActive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
+                      }`}
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
+                      {c.isActive ? '🟢 Active' : '🔴 Disabled'}
                     </button>
-                    <button
-                      onClick={() => handleDeleteCoupon(c.id)}
-                      className="w-8 h-8 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center transition-all"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => openCouponModal(c)}
+                        className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center transition-all cursor-pointer"
+                        title="Edit Coupon"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCoupon(c.id)}
+                        className="w-8 h-8 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center transition-all cursor-pointer"
+                        title="Delete Coupon"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── ADD / EDIT BANNER MODAL ── */}
@@ -499,11 +590,10 @@ export default function AdminCMSPage() {
                   ? (isBn ? 'ব্যানার সম্পাদনা করুন' : 'Edit Banner')
                   : (isBn ? 'নতুন ব্যানার স্লাইডার যুক্ত করুন' : 'Add New Hero Banner')}
               </h3>
-              <button onClick={() => setShowBannerModal(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowBannerModal(false)} className="text-slate-400 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
 
             <div className="space-y-3 text-xs">
-              {/* Image URL + Preview */}
               <div>
                 <label className="text-slate-400 font-semibold block mb-1">
                   {isBn ? 'ব্যানার ছবির URL' : 'Banner Image URL'}
@@ -512,7 +602,7 @@ export default function AdminCMSPage() {
                   value={bannerForm.image}
                   onChange={(e) => setBannerForm((f: any) => ({ ...f, image: e.target.value }))}
                   placeholder="https://images.unsplash.com/..."
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-500 font-mono"
                 />
                 {bannerForm.image && (bannerForm.image.startsWith('http') || bannerForm.image.startsWith('/')) && (
                   <div className="mt-2 rounded-xl overflow-hidden border border-indigo-500/20 h-28">
@@ -567,7 +657,7 @@ export default function AdminCMSPage() {
                     value={bannerForm.link}
                     onChange={(e) => setBannerForm((f: any) => ({ ...f, link: e.target.value }))}
                     placeholder="/services/shopping"
-                    className="w-full px-4 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-500"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-500 font-mono"
                   />
                 </div>
               </div>
@@ -575,10 +665,11 @@ export default function AdminCMSPage() {
               <div className="flex items-center gap-3">
                 <label className="text-slate-400 font-semibold">{isBn ? 'সক্রিয়' : 'Active'}</label>
                 <button
+                  type="button"
                   onClick={() => setBannerForm((f: any) => ({ ...f, isActive: !f.isActive }))}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${bannerForm.isActive ? 'bg-emerald-500' : 'bg-slate-600'}`}
+                  className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${bannerForm.isActive ? 'bg-emerald-500' : 'bg-slate-600'}`}
                 >
-                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${bannerForm.isActive ? 'left-5.5' : 'left-0.5'}`} style={{ left: bannerForm.isActive ? '1.375rem' : '0.125rem' }} />
+                  <span className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all" style={{ left: bannerForm.isActive ? '1.375rem' : '0.125rem' }} />
                 </button>
                 <span className={`text-xs font-bold ${bannerForm.isActive ? 'text-emerald-400' : 'text-slate-500'}`}>
                   {bannerForm.isActive ? 'Active' : 'Inactive'}
@@ -590,14 +681,14 @@ export default function AdminCMSPage() {
               <button
                 onClick={handleSaveBanner}
                 disabled={saving || !bannerForm.title.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
               >
-                {saving ? <span className="animate-spin">⟳</span> : <Save className="w-4 h-4" />}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {editingBanner ? (isBn ? 'আপডেট করুন' : 'Update Banner') : (isBn ? 'ব্যানার সংরক্ষণ করুন' : 'Save Banner')}
               </button>
               <button
                 onClick={() => setShowBannerModal(false)}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition-all"
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition-all cursor-pointer"
               >
                 {isBn ? 'বাতিল' : 'Cancel'}
               </button>
@@ -616,7 +707,7 @@ export default function AdminCMSPage() {
                   ? (isBn ? 'কুপন সম্পাদনা করুন' : 'Edit Coupon')
                   : (isBn ? 'নতুন কুপন তৈরি করুন' : 'Create New Coupon')}
               </h3>
-              <button onClick={() => setShowCouponModal(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowCouponModal(false)} className="text-slate-400 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
 
             <div className="space-y-3 text-xs">
@@ -636,7 +727,7 @@ export default function AdminCMSPage() {
                   <input
                     value={couponForm.discount}
                     onChange={(e) => setCouponForm((f: any) => ({ ...f, discount: e.target.value }))}
-                    placeholder="৳150 OFF"
+                    placeholder="e.g. ৳150 OFF"
                     className="w-full px-4 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -647,7 +738,7 @@ export default function AdminCMSPage() {
                     value={couponForm.discountValue}
                     onChange={(e) => setCouponForm((f: any) => ({ ...f, discountValue: e.target.value }))}
                     placeholder="100"
-                    className="w-full px-4 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -660,7 +751,7 @@ export default function AdminCMSPage() {
                     value={couponForm.minSpend}
                     onChange={(e) => setCouponForm((f: any) => ({ ...f, minSpend: e.target.value }))}
                     placeholder="500"
-                    className="w-full px-4 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
                   />
                 </div>
                 <div>
@@ -670,7 +761,7 @@ export default function AdminCMSPage() {
                     value={couponForm.maxUses}
                     onChange={(e) => setCouponForm((f: any) => ({ ...f, maxUses: e.target.value }))}
                     placeholder="Unlimited"
-                    className="w-full px-4 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -678,8 +769,9 @@ export default function AdminCMSPage() {
               <div className="flex items-center gap-3">
                 <label className="text-slate-400 font-semibold">{isBn ? 'সক্রিয়' : 'Active'}</label>
                 <button
+                  type="button"
                   onClick={() => setCouponForm((f: any) => ({ ...f, isActive: !f.isActive }))}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${couponForm.isActive ? 'bg-emerald-500' : 'bg-slate-600'}`}
+                  className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${couponForm.isActive ? 'bg-emerald-500' : 'bg-slate-600'}`}
                 >
                   <span className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all" style={{ left: couponForm.isActive ? '1.375rem' : '0.125rem' }} />
                 </button>
@@ -693,14 +785,14 @@ export default function AdminCMSPage() {
               <button
                 onClick={handleSaveCoupon}
                 disabled={saving || !couponForm.code.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
               >
-                {saving ? <span className="animate-spin">⟳</span> : <Save className="w-4 h-4" />}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {editingCoupon ? (isBn ? 'আপডেট করুন' : 'Update Coupon') : (isBn ? 'কুপন সংরক্ষণ করুন' : 'Save Coupon')}
               </button>
               <button
                 onClick={() => setShowCouponModal(false)}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition-all"
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition-all cursor-pointer"
               >
                 {isBn ? 'বাতিল' : 'Cancel'}
               </button>

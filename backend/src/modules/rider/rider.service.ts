@@ -746,7 +746,7 @@ export const removeOrderItem = async (orderId: string, itemId: string, riderId: 
   return prisma.order.update({
     where: { id: orderId },
     data: {
-      subTotal: newSubTotal,
+      subtotal: newSubTotal,
       totalAmount: newTotal,
     },
     include: {

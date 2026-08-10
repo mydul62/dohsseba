@@ -558,21 +558,23 @@ export const createGuestOrder = async (data: {
         try {
           if (!seller) seller = await prisma.user.findFirst({ where: { role: 'SELLER' } });
           if (!category) category = await prisma.productCategory.findFirst();
-          const createdProd = await prisma.product.create({
-            data: {
-              id: missingId,
-              sellerId: seller.id,
-              categoryId: category.id,
-              name: 'Fresh Grocery Item',
-              slug: `prod-${missingId}-${Date.now()}`,
-              description: 'Fresh local DOHS bazaar item.',
-              price: 100,
-              stock: 100,
-              unit: 'kg',
-              isActive: true,
-            },
-          });
-          products.push(createdProd);
+          if (seller && category) {
+            const createdProd = await prisma.product.create({
+              data: {
+                id: missingId,
+                sellerId: seller.id,
+                categoryId: category.id,
+                name: 'Fresh Grocery Item',
+                slug: `prod-${missingId}-${Date.now()}`,
+                description: 'Fresh local DOHS bazaar item.',
+                price: 100,
+                stock: 100,
+                unit: 'kg',
+                isActive: true,
+              },
+            });
+            products.push(createdProd);
+          }
         } catch (_) {}
       }
     }

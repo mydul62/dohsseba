@@ -566,6 +566,17 @@ export function DashboardSidebar({
     }
   };
 
+  const [currentHash, setCurrentHash] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentHash(window.location.hash);
+      const handleHashChange = () => setCurrentHash(window.location.hash);
+      window.addEventListener('hashchange', handleHashChange);
+      return () => window.removeEventListener('hashchange', handleHashChange);
+    }
+  }, []);
+
   const navGroups = getRoleNavGroups();
 
   const sidebarContent = (
@@ -636,7 +647,11 @@ export function DashboardSidebar({
               {group.items.map((item) => {
                 const hasSub = !!item.subItems?.length;
                 const isOpen = openAccordion === item.label;
-                const isActive = item.href ? pathname === item.href : false;
+                const isActive = item.href
+                  ? item.href.includes('#')
+                    ? (pathname + currentHash) === item.href
+                    : pathname === item.href && !currentHash
+                  : false;
 
                 if (hasSub) {
                   return (

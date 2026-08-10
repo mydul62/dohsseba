@@ -62,6 +62,10 @@ export const updateBanner = async (req: Request, res: Response, next: NextFuncti
   try { return sendResponse(res, 200, 'Banner updated', await adminService.updateBanner(req.params.id as string, req.body)); }
   catch (e) { next(e); }
 };
+export const toggleBanner = async (req: Request, res: Response, next: NextFunction) => {
+  try { return sendResponse(res, 200, 'Banner status updated', await adminService.toggleBannerStatus(req.params.id as string)); }
+  catch (e) { next(e); }
+};
 export const deleteBanner = async (req: Request, res: Response, next: NextFunction) => {
   try { await adminService.deleteBanner(req.params.id as string); return sendResponse(res, 200, 'Banner deleted'); }
   catch (e) { next(e); }
@@ -78,6 +82,10 @@ export const createCoupon = async (req: Request, res: Response, next: NextFuncti
 };
 export const updateCoupon = async (req: Request, res: Response, next: NextFunction) => {
   try { return sendResponse(res, 200, 'Coupon updated', await adminService.updateCoupon(req.params.id as string, req.body)); }
+  catch (e) { next(e); }
+};
+export const toggleCoupon = async (req: Request, res: Response, next: NextFunction) => {
+  try { return sendResponse(res, 200, 'Coupon status updated', await adminService.toggleCouponStatus(req.params.id as string)); }
   catch (e) { next(e); }
 };
 export const deleteCoupon = async (req: Request, res: Response, next: NextFunction) => {

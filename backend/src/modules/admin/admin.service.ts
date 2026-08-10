@@ -203,8 +203,17 @@ export const createBanner = async (data: any) => {
   });
 };
 
-export const updateBanner = async (id: string, data: object) => {
+export const updateBanner = async (id: string, data: any) => {
   return prisma.banner.update({ where: { id }, data: data as any });
+};
+
+export const toggleBannerStatus = async (id: string) => {
+  const banner = await prisma.banner.findUnique({ where: { id } });
+  if (!banner) throw new Error('Banner not found');
+  return prisma.banner.update({
+    where: { id },
+    data: { isActive: !banner.isActive },
+  });
 };
 
 export const deleteBanner = async (id: string) => {
@@ -225,7 +234,7 @@ export const createCoupon = async (data: any) => {
   return prisma.coupon.create({
     data: {
       code,
-      discount:      data.discount || '৳100 OFF',
+      discount:      data.discount || `৳${data.discountValue || 100} OFF`,
       discountType:  data.discountType || 'FIXED',
       discountValue: Number(data.discountValue) || 0,
       minOrderAmount: Number(data.minSpend || data.minOrderAmount) || 0,
@@ -237,8 +246,29 @@ export const createCoupon = async (data: any) => {
   });
 };
 
-export const updateCoupon = async (id: string, data: object) => {
-  return prisma.coupon.update({ where: { id }, data: data as any });
+export const updateCoupon = async (id: string, data: any) => {
+  const updateData: any = {};
+  if (data.code) updateData.code = data.code.trim().toUpperCase();
+  if (data.discount !== undefined) updateData.discount = data.discount;
+  if (data.discountType !== undefined) updateData.discountType = data.discountType;
+  if (data.discountValue !== undefined) updateData.discountValue = Number(data.discountValue) || 0;
+  if (data.minSpend !== undefined || data.minOrderAmount !== undefined) {
+    updateData.minOrderAmount = Number(data.minSpend ?? data.minOrderAmount) || 0;
+  }
+  if (data.maxUses !== undefined) updateData.maxUses = data.maxUses ? Number(data.maxUses) : null;
+  if (data.isActive !== undefined) updateData.isActive = Boolean(data.isActive);
+  if (data.expiresAt !== undefined) updateData.expiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
+
+  return prisma.coupon.update({ where: { id }, data: updateData });
+};
+
+export const toggleCouponStatus = async (id: string) => {
+  const coupon = await prisma.coupon.findUnique({ where: { id } });
+  if (!coupon) throw new Error('Coupon not found');
+  return prisma.coupon.update({
+    where: { id },
+    data: { isActive: !coupon.isActive },
+  });
 };
 
 export const deleteCoupon = async (id: string) => {

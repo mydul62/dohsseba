@@ -19,18 +19,24 @@ export default function AdminDashboardOverview() {
   const [partnerQueue, setPartnerQueue] = useState<any[]>([]);
   const [actionMsg, setActionMsg] = useState('');
 
+  const [errorMsg, setErrorMsg] = useState('');
+
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const res = await fetchApi<any>('/admin/dashboard').catch(() => null);
+      setErrorMsg('');
+      const res = await fetchApi<any>('/admin/dashboard');
       if (res && res.success && res.data) {
         setStats(res.data);
         if (Array.isArray(res.data.pendingQueue)) {
           setPartnerQueue(res.data.pendingQueue);
         }
+      } else {
+        throw new Error(res?.message || 'Failed to load dashboard statistics');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading dashboard stats:', err);
+      setErrorMsg(err?.message || 'Failed to connect to backend server');
     } finally {
       setLoading(false);
     }
@@ -56,10 +62,30 @@ export default function AdminDashboardOverview() {
     setTimeout(() => setActionMsg(''), 4000);
   };
 
-  if (!mounted) {
+  if (!mounted || loading) {
     return (
-      <div className="flex items-center justify-center p-12 text-slate-400 text-xs">
-        <Loader2 className="w-6 h-6 text-indigo-400 animate-spin mr-2" /> Loading Admin Command Center...
+      <div className="flex flex-col items-center justify-center p-16 text-slate-400 text-xs min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin mb-3" />
+        <span className="font-bold text-white text-sm">Syncing Admin Command Center…</span>
+        <span className="text-slate-500 mt-1">Fetching live system metrics from database</span>
+      </div>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <div className="p-8 rounded-3xl bg-[#1f2136] border border-red-500/20 text-center space-y-4 max-w-lg mx-auto my-12">
+        <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-400 flex items-center justify-center mx-auto">
+          <X className="w-6 h-6" />
+        </div>
+        <h3 className="font-extrabold text-white text-base">Failed to Load Dashboard Data</h3>
+        <p className="text-xs text-slate-400 font-mono">{errorMsg}</p>
+        <button
+          onClick={loadDashboardData}
+          className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors flex items-center gap-2 mx-auto cursor-pointer"
+        >
+          <RefreshCw className="w-4 h-4" /> Try Again
+        </button>
       </div>
     );
   }
@@ -86,8 +112,8 @@ export default function AdminDashboardOverview() {
             <span>{isBn ? 'মোট প্ল্যাটফর্ম জিএমভি' : 'Total Platform GMV'}</span>
             <DollarSign className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl font-black text-emerald-400" suppressHydrationWarning>{formatCurrency(dataStats.totalRevenue || 14235)}</div>
-          <div className="text-[11px] text-emerald-400 font-bold">{isBn ? '+৩২% মাসিক বৃদ্ধি' : '+32% MoM growth'}</div>
+          <div className="text-2xl font-black text-emerald-400" suppressHydrationWarning>{formatCurrency(dataStats.totalRevenue || 0)}</div>
+          <div className="text-[11px] text-emerald-400 font-bold">{isBn ? 'লাইভ ডাটাবেস ক্যালকুলেশন' : 'Live DB Calculation'}</div>
         </div>
 
         <div className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 text-white shadow-xl space-y-2">
@@ -96,7 +122,7 @@ export default function AdminDashboardOverview() {
             <Users className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="text-2xl font-black text-white" suppressHydrationWarning>
-            {dataStats.totalUsers || 136} {isBn ? 'জন ব্যবহারকারী' : 'Users'}
+            {dataStats.totalUsers || 0} {isBn ? 'জন ব্যবহারকারী' : 'Users'}
           </div>
           <div className="text-[11px] text-indigo-300 font-bold">{isBn ? 'DOHS কমিউনিটি' : 'DOHS Communities'}</div>
         </div>
@@ -107,7 +133,7 @@ export default function AdminDashboardOverview() {
             <ShieldCheck className="w-4 h-4 text-purple-400" />
           </div>
           <div className="text-2xl font-black text-purple-400" suppressHydrationWarning>
-            {dataStats.totalProviders || 520} {isBn ? 'জন অংশীদার' : 'Partners'}
+            {dataStats.totalProviders || 0} {isBn ? 'জন অংশীদার' : 'Partners'}
           </div>
           <div className="text-[11px] text-slate-400 font-bold">{isBn ? 'এনআইডি এবং নিরাপত্তা যাচাই করা হয়েছে' : 'NID & Security Vetted'}</div>
         </div>
@@ -118,7 +144,7 @@ export default function AdminDashboardOverview() {
             <Store className="w-4 h-4 text-amber-400" />
           </div>
           <div className="text-2xl font-black text-amber-400" suppressHydrationWarning>
-            {dataStats.totalSellers || 140}{isBn ? 'টি দোকান' : ' Shops'}
+            {dataStats.totalSellers || 0}{isBn ? 'টি দোকান' : ' Shops'}
           </div>
           <div className="text-[11px] text-slate-400 font-bold">{isBn ? 'স্থানীয় বাজারের বিক্রেতারা' : 'Local Bazaar Vendors'}</div>
         </div>
