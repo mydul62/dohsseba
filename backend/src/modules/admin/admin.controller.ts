@@ -202,3 +202,10 @@ export const updateWithdrawalStatus = async (req: Request, res: Response, next: 
     return sendResponse(res, 200, `Withdrawal request status updated to ${data.status}`, data);
   } catch (e) { next(e); }
 };
+
+export const deleteWithdrawal = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await adminService.deleteWithdrawalRequest(req.params.id as string);
+    return sendResponse(res, 200, 'Withdrawal request deleted successfully');
+  } catch (e) { next(e); }
+};

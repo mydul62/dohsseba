@@ -780,3 +780,9 @@ export const updateWithdrawalStatus = async (id: string, payload: {
 
   return updated;
 };
+
+export const deleteWithdrawalRequest = async (id: string) => {
+  const reqItem = await prisma.withdrawalRequest.findUnique({ where: { id } });
+  if (!reqItem) throw new Error('Withdrawal request not found');
+  return prisma.withdrawalRequest.delete({ where: { id } });
+};

@@ -7,12 +7,15 @@ import { useLanguageStore } from '@/store/useLanguageStore';
 import {
   Wallet, Search, Filter, CheckCircle2, AlertCircle, Clock,
   Loader2, RefreshCw, X, Check, Building2, Smartphone, DollarSign,
-  ArrowUpRight, ShieldCheck, User, MessageSquare
+  ArrowUpRight, ShieldCheck, User, MessageSquare, Trash2
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function AdminWithdrawalsPage() {
   const { language } = useLanguageStore();
   const isBn = language === 'BN';
+  const { confirm, dialogProps } = useConfirm();
 
   const [requests, setRequests] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>({ pendingCount: 0, pendingAmount: 0, totalPaidAmount: 0 });
@@ -103,6 +106,36 @@ export default function AdminWithdrawalsPage() {
     }
   };
 
+  const handleDeleteRequest = async (id: string, amount: number, name: string) => {
+    const ok = await confirm({
+      title: isBn ? 'উইথড্রয়াল রিকোয়েস্ট ডিলিট করুন' : 'Delete Withdrawal Request',
+      message: isBn
+        ? `আপনি কি নিশ্চিত যে আপনি ${name || 'এই রাইডারের'} ৳${formatCurrency(amount)} টাকা উত্তোলনের রিকোয়েস্ট রেকর্ডটি মুছে ফেলতে চান?`
+        : `Are you sure you want to delete the ৳${formatCurrency(amount)} withdrawal request record for ${name || 'this user'}?`,
+      confirmText: isBn ? 'হ্যাঁ, ডিলিট করুন' : 'Delete Request',
+      variant: 'danger',
+    });
+
+    if (!ok) return;
+
+    try {
+      const res = await fetchApi<any>(`/admin/withdrawals/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res && res.success) {
+        setRequests((prev) => prev.filter((r) => r.id !== id));
+        setActionMsg(isBn ? 'উইথড্রয়াল রিকোয়েস্ট সফলভাবে ডিলিট করা হয়েছে।' : 'Withdrawal request deleted successfully!');
+        loadRequests();
+        setTimeout(() => setActionMsg(''), 4000);
+      } else {
+        alert(res?.message || 'Failed to delete withdrawal request');
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Error deleting request');
+    }
+  };
+
   const filteredRequests = requests.filter((r) => {
     const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter;
     const nameStr = String(r.user?.name || '').toLowerCase();
@@ -148,14 +181,14 @@ export default function AdminWithdrawalsPage() {
             <span>{isBn ? 'উইথড্রয়াল রিকোয়েস্ট ও পেআউট ম্যানেজমেন্ট' : 'Withdrawal & Payout Manager'}</span>
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            {isBn ? 'রাইডার এবং সেলারদের টাকা উত্তোলনের আবেদন রিভিউ ও প্রসেস করুন' : 'Review, approve, and disburse rider & merchant earning withdrawals'}
+            {isBn ? 'রাইডার এবং সেলারদের টাকা উত্তোলনের আবেদন রিভিউ, ডিলিট ও প্রসেস করুন' : 'Review, approve, disburse, or delete rider & merchant earning withdrawals'}
           </p>
         </div>
 
         <button
           onClick={loadRequests}
           disabled={loading}
-          className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50"
+          className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           <span>{isBn ? 'রিফ্রেশ ডাটা' : 'Reload List'}</span>
@@ -163,8 +196,8 @@ export default function AdminWithdrawalsPage() {
       </div>
 
       {actionMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2 shadow-lg">
-          <CheckCircle2 className="w-4 h-4 shrink-0" /> {actionMsg}
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2 shadow-lg animate-in fade-in-50">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" /> {actionMsg}
         </div>
       )}
 
@@ -174,7 +207,7 @@ export default function AdminWithdrawalsPage() {
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{errorMsg}</span>
           </div>
-          <button onClick={loadRequests} className="px-3 py-1 bg-rose-600 text-white rounded-lg text-xs font-bold">
+          <button onClick={loadRequests} className="px-3 py-1 bg-rose-600 text-white rounded-lg text-xs font-bold cursor-pointer">
             {isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry'}
           </button>
         </div>
@@ -182,7 +215,7 @@ export default function AdminWithdrawalsPage() {
 
       {/* Summary Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 space-y-2">
+        <div className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 space-y-2 shadow-xl">
           <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
             <span>{isBn ? 'পেন্ডিং রিকোয়েস্ট' : 'Pending Requests'}</span>
             <Clock className="w-4 h-4 text-amber-400" />
@@ -191,7 +224,7 @@ export default function AdminWithdrawalsPage() {
           <div className="text-[11px] text-amber-300/80 font-bold">Awaiting Admin Approval</div>
         </div>
 
-        <div className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 space-y-2">
+        <div className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 space-y-2 shadow-xl">
           <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
             <span>{isBn ? 'পেন্ডিং পেআউট মোট টাকা' : 'Total Pending Amount'}</span>
             <DollarSign className="w-4 h-4 text-amber-400" />
@@ -200,7 +233,7 @@ export default function AdminWithdrawalsPage() {
           <div className="text-[11px] text-slate-400 font-bold">To be disbursed</div>
         </div>
 
-        <div className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 space-y-2">
+        <div className="p-5 rounded-3xl bg-[#1f2136] border border-white/10 space-y-2 shadow-xl">
           <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
             <span>{isBn ? 'মোট পরিশোধিত টাকা (PAID)' : 'Total Paid Out'}</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -217,7 +250,7 @@ export default function AdminWithdrawalsPage() {
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg transition-all text-xs font-bold whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-lg transition-all text-xs font-bold whitespace-nowrap cursor-pointer ${
                 statusFilter === st ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -232,7 +265,7 @@ export default function AdminWithdrawalsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={isBn ? 'নাম, ফোন বা অ্যাকাউন্ট দিয়ে খুঁজুন…' : 'Search name, phone or account…'}
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-[#181928] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            className="w-full pl-9 pr-4 py-2 rounded-xl bg-[#181928] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-medium"
           />
         </div>
       </div>
@@ -275,13 +308,13 @@ export default function AdminWithdrawalsPage() {
                   <tr key={r.id} className="hover:bg-white/5 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-300 font-black flex items-center justify-center text-xs shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-300 font-black flex items-center justify-center text-xs shrink-0 border border-emerald-500/30">
                           {(r.user?.name || 'U').slice(0, 2).toUpperCase()}
                         </div>
                         <div>
                           <div className="font-bold text-white text-sm flex items-center gap-2">
-                            <span>{r.user?.name || 'Unknown Rider'}</span>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/10 text-slate-300">
+                            <span>{r.user?.name || 'Unknown User'}</span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/10 text-slate-300 font-bold uppercase">
                               {r.userRole}
                             </span>
                           </div>
@@ -328,19 +361,19 @@ export default function AdminWithdrawalsPage() {
                           <>
                             <button
                               onClick={() => handleOpenProcessModal(r, 'APPROVED')}
-                              className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold transition-all"
+                              className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold transition-all cursor-pointer"
                             >
                               Approve
                             </button>
                             <button
                               onClick={() => handleOpenProcessModal(r, 'PAID')}
-                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md transition-all"
+                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md transition-all cursor-pointer"
                             >
                               Pay Now
                             </button>
                             <button
                               onClick={() => handleOpenProcessModal(r, 'REJECTED')}
-                              className="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-bold transition-all"
+                              className="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-bold transition-all cursor-pointer"
                             >
                               Reject
                             </button>
@@ -349,14 +382,20 @@ export default function AdminWithdrawalsPage() {
                         {r.status === 'APPROVED' && (
                           <button
                             onClick={() => handleOpenProcessModal(r, 'PAID')}
-                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md transition-all"
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md transition-all cursor-pointer"
                           >
                             Mark Paid
                           </button>
                         )}
-                        {(r.status === 'PAID' || r.status === 'REJECTED') && (
-                          <span className="text-[11px] text-slate-500 font-mono">Processed</span>
-                        )}
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDeleteRequest(r.id, r.amount, r.user?.name)}
+                          className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all cursor-pointer"
+                          title="Delete Withdrawal Request Record"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -380,7 +419,7 @@ export default function AdminWithdrawalsPage() {
               </div>
               <button
                 onClick={() => { setSelectedReq(null); setActionType(null); }}
-                className="p-1 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
+                className="p-1 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -430,14 +469,14 @@ export default function AdminWithdrawalsPage() {
                 <button
                   type="button"
                   onClick={() => { setSelectedReq(null); setActionType(null); }}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs"
+                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={processing}
-                  className={`flex-1 py-2.5 rounded-xl font-black text-xs shadow-lg flex items-center justify-center gap-2 text-white ${
+                  className={`flex-1 py-2.5 rounded-xl font-black text-xs shadow-lg flex items-center justify-center gap-2 text-white cursor-pointer ${
                     actionType === 'REJECTED' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
                   }`}
                 >
@@ -449,6 +488,9 @@ export default function AdminWithdrawalsPage() {
           </div>
         </div>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog {...dialogProps} />
 
     </div>
   );

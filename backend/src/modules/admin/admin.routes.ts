@@ -53,7 +53,8 @@ router.get('/settings',        adminController.getSiteSettings);
 router.put('/settings',        adminController.updateSiteSettings);
 
 // ─── Withdrawal & Payout Management ──────────────────────────────────────────
-router.get('/withdrawals',     adminController.getWithdrawals);
-router.patch('/withdrawals/:id', adminController.updateWithdrawalStatus);
+router.get('/withdrawals',        adminController.getWithdrawals);
+router.patch('/withdrawals/:id',  adminController.updateWithdrawalStatus);
+router.delete('/withdrawals/:id', adminController.deleteWithdrawal);
 
 export default router;
