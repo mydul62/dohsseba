@@ -3,12 +3,25 @@ import { io, Socket } from 'socket.io-client';
 let socket: Socket | null = null;
 
 export const getSocket = (token?: string): Socket => {
-  const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:5000';
+  let SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/v1\/?$/, '');
+
+  if (!SOCKET_URL && typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      SOCKET_URL = `${protocol}//${hostname}:5000`;
+    }
+  }
+
+  if (!SOCKET_URL) {
+    SOCKET_URL = 'http://localhost:5000';
+  }
 
   if (!socket) {
     socket = io(SOCKET_URL, {
       autoConnect: true,
       auth: { token },
+      transports: ['websocket', 'polling'],
       withCredentials: true,
     });
 
