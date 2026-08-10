@@ -9,9 +9,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useSocket } from '@/hooks/useSocket';
 import {
   Bike, Navigation, CheckCircle2, Clock, MapPin, Phone, Store,
-  BellRing, Package, Check, X, Loader2, User,
-  Radio, Search, ShieldCheck, Wallet, ChevronRight, Menu, Eye, LogOut,
-  Tag, ShoppingBag, LayoutGrid, RotateCcw, AlertTriangle, Compass, Trash2
+  Package, Check, X, Loader2, User, Eye, Trash2, Tag, ShoppingBag
 } from 'lucide-react';
 import { CurrentMissionView } from './CurrentMissionView';
 
@@ -63,9 +61,6 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
     setMounted(true);
   }, []);
 
-  // ── Navigation Tab State ──────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<'orders' | 'history' | 'wallet' | 'notifications' | 'profile'>(initialTab);
-
   // ── Core Rider State ──────────────────────────────────────────────────────
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [autoAccept, setAutoAccept] = useState<boolean>(false);
@@ -74,58 +69,9 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // ── Orders State ──────────────────────────────────────────────────────────
-  const [activeMissions, setActiveMissions] = useState<any[]>([
-    {
-      id: 'ord-S3107C',
-      customerName: 'Rahim Chowdhury',
-      phone: '+880 1711-000000',
-      address: 'House #12, Road #04, DOHS Mohakhali, Dhaka',
-      status: 'PICKED_UP',
-      deliveryFee: 50,
-      subTotal: 450,
-      totalAmount: 500,
-      createdAt: new Date().toISOString(),
-      items: [
-        { id: 'i1', name: 'Organic Whole Milk (2L)', quantity: 1, price: 220 },
-        { id: 'i2', name: 'Fresh Deshi Tomato (1kg)', quantity: 2, price: 115 },
-      ],
-    },
-  ]);
-
-  const [openOrders, setOpenOrders] = useState<any[]>([
-    {
-      id: 'ord-S3108D',
-      customerName: 'Nusrat Jahan',
-      phone: '+880 1812-998877',
-      address: 'House #45, Road #08, DOHS Mirpur, Dhaka',
-      status: 'PENDING',
-      deliveryFee: 65,
-      pickupDistance: '1.2 km',
-      subTotal: 620,
-      totalAmount: 685,
-      createdAt: new Date().toISOString(),
-      items: [
-        { id: 'i3', name: 'Fresh Beef Ribs (1kg)', quantity: 1, price: 620 },
-      ],
-    },
-    {
-      id: 'ord-S3109E',
-      customerName: 'Kamrul Hasan',
-      phone: '+880 1911-334455',
-      address: 'Flat 4B, Road #11, DOHS Baridhara, Dhaka',
-      status: 'PENDING',
-      deliveryFee: 80,
-      pickupDistance: '2.4 km',
-      subTotal: 850,
-      totalAmount: 930,
-      createdAt: new Date().toISOString(),
-      items: [
-        { id: 'i4', name: 'Cooking Sunflower Oil (5L)', quantity: 1, price: 850 },
-      ],
-    },
-  ]);
-
+  // ── Dynamic Backend Orders State ──────────────────────────────────────────
+  const [activeMissions, setActiveMissions] = useState<any[]>([]);
+  const [openOrders, setOpenOrders] = useState<any[]>([]);
   const [orderHistory, setOrderHistory] = useState<any[]>([]);
 
   // ── Order Detail Modal State ──────────────────────────────────────────────
@@ -133,7 +79,7 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
   const [actionMsg, setActionMsg] = useState<string>('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Load All Rider Data from Backend
+  // Load All Rider Data Dynamically from Backend APIs
   const loadRiderData = useCallback(async () => {
     setLoading(true);
     try {
@@ -152,12 +98,16 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
 
       if (sRes?.success && sRes.data) setStats(sRes.data);
 
-      if (actRes?.success && Array.isArray(actRes.data) && actRes.data.length > 0) {
+      if (actRes?.success && Array.isArray(actRes.data)) {
         setActiveMissions(actRes.data);
+      } else {
+        setActiveMissions([]);
       }
 
       if (opRes?.success && Array.isArray(opRes.data)) {
         setOpenOrders(opRes.data);
+      } else {
+        setOpenOrders([]);
       }
 
       if (hRes?.success && Array.isArray(hRes.data)) {
@@ -219,14 +169,17 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
   const handleAcceptOrder = async (order: any) => {
     setActionLoading(order.id);
     try {
-      await fetchApi<any>(`/rider/orders/${order.id}/accept`, {
+      const res = await fetchApi<any>(`/rider/orders/${order.id}/accept`, {
         method: 'POST',
       }).catch(() => null);
 
-      // Move order from openOrders to activeMissions
-      setOpenOrders((prev) => prev.filter((o) => o.id !== order.id));
-      setActiveMissions((prev) => [...prev, { ...order, status: 'ACCEPTED' }]);
-      showToast(`Accepted Order #${order.id?.slice(-6).toUpperCase() || 'S3108D'}! Added to Active Deliveries.`);
+      if (res?.success) {
+        setOpenOrders((prev) => prev.filter((o) => o.id !== order.id));
+        showToast(`Accepted Order #${order.id?.slice(-6).toUpperCase()}! Added to Active Deliveries.`);
+        loadRiderData();
+      } else {
+        showToast(res?.message || 'Could not accept order.');
+      }
     } finally {
       setActionLoading(null);
     }
@@ -251,7 +204,6 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
         setSelectedOrderDetails(res.data);
         showToast(`Item "${itemName}" removed from order.`);
       } else {
-        // Fallback update for active mission modal items
         setSelectedOrderDetails((prev: any) => {
           if (!prev) return null;
           const updatedItems = (prev.items || []).filter((i: any) => (i.id || i.name) !== itemId);
@@ -287,7 +239,7 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
 
       setSelectedOrderDetails(null);
       setActiveMissions((prev) => prev.filter((o) => o.id !== orderId));
-      showToast('Order CANCELLED! Removed from home active route.');
+      showToast('Order CANCELLED! Removed from active missions.');
       loadRiderData();
     } finally {
       setActionLoading(null);
@@ -297,262 +249,184 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
   const todayEarnings = stats?.todayEarnings ?? stats?.totalEarnings ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#070C18] text-slate-100 font-sans pb-28 select-none">
+    <div className="space-y-6 pb-24 select-none">
       
-      {/* ── TOP PHONE STATUS BAR ── */}
-      <div className="flex items-center justify-between px-6 pt-3 pb-1 text-[11px] font-mono text-slate-400 font-bold border-b border-slate-900/60">
-        <span>9:41</span>
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          Dhaka · BD
-        </span>
-      </div>
-
-      {/* ── HEADER CONSOLE BAR ── */}
-      <header className="px-5 py-4 border-b border-slate-900 flex items-center justify-between bg-[#0B1120]/80 backdrop-blur-md sticky top-0 z-30">
-        <div className="flex items-center gap-3">
-          <button className="p-2 rounded-xl bg-slate-900 text-slate-300 hover:text-white border border-slate-800">
-            <Menu className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="font-extrabold text-white text-base tracking-tight leading-tight">Rider Fleet Co.</h1>
-            <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest block">COURIER CONSOLE</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <div className="relative">
-            <button
-              onClick={() => setActiveTab('notifications')}
-              className="w-9 h-9 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 relative"
-            >
-              <BellRing className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white font-black text-[9px] flex items-center justify-center border-2 border-[#070C18]">
-                2
-              </span>
-            </button>
-          </div>
-
-          <button
-            onClick={() => setActiveTab('profile')}
-            className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white font-black text-xs flex items-center justify-center shadow-lg shadow-pink-950/50"
-          >
-            {user?.name?.[0] || 'E'}
-          </button>
-
-          <button
-            onClick={logout}
-            className="p-2 rounded-2xl bg-slate-900 text-slate-400 hover:text-rose-400 border border-slate-800"
-            title="Log Out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
-
-      {/* TOAST CONFIRMATION FEEDBACK */}
+      {/* Toast Confirmation Feedback */}
       {actionMsg && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-emerald-500 text-slate-950 font-black text-xs shadow-2xl flex items-center gap-2 animate-in slide-in-from-top-4">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[10000] px-4 py-2.5 rounded-2xl bg-emerald-500 text-slate-950 font-black text-xs shadow-2xl flex items-center gap-2 animate-in slide-in-from-top-4">
           <CheckCircle2 className="w-4 h-4" />
           <span>{actionMsg}</span>
         </div>
       )}
 
-      {/* ── MAIN RIDER CONSOLE BODY ── */}
-      <main className="max-w-md mx-auto p-4 space-y-6">
-
-        {/* ── TOP SUMMARY METRIC CARDS (ROW OF 3) ── */}
-        <div className="grid grid-cols-3 gap-2.5">
-          
-          {/* Card 1: Duty Status Toggle */}
-          <div
-            onClick={handleToggleDuty}
-            className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between h-24 ${
-              isOnline
-                ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-400 shadow-lg shadow-emerald-950/30'
-                : 'bg-slate-900/80 border-slate-800 text-slate-500'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${isOnline ? 'bg-emerald-500' : 'bg-slate-700'}`}>
-                <div className={`w-3 h-3 rounded-full bg-white transition-transform ${isOnline ? 'translate-x-4' : 'translate-x-0'}`} />
-              </div>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">STATUS</span>
-              <strong className={`text-sm font-extrabold block mt-0.5 ${isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
-                {isOnline ? 'On Duty' : 'Off Duty'}
-              </strong>
+      {/* ── TOP SUMMARY METRIC CARDS (ROW OF 3) ── */}
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+        
+        {/* Card 1: Duty Status Toggle */}
+        <div
+          onClick={handleToggleDuty}
+          className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between h-24 ${
+            isOnline
+              ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-400 shadow-lg shadow-emerald-950/30'
+              : 'bg-slate-900/80 border-slate-800 text-slate-500'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${isOnline ? 'bg-emerald-500' : 'bg-slate-700'}`}>
+              <div className={`w-3 h-3 rounded-full bg-white transition-transform ${isOnline ? 'translate-x-4' : 'translate-x-0'}`} />
             </div>
           </div>
-
-          {/* Card 2: Active Deliveries Count */}
-          <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex flex-col justify-between h-24">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ACTIVE</span>
-            <div className="text-2xl font-black text-white font-mono">{activeMissions.length}</div>
-          </div>
-
-          {/* Card 3: Today's Earnings */}
-          <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex flex-col justify-between h-24">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">TODAY</span>
-            <div className="text-xl font-black text-white font-mono">৳{todayEarnings}</div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">STATUS</span>
+            <strong className={`text-sm font-extrabold block mt-0.5 ${isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
+              {isOnline ? 'On Duty' : 'Off Duty'}
+            </strong>
           </div>
         </div>
 
-        {/* ══════════════════════════════════════════════════════════════════════
-            TAB 1: MISSION / ACTIVE & INCOMING REQUESTS
-           ══════════════════════════════════════════════════════════════════════ */}
-        {activeTab === 'orders' && (
-          <div className="space-y-6">
+        {/* Card 2: Active Deliveries Count */}
+        <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex flex-col justify-between h-24">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ACTIVE</span>
+          <div className="text-2xl font-black text-white font-mono">{activeMissions.length}</div>
+        </div>
 
-            {/* ── 1. ACTIVE DELIVERIES SECTION ── */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between px-1">
-                <h2 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                  <span>ACTIVE DELIVERIES</span>
-                  <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-black flex items-center justify-center border border-blue-500/30">
-                    {activeMissions.length}
-                  </span>
-                </h2>
-              </div>
+        {/* Card 3: Today's Earnings */}
+        <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800/90 flex flex-col justify-between h-24">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">TODAY</span>
+          <div className="text-xl font-black text-white font-mono">৳{todayEarnings}</div>
+        </div>
+      </div>
 
-              {activeMissions.length === 0 ? (
-                <div className="p-8 rounded-3xl bg-[#0F172A] border border-slate-800 text-center space-y-2">
-                  <Bike className="w-10 h-10 text-slate-600 mx-auto" />
-                  <h3 className="font-extrabold text-sm text-white">No Active Deliveries</h3>
-                  <p className="text-xs text-slate-500">Accept an incoming request below to start delivery.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {activeMissions.map((ord, idx) => (
-                    <CurrentMissionView
-                      key={ord.id || idx}
-                      mission={ord}
-                      onMissionUpdate={loadRiderData}
-                      onOpenDetails={(selectedOrd) => setSelectedOrderDetails(selectedOrd)}
-                      isPinned={idx === 0 && activeMissions.length > 1}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+      {/* ── 1. ACTIVE DELIVERIES SECTION ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <span>ACTIVE DELIVERIES</span>
+            <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-black flex items-center justify-center border border-blue-500/30">
+              {activeMissions.length}
+            </span>
+          </h2>
+        </div>
 
-            {/* ── 2. INCOMING REQUESTS SECTION ── */}
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between px-1">
-                <h2 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                  <span>INCOMING REQUESTS</span>
-                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-black flex items-center justify-center border border-amber-500/30">
-                    {openOrders.length}
-                  </span>
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setAutoAccept(!autoAccept)}
-                  className="text-[11px] font-bold text-blue-400 hover:text-blue-300"
-                >
-                  {autoAccept ? 'Auto-accept ON' : 'Auto-accept off'}
-                </button>
-              </div>
-
-              {openOrders.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/60 text-center text-xs text-slate-500">
-                  No incoming dispatch requests right now.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {openOrders.map((ord) => {
-                    const cName = ord.customerName || ord.user?.name || ord.guestName || 'Nusrat Jahan';
-                    const distance = ord.pickupDistance || '1.2 km';
-                    const fee = ord.deliveryFee || 65;
-
-                    return (
-                      <div
-                        key={ord.id}
-                        className="p-4 rounded-3xl bg-[#0F172A] border-2 border-dashed border-amber-500/60 shadow-xl space-y-3.5 relative"
-                      >
-                        {/* Top Badge & Distance */}
-                        <div className="flex items-center justify-between">
-                          <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-wider border border-amber-500/30 flex items-center gap-1">
-                            ⏱ NEW REQUEST
-                          </span>
-                          <span className="text-xs font-bold text-slate-400">Pickup {distance}</span>
-                        </div>
-
-                        {/* Order ID & Customer Name + Fee */}
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="text-sm font-extrabold text-white">
-                              Order <span className="font-mono font-black">#{ord.id?.slice(-6).toUpperCase() || 'S3108D'}</span> — {cName}
-                            </span>
-                          </div>
-                          <span className="text-base font-black text-emerald-400 font-mono">+৳{fee}</span>
-                        </div>
-
-                        {/* Action Buttons: Decline | Eye Details | Accept */}
-                        <div className="grid grid-cols-12 gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => handleDeclineOrder(ord.id)}
-                            className="col-span-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold text-xs transition-all cursor-pointer"
-                          >
-                            Decline
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setSelectedOrderDetails(ord)}
-                            className="col-span-3 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-blue-400 font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer"
-                            title="Preview Order Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleAcceptOrder(ord)}
-                            disabled={actionLoading === ord.id}
-                            className="col-span-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
-                          >
-                            {actionLoading === ord.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <>
-                                <Check className="w-4 h-4 stroke-[3]" />
-                                <span>Accept</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
+        {activeMissions.length === 0 ? (
+          <div className="p-8 rounded-3xl bg-[#0F172A] border border-slate-800 text-center space-y-2">
+            <Bike className="w-10 h-10 text-slate-600 mx-auto" />
+            <h3 className="font-extrabold text-sm text-white">No Active Deliveries</h3>
+            <p className="text-xs text-slate-500">Accept an incoming request below to start delivery.</p>
           </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════════════
-            TAB 2: DISPATCH & OPEN LIST
-           ══════════════════════════════════════════════════════════════════════ */}
-        {activeTab === 'notifications' && (
+        ) : (
           <div className="space-y-4">
-            <h2 className="font-black text-base text-white">System Broadcasts</h2>
-            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
-              <span className="font-bold text-indigo-400 text-xs">Dispatch Ready</span>
-              <p className="text-xs text-slate-300">Keep your duty status ONLINE to receive automatic delivery dispatches.</p>
-            </div>
+            {activeMissions.map((ord, idx) => (
+              <CurrentMissionView
+                key={ord.id || idx}
+                mission={ord}
+                onMissionUpdate={loadRiderData}
+                onOpenDetails={(selectedOrd) => setSelectedOrderDetails(selectedOrd)}
+                isPinned={idx === 0 && activeMissions.length > 1}
+              />
+            ))}
           </div>
         )}
+      </div>
 
-      </main>
+      {/* ── 2. INCOMING REQUESTS SECTION ── */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <span>INCOMING REQUESTS</span>
+            <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-black flex items-center justify-center border border-amber-500/30">
+              {openOrders.length}
+            </span>
+          </h2>
+          <button
+            type="button"
+            onClick={() => setAutoAccept(!autoAccept)}
+            className="text-[11px] font-bold text-blue-400 hover:text-blue-300"
+          >
+            {autoAccept ? 'Auto-accept ON' : 'Auto-accept off'}
+          </button>
+        </div>
+
+        {openOrders.length === 0 ? (
+          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/60 text-center text-xs text-slate-500">
+            No incoming dispatch requests right now.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {openOrders.map((ord) => {
+              const cName = ord.customerName || ord.user?.name || ord.guestName || 'Customer';
+              const distance = ord.pickupDistance || '1.2 km';
+              const fee = ord.deliveryFee || 65;
+
+              return (
+                <div
+                  key={ord.id}
+                  className="p-4 rounded-3xl bg-[#0F172A] border-2 border-dashed border-amber-500/60 shadow-xl space-y-3.5 relative"
+                >
+                  {/* Top Badge & Distance */}
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-wider border border-amber-500/30 flex items-center gap-1">
+                      ⏱ NEW REQUEST
+                    </span>
+                    <span className="text-xs font-bold text-slate-400">Pickup {distance}</span>
+                  </div>
+
+                  {/* Order ID & Customer Name + Fee */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-extrabold text-white">
+                        Order <span className="font-mono font-black">#{ord.id?.slice(-6).toUpperCase()}</span> — {cName}
+                      </span>
+                    </div>
+                    <span className="text-base font-black text-emerald-400 font-mono">+৳{fee}</span>
+                  </div>
+
+                  {/* Action Buttons: Decline | Eye Details | Accept */}
+                  <div className="grid grid-cols-12 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleDeclineOrder(ord.id)}
+                      className="col-span-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold text-xs transition-all cursor-pointer"
+                    >
+                      Decline
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrderDetails(ord)}
+                      className="col-span-3 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-blue-400 font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer"
+                      title="Preview Order Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAcceptOrder(ord)}
+                      disabled={actionLoading === ord.id}
+                      className="col-span-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                    >
+                      {actionLoading === ord.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4 stroke-[3]" />
+                          <span>Accept</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ── ORDER DETAIL MODAL / BOTTOM SHEET (OPENED BY EYE ICON) ── */}
       {selectedOrderDetails && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-[#0F172A] border border-slate-800 rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-md flex items-end sm:items-center justify-center p-2 sm:p-4 animate-in fade-in">
+          <div className="w-full max-w-md bg-[#0F172A] border border-slate-800 rounded-3xl p-5 md:p-6 space-y-4 shadow-2xl max-h-[80vh] overflow-y-auto mb-16 sm:mb-0">
             
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
@@ -576,15 +450,15 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
             <div className="p-4 rounded-2xl bg-[#0B1120] border border-slate-800/80 space-y-2 text-xs">
               <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Customer Info</span>
               <p className="font-extrabold text-white text-sm">
-                {selectedOrderDetails.customerName || selectedOrderDetails.user?.name || selectedOrderDetails.guestName || 'Rahim Chowdhury'}
+                {selectedOrderDetails.customerName || selectedOrderDetails.user?.name || selectedOrderDetails.customer?.name || selectedOrderDetails.guestName || 'Valued Customer'}
               </p>
               <p className="text-slate-300 font-mono">
-                Phone: {selectedOrderDetails.phone || selectedOrderDetails.user?.phone || '+880 1711-000000'}
+                Phone: {selectedOrderDetails.phone || selectedOrderDetails.user?.phone || selectedOrderDetails.customer?.phone || selectedOrderDetails.customerPhone || 'N/A'}
               </p>
               <div className="pt-2 border-t border-slate-800 text-slate-300 flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <p className="font-medium">
-                  {selectedOrderDetails.address || selectedOrderDetails.deliveryAddress || 'House #12, Road #04, DOHS Mohakhali, Dhaka'}
+                  {selectedOrderDetails.address?.line1 || selectedOrderDetails.address || selectedOrderDetails.deliveryAddress || 'DOHS Location, Dhaka'}
                 </p>
               </div>
             </div>
@@ -592,39 +466,41 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
             {/* Itemized Package Contents */}
             <div className="p-4 rounded-2xl bg-[#0B1120] border border-slate-800/80 space-y-3 text-xs">
               <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Package Contents</span>
+              
               <div className="space-y-2">
-                {(selectedOrderDetails.items || [
-                  { id: '1', name: 'Organic Whole Milk (2L)', quantity: 1, price: 220 },
-                  { id: '2', name: 'Fresh Deshi Tomato (1kg)', quantity: 2, price: 115 },
-                ]).map((item: any, idx: number) => {
-                  const itemName = item.name || item.product?.name || `Item #${idx + 1}`;
-                  const itemId = item.id || item.name || String(idx);
-                  const price = Number(item.price || item.unitPrice || 0);
-                  const qty = Number(item.quantity || 1);
+                {(selectedOrderDetails.items || []).length === 0 ? (
+                  <p className="text-slate-500 text-center py-1 text-xs">No items listed.</p>
+                ) : (
+                  (selectedOrderDetails.items || []).map((item: any, idx: number) => {
+                    const itemName = item.name || item.product?.name || `Item #${idx + 1}`;
+                    const itemId = item.id || item.name || String(idx);
+                    const price = Number(item.price || item.unitPrice || 0);
+                    const qty = Number(item.quantity || 1);
 
-                  return (
-                    <div key={itemId} className="flex justify-between items-center text-xs p-2 rounded-xl bg-[#070C18] border border-slate-800/80">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveOrderItem(selectedOrderDetails.id, itemId, itemName)}
-                          className="p-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 shrink-0 cursor-pointer"
-                          title={`Delete "${itemName}" from order`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="font-bold text-white truncate">{qty}x {itemName}</span>
+                    return (
+                      <div key={itemId} className="flex justify-between items-center text-xs p-2 rounded-xl bg-[#070C18] border border-slate-800/80">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOrderItem(selectedOrderDetails.id, itemId, itemName)}
+                            className="p-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 shrink-0 cursor-pointer"
+                            title={`Delete "${itemName}" from order`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="font-bold text-white truncate">{qty}x {itemName}</span>
+                        </div>
+                        <span className="font-mono text-slate-300 shrink-0">৳{price * qty}</span>
                       </div>
-                      <span className="font-mono text-slate-300 shrink-0">৳{price * qty}</span>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
               <div className="pt-3 border-t border-slate-800 space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-400">
                   <span>Subtotal:</span>
-                  <span className="font-mono text-slate-200">৳{selectedOrderDetails.subTotal || 450}</span>
+                  <span className="font-mono text-slate-200">৳{selectedOrderDetails.subTotal || 0}</span>
                 </div>
                 <div className="flex justify-between text-slate-400">
                   <span>Delivery Charge:</span>
@@ -632,7 +508,7 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
                 </div>
                 <div className="flex justify-between text-white font-black text-sm pt-2 border-t border-slate-800">
                   <span>Total Amount (COD):</span>
-                  <span className="font-mono text-emerald-400">৳{selectedOrderDetails.totalAmount || 500}</span>
+                  <span className="font-mono text-emerald-400">৳{selectedOrderDetails.totalAmount || 0}</span>
                 </div>
               </div>
             </div>
@@ -658,78 +534,6 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
           </div>
         </div>
       )}
-
-      {/* ── BOTTOM NAVIGATION BAR (FIXED) ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#0B1120]/95 backdrop-blur-md border-t border-slate-900 p-2 shadow-2xl">
-        <div className="max-w-md mx-auto grid grid-cols-5 gap-1 text-center">
-          
-          <button
-            type="button"
-            onClick={() => setActiveTab('orders')}
-            className={`py-2 px-1 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative ${
-              activeTab === 'orders' ? 'text-emerald-400 font-extrabold' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            <Navigation className="w-5 h-5" />
-            <span className="text-[10px]">Mission</span>
-            {activeTab === 'orders' && (
-              <span className="absolute bottom-0 w-6 h-0.5 rounded-full bg-emerald-400" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('orders')}
-            className="py-2 px-1 flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-slate-300 cursor-pointer"
-          >
-            <LayoutGrid className="w-5 h-5" />
-            <span className="text-[10px]">Dispatch</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('history')}
-            className={`py-2 px-1 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative ${
-              activeTab === 'history' ? 'text-emerald-400 font-extrabold' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            <Clock className="w-5 h-5" />
-            <span className="text-[10px]">History</span>
-            {activeTab === 'history' && (
-              <span className="absolute bottom-0 w-6 h-0.5 rounded-full bg-emerald-400" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('wallet')}
-            className={`py-2 px-1 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative ${
-              activeTab === 'wallet' ? 'text-emerald-400 font-extrabold' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            <Wallet className="w-5 h-5" />
-            <span className="text-[10px]">Wallet</span>
-            {activeTab === 'wallet' && (
-              <span className="absolute bottom-0 w-6 h-0.5 rounded-full bg-emerald-400" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('profile')}
-            className={`py-2 px-1 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative ${
-              activeTab === 'profile' ? 'text-emerald-400 font-extrabold' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            <User className="w-5 h-5" />
-            <span className="text-[10px]">Profile</span>
-            {activeTab === 'profile' && (
-              <span className="absolute bottom-0 w-6 h-0.5 rounded-full bg-emerald-400" />
-            )}
-          </button>
-
-        </div>
-      </nav>
 
     </div>
   );
