@@ -226,9 +226,12 @@ export const createOrderFromCart = async (
   const sellerId = order.items[0]?.product?.sellerId;
   if (sellerId) {
     emitToSellerRoom(sellerId, 'ORDER_CREATED', { order });
+    emitToSellerRoom(sellerId, 'order:created', { order });
   }
   emitToRole('SELLER', 'ORDER_CREATED', { order });
+  emitToRole('SELLER', 'order:created', { order });
   emitToAdminRoom('ORDER_CREATED', { order });
+  emitToAdminRoom('order:created', { order });
 
   return order;
 };
@@ -441,11 +444,20 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus) =>
     }, 30000);
   }
 
-  // Socket emissions to Customer & Order Room
+  // Socket emissions to Customer, Seller & Order Room
   if (order.customerId) {
     emitToUser(order.customerId, 'ORDER_STATUS_UPDATED', { orderId, status: updated.status });
+    emitToUser(order.customerId, 'order:status_updated', { orderId, status: updated.status, order: updated });
   }
+  const sellerId = updated.items[0]?.product?.sellerId;
+  if (sellerId) {
+    emitToSellerRoom(sellerId, 'ORDER_STATUS_UPDATED', { orderId, status: updated.status, order: updated });
+    emitToSellerRoom(sellerId, 'order:status_updated', { orderId, status: updated.status, order: updated });
+  }
+  emitToRole('SELLER', 'ORDER_STATUS_UPDATED', { orderId, status: updated.status, order: updated });
+  emitToRole('SELLER', 'order:status_updated', { orderId, status: updated.status, order: updated });
   emitToOrderRoom(orderId, 'ORDER_STATUS_UPDATED', { orderId, status: updated.status, order: updated });
+  emitToOrderRoom(orderId, 'order:status_updated', { orderId, status: updated.status, order: updated });
 
   // System Notification for Customer
   if (order.customerId) {

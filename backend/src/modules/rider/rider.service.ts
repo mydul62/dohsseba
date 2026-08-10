@@ -229,10 +229,14 @@ export const acceptOpenOrder = async (orderId: string, riderId: string) => {
 
   const sellerId = updatedOrder.items[0]?.product?.sellerId;
   if (sellerId) {
-    emitToSellerRoom(sellerId, 'ORDER_STATUS_UPDATED', { orderId, status: 'RIDER_ASSIGNED', riderName: riderUser.name });
+    emitToSellerRoom(sellerId, 'ORDER_STATUS_UPDATED', { orderId, status: 'RIDER_ASSIGNED', riderName: riderUser.name, order: updatedOrder });
+    emitToSellerRoom(sellerId, 'order:status_updated', { orderId, status: 'RIDER_ASSIGNED', riderName: riderUser.name, order: updatedOrder });
   }
 
+  emitToRole('SELLER', 'ORDER_STATUS_UPDATED', { orderId, status: 'RIDER_ASSIGNED', order: updatedOrder });
+  emitToRole('SELLER', 'order:status_updated', { orderId, status: 'RIDER_ASSIGNED', order: updatedOrder });
   emitToOrderRoom(orderId, 'ORDER_STATUS_UPDATED', { orderId, status: 'RIDER_ASSIGNED', order: updatedOrder });
+  emitToOrderRoom(orderId, 'order:status_updated', { orderId, status: 'RIDER_ASSIGNED', order: updatedOrder });
 
   return updatedOrder;
 };
@@ -411,11 +415,15 @@ export const updateMissionStatus = async (
   }
   const sellerId = order.items[0]?.product?.sellerId;
   if (sellerId) {
-    emitToSellerRoom(sellerId, 'ORDER_STATUS_UPDATED', { orderId, status: targetStatus });
+    emitToSellerRoom(sellerId, 'ORDER_STATUS_UPDATED', { orderId, status: targetStatus, order: updatedOrder });
+    emitToSellerRoom(sellerId, 'order:status_updated', { orderId, status: targetStatus, order: updatedOrder });
   }
   emitToOrderRoom(orderId, 'ORDER_STATUS_UPDATED', { orderId, status: targetStatus, order: updatedOrder });
+  emitToOrderRoom(orderId, 'order:status_updated', { orderId, status: targetStatus, order: updatedOrder });
   emitToRole('SELLER', 'ORDER_STATUS_UPDATED', { orderId, status: targetStatus, order: updatedOrder });
+  emitToRole('SELLER', 'order:status_updated', { orderId, status: targetStatus, order: updatedOrder });
   emitToAdminRoom('ORDER_STATUS_UPDATED', { orderId, status: targetStatus, order: updatedOrder });
+  emitToAdminRoom('order:status_updated', { orderId, status: targetStatus, order: updatedOrder });
 
   return updatedOrder;
 };

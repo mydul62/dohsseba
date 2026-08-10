@@ -47,6 +47,30 @@ import { useSocket } from '@/hooks/useSocket';
 
 // ─── Order List Component ─────────────────────────────────────────────────────
 
+// Helper function: Play short "bip" notification sound for NEW orders only
+const playNewOrderBipSound = () => {
+  try {
+    const AudioCtx = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime); // High pitch notification bip
+    gain.gain.setValueAtTime(0.5, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+  } catch (err) {
+    console.warn('Audio notification sound autoplay restricted:', err);
+  }
+};
+
 interface OrdersContentProps {
   defaultStatus?: string;
   title?: string;
@@ -102,17 +126,20 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
 
     const handleOrderCreated = (data: any) => {
       console.log('⚡ [SELLER REALTIME] New order created in database:', data);
-      if (data?.order) {
+      const rawOrder = data?.order || data;
+      if (rawOrder && rawOrder.id) {
         const newOrder = {
-          ...data.order,
-          total: data.order.totalAmount ?? data.order.total ?? 0,
-          createdAt: data.order.createdAt || new Date().toISOString(),
+          ...rawOrder,
+          total: rawOrder.totalAmount ?? rawOrder.total ?? 0,
+          createdAt: rawOrder.createdAt || new Date().toISOString(),
         };
         setApiOrders((prev) => {
           const exists = prev.some((o) => o.id === newOrder.id);
           if (exists) {
-            return prev.map((o) => (o.id === newOrder.id ? newOrder : o));
+            return prev.map((o) => (o.id === newOrder.id ? { ...o, ...newOrder } : o));
           }
+          // ONLY play short "bip" sound when order is genuinely NEW
+          playNewOrderBipSound();
           return [newOrder, ...prev];
         });
       }
@@ -121,20 +148,35 @@ export function OrdersContent({ defaultStatus, title }: OrdersContentProps) {
 
     const handleStatusUpdated = (data: any) => {
       console.log('⚡ [SELLER REALTIME] Order status updated:', data);
-      if (data?.orderId && data?.status) {
+      const targetId = data?.orderId || data?.id || data?.order?.id;
+      const targetStatus = data?.status || data?.order?.status;
+
+      if (targetId && targetStatus) {
         setApiOrders((prev) =>
-          prev.map((o) => (o.id === data.orderId ? { ...o, status: data.status } : o))
+          prev.map((o) =>
+            o.id === targetId
+              ? {
+                  ...o,
+                  ...(data.order || {}),
+                  status: targetStatus,
+                }
+              : o
+          )
         );
       }
       fetchOrders(true); // Silent background sync
     };
 
     socketInstance.on('ORDER_CREATED', handleOrderCreated);
+    socketInstance.on('order:created', handleOrderCreated);
     socketInstance.on('ORDER_STATUS_UPDATED', handleStatusUpdated);
+    socketInstance.on('order:status_updated', handleStatusUpdated);
 
     return () => {
       socketInstance.off('ORDER_CREATED', handleOrderCreated);
+      socketInstance.off('order:created', handleOrderCreated);
       socketInstance.off('ORDER_STATUS_UPDATED', handleStatusUpdated);
+      socketInstance.off('order:status_updated', handleStatusUpdated);
     };
   }, [user?.id]);
 
