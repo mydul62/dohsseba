@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchApi } from '@/lib/api-client';
 import { formatCurrency } from '@/utils/cn';
 import {
-  Wrench, Plus, Check, Edit, Trash2, Power, Star, Loader2, X, Upload,
+  Wrench, Plus, Check, Edit, Trash2, Power, Star, Loader2, X, Upload, Clock,
   Image as ImageIcon, Sparkles, Layers, Tag, Search, Filter, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -339,6 +339,14 @@ export default function ProviderServicesPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <a
+            href="/provider/dashboard?tab=SLOTS"
+            className="px-4 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs transition-all shadow-md flex items-center gap-1.5"
+          >
+            <Clock className="w-4 h-4" />
+            <span>Time Slots & Capacity</span>
+          </a>
+
           <button
             type="button"
             onClick={handleOpenCreateCatModal}

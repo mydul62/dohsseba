@@ -365,6 +365,14 @@ export default function AdminServicesPage() {
           <Users className="w-4 h-4" />
           <span>Technicians ({technicians.length})</span>
         </button>
+
+        <a
+          href="/provider/dashboard?tab=SLOTS"
+          className="px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 ml-auto"
+        >
+          <Clock className="w-4 h-4 text-amber-600" />
+          <span>Time Slots & Capacity Management →</span>
+        </a>
       </div>
 
       {/* Tab 1: Service Catalog */}

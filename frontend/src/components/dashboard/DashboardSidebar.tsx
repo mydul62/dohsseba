@@ -168,6 +168,7 @@ export function DashboardSidebar({
               icon: <Wrench className="w-4 h-4" />,
               subItems: [
                 { label: 'Services Catalog', href: '/admin/dashboard/services' },
+                { label: 'Time Slots & Capacity', href: '/provider/dashboard?tab=SLOTS' },
                 { label: 'Partner Approvals', href: '/admin/dashboard/services#approvals' },
               ],
             },
@@ -257,9 +258,14 @@ export function DashboardSidebar({
               icon: <Layers className="w-4 h-4 text-emerald-400" />,
             },
             {
+              label: 'Time Slots & Capacity',
+              href: '/provider/dashboard?tab=SLOTS',
+              icon: <Clock className="w-4 h-4 text-amber-400" />,
+            },
+            {
               label: 'Technician Roster',
               href: '/admin/dashboard/services',
-              icon: <Users className="w-4 h-4 text-amber-400" />,
+              icon: <Users className="w-4 h-4 text-blue-400" />,
             },
           ],
         },
