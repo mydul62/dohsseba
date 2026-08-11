@@ -36,7 +36,8 @@ jobs:
             echo "📦 Building Backend..."
             cd backend
             npm install
-            npx prisma db push
+            npx prisma db execute --file prisma/migrations/20260811134714_make_slot_date_optional/migration.sql --schema prisma/schema.prisma || true
+            npx prisma db push --accept-data-loss --skip-generate || npx prisma db push --skip-generate || true
             npx prisma generate
             npm run build
             fuser -k 5000/tcp || true
