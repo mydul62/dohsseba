@@ -43,6 +43,15 @@ html, body {
   color: #0f172a;
 }
 
+/* Service Operations Dark Theme Design Tokens */
+.bg-sheba-dark { background-color: #0a0b14 !important; }
+.bg-sheba-panel { background-color: #12131f !important; }
+.bg-sheba-panel-alt { background-color: #171829 !important; }
+.border-sheba { border-color: #242539 !important; }
+.text-sheba-purple { color: #7c6ff0 !important; }
+.bg-sheba-purple { background-color: #7c6ff0 !important; }
+.bg-sheba-purple-hover:hover { background-color: #695bdc !important; }
+
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
 }

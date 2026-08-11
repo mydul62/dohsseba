@@ -27,6 +27,11 @@ import {
   Lock,
   Unlock,
   Users,
+  AlertCircle,
+  BarChart2,
+  Activity,
+  Zap,
+  TrendingUp,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -37,6 +42,138 @@ import {
   deleteServiceSlot,
   ServiceSlotItem,
 } from '@/services/serviceSlot';
+import { DetailBottomSheet } from '@/components/dashboard/DetailBottomSheet';
+
+// ─── Status helpers ────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+  PENDING:            { label: 'New Request',        bg: 'bg-amber-500/10',  text: 'text-amber-400',  dot: 'bg-amber-400' },
+  CONFIRMED:          { label: 'Confirmed',           bg: 'bg-blue-500/10',   text: 'text-blue-400',   dot: 'bg-blue-400' },
+  TECHNICIAN_ASSIGNED:{ label: 'Tech Assigned',       bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
+  TECHNICIAN_ON_THE_WAY:{ label: 'On The Way',        bg: 'bg-indigo-500/10', text: 'text-indigo-400', dot: 'bg-indigo-400' },
+  IN_PROGRESS:        { label: 'In Progress',         bg: 'bg-sky-500/10',    text: 'text-sky-400',    dot: 'bg-sky-400' },
+  WORK_COMPLETED:     { label: 'Completed',           bg: 'bg-emerald-500/10',text: 'text-emerald-400',dot: 'bg-emerald-400' },
+  CUSTOMER_CONFIRMED: { label: 'Confirmed ✓',        bg: 'bg-emerald-500/10',text: 'text-emerald-400',dot: 'bg-emerald-400' },
+  COMPLETED:          { label: 'Done',                bg: 'bg-emerald-500/10',text: 'text-emerald-400',dot: 'bg-emerald-400' },
+  CANCELLED:          { label: 'Cancelled',           bg: 'bg-red-500/10',    text: 'text-red-400',    dot: 'bg-red-400' },
+};
+
+function StatusPill({ status }: { status: string }) {
+  const cfg = STATUS_CONFIG[status] || { label: status, bg: 'bg-slate-500/10', text: 'text-slate-400', dot: 'bg-slate-400' };
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold ${cfg.bg} ${cfg.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} animate-pulse`} />
+      {cfg.label}
+    </span>
+  );
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+function StatCard({ label, value, icon: Icon, accent }: { label: string; value: React.ReactNode; icon: any; accent: string }) {
+  return (
+    <div className={`p-5 rounded-2xl border border-[#242539] bg-[#12131f] space-y-2 hover:border-[#7c6ff0]/30 transition-all group`}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+        <div className={`w-8 h-8 rounded-xl ${accent} flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity`}>
+          <Icon className="w-4 h-4 text-white" />
+        </div>
+      </div>
+      <div className="text-2xl font-black text-white tracking-tight">{value}</div>
+    </div>
+  );
+}
+
+// ─── Booking Job Card ─────────────────────────────────────────────────────────
+function BookingJobCard({
+  booking,
+  onOpenSheet,
+}: {
+  booking: any;
+  onOpenSheet: (b: any) => void;
+}) {
+  const ticketId = `#${booking.id.slice(-7).toUpperCase()}`;
+  const customerName = booking.customer?.name || 'Guest Customer';
+  const customerPhone = booking.customer?.phone || booking.notes?.match(/Phone:\s*([\d\+\-\s]+)/)?.[1] || '';
+  const serviceName = booking.service?.title || 'Home Maintenance Service';
+  const slotTime = booking.slot ? `${booking.slot.startTime} – ${booking.slot.endTime}` : '';
+  const address = booking.address?.line1 || 'Mohakhali DOHS Residence';
+  const techName = booking.technicianName || booking.technician?.name;
+  const techPhone = booking.technicianPhone || booking.technician?.phone;
+
+  return (
+    <div
+      onClick={() => onOpenSheet(booking)}
+      className="group p-5 rounded-2xl bg-[#12131f] border border-[#242539] hover:border-[#7c6ff0]/50 transition-all cursor-pointer space-y-4 hover:shadow-xl hover:shadow-[#7c6ff0]/5"
+    >
+      {/* Card Header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-[10px] font-extrabold text-[#7c6ff0] bg-[#7c6ff0]/10 border border-[#7c6ff0]/20 px-2.5 py-0.5 rounded-lg">
+              {ticketId}
+            </span>
+            <span className="text-xs text-slate-400 font-semibold flex items-center gap-1">
+              <User className="w-3 h-3" /> {customerName} {customerPhone && `(${customerPhone})`}
+            </span>
+          </div>
+          <h3 className="font-extrabold text-base text-white group-hover:text-[#7c6ff0] transition-colors leading-tight">
+            {serviceName}
+          </h3>
+        </div>
+        <StatusPill status={booking.status} />
+      </div>
+
+      {/* Card Body */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+        <div className="space-y-1.5 text-slate-400">
+          <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block">Customer & Location</span>
+          <div className="flex items-start gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-[#7c6ff0] shrink-0 mt-0.5" />
+            <span className="text-slate-300">{address}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-slate-500">
+            <Calendar className="w-3.5 h-3.5 shrink-0" />
+            <span>{new Date(booking.scheduledAt).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+          </div>
+          {slotTime && (
+            <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              <span>Booked Slot: {slotTime}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block">Assigned Technician</span>
+          {techName ? (
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#7c6ff0] flex items-center justify-center text-[10px] font-extrabold text-white">
+                  {techName.slice(0, 2).toUpperCase()}
+                </div>
+                <span className="font-extrabold text-xs text-purple-200">{techName}</span>
+              </div>
+              <span className="text-[10px] text-purple-400 font-mono">{techPhone}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>No technician assigned yet</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer hint */}
+      <div className="pt-3 border-t border-[#242539] text-[10px] text-slate-500 flex items-center gap-1 group-hover:text-slate-400 transition-colors">
+        <Zap className="w-3 h-3 text-[#7c6ff0]" />
+        <span>Click to open detail panel — assign technician, update status, view contact</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Dashboard Component ──────────────────────────────────────────────────
 
 export default function ServiceOperationsDashboard() {
   const { user } = useAuthStore();
@@ -59,11 +196,10 @@ export default function ServiceOperationsDashboard() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [bookings, setBookings] = useState<any[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
-  const [selectedBookingForAssign, setSelectedBookingForAssign] = useState<any | null>(null);
-  const [selectedTechId, setSelectedTechId] = useState<string>('');
-  const [customTechName, setCustomTechName] = useState<string>('');
-  const [customTechPhone, setCustomTechPhone] = useState<string>('');
   const [assigning, setAssigning] = useState<boolean>(false);
+
+  // Bottom sheet state
+  const [sheetBooking, setSheetBooking] = useState<any | null>(null);
 
   // Customer Contact Modal
   const [contactModalBooking, setContactModalBooking] = useState<any | null>(null);
@@ -85,6 +221,16 @@ export default function ServiceOperationsDashboard() {
   });
 
   const [myServices, setMyServices] = useState<any[]>([]);
+
+  const [stats, setStats] = useState({
+    todayEarnings: 0,
+    totalJobsCompleted: 0,
+    rating: 4.9,
+    pendingCount: 0,
+    activeCount: 0,
+    assignedCount: 0,
+    totalEarnings: 0,
+  });
 
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
@@ -116,10 +262,10 @@ export default function ServiceOperationsDashboard() {
         setTechnicians(techRes.data);
       } else {
         setTechnicians([
-          { id: 't1', name: 'Rakib Ahmed', phone: '+880 1711-223344', specialty: 'Electrical & AC' },
-          { id: 't2', name: 'Hasan Mahmud', phone: '+880 1722-556677', specialty: 'Plumbing & Sanitary' },
-          { id: 't3', name: 'Mahmudul Islam', phone: '+880 1733-889900', specialty: 'Appliance Repair' },
-          { id: 't4', name: 'Sabbir Hossain', phone: '+880 1744-112233', specialty: 'General Handyman' },
+          { id: 't1', name: 'Rakib Ahmed',     phone: '+880 1711-223344', specialty: 'Electrical & AC' },
+          { id: 't2', name: 'Hasan Mahmud',    phone: '+880 1722-556677', specialty: 'Plumbing & Sanitary' },
+          { id: 't3', name: 'Mahmudul Islam',  phone: '+880 1733-889900', specialty: 'Appliance Repair' },
+          { id: 't4', name: 'Sabbir Hossain',  phone: '+880 1744-112233', specialty: 'General Handyman' },
         ]);
       }
     } finally {
@@ -143,16 +289,6 @@ export default function ServiceOperationsDashboard() {
     }
   }, [slotsDate]);
 
-  const [stats, setStats] = useState({
-    todayEarnings: 0,
-    totalJobsCompleted: 0,
-    rating: 4.9,
-    pendingCount: 0,
-    activeCount: 0,
-    assignedCount: 0,
-    totalEarnings: 0,
-  });
-
   useEffect(() => {
     loadDashboardData();
     loadSlots();
@@ -161,33 +297,28 @@ export default function ServiceOperationsDashboard() {
   // Real-time Socket.IO Sync
   useEffect(() => {
     if (!socket) return;
-
-    const handleSync = () => {
-      loadDashboardData();
-      loadSlots();
-    };
-
-    socket.on('service:slot:created', handleSync);
-    socket.on('service:slot:updated', handleSync);
-    socket.on('service:slot:deleted', handleSync);
+    const handleSync = () => { loadDashboardData(); loadSlots(); };
+    socket.on('service:slot:created',              handleSync);
+    socket.on('service:slot:updated',              handleSync);
+    socket.on('service:slot:deleted',              handleSync);
     socket.on('service:slot:availability_updated', handleSync);
-    socket.on('service:booking:created', handleSync);
-    socket.on('service:booking:updated', handleSync);
-    socket.on('service:booking:cancelled', handleSync);
-    socket.on('service:technician:assigned', handleSync);
-
+    socket.on('service:booking:created',           handleSync);
+    socket.on('service:booking:updated',           handleSync);
+    socket.on('service:booking:cancelled',         handleSync);
+    socket.on('service:technician:assigned',       handleSync);
     return () => {
-      socket.off('service:slot:created', handleSync);
-      socket.off('service:slot:updated', handleSync);
-      socket.off('service:slot:deleted', handleSync);
+      socket.off('service:slot:created',              handleSync);
+      socket.off('service:slot:updated',              handleSync);
+      socket.off('service:slot:deleted',              handleSync);
       socket.off('service:slot:availability_updated', handleSync);
-      socket.off('service:booking:created', handleSync);
-      socket.off('service:booking:updated', handleSync);
-      socket.off('service:booking:cancelled', handleSync);
-      socket.off('service:technician:assigned', handleSync);
+      socket.off('service:booking:created',           handleSync);
+      socket.off('service:booking:updated',           handleSync);
+      socket.off('service:booking:cancelled',         handleSync);
+      socket.off('service:technician:assigned',       handleSync);
     };
   }, [socket, loadDashboardData, loadSlots]);
 
+  // Status update — also syncs open sheet booking
   const handleStatusUpdate = async (bookingId: string, nextStatus: string) => {
     setUpdatingId(bookingId);
     try {
@@ -199,33 +330,65 @@ export default function ServiceOperationsDashboard() {
       setBookings((prev) =>
         prev.map((b) => (b.id === bookingId ? { ...b, status: nextStatus } : b))
       );
+      // Sync sheet booking too
+      setSheetBooking((prev: any) => prev?.id === bookingId ? { ...prev, status: nextStatus } : prev);
       loadDashboardData();
-      loadSlots();
     } finally {
       setUpdatingId(null);
     }
   };
 
-  const handleAssignTechnicianSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedBookingForAssign) return;
-
+  // Assign Technician — used from both card and bottom sheet
+  const handleAssignTechnicianDirect = async (bookingId: string, tech: any) => {
     setAssigning(true);
     try {
-      let techObj = technicians.find((t) => t.id === selectedTechId);
-
-      const res = await fetchApi<any>(`/bookings/${selectedBookingForAssign.id}/assign-technician`, {
+      const res = await fetchApi<any>(`/bookings/${bookingId}/assign-technician`, {
         method: 'PATCH',
         body: JSON.stringify({
-          technicianId: techObj ? techObj.id : undefined,
-          technicianName: techObj ? techObj.name : customTechName,
-          technicianPhone: techObj ? techObj.phone : customTechPhone,
+          technicianId:    tech.id,
+          technicianName:  tech.name,
+          technicianPhone: tech.phone,
         }),
       }).catch(() => null);
 
       if (res?.success) {
-        setSelectedBookingForAssign(null);
-        setSelectedTechId('');
+        const techName  = tech.name;
+        const techPhone = tech.phone;
+        const techId    = tech.id;
+        setBookings((prev) =>
+          prev.map((b) =>
+            b.id === bookingId
+              ? { ...b, technicianName: techName, technicianPhone: techPhone, technicianId: techId, status: b.status === 'PENDING' || b.status === 'CONFIRMED' ? 'TECHNICIAN_ASSIGNED' : b.status }
+              : b
+          )
+        );
+        setSheetBooking((prev: any) =>
+          prev?.id === bookingId
+            ? { ...prev, technicianName: techName, technicianPhone: techPhone, technicianId: techId, status: prev.status === 'PENDING' || prev.status === 'CONFIRMED' ? 'TECHNICIAN_ASSIGNED' : prev.status }
+            : prev
+        );
+        loadDashboardData();
+      }
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  // Legacy assign handler (used by form modal kept for custom tech)
+  const handleAssignTechnicianSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const booking = sheetBooking;
+    if (!booking) return;
+    setAssigning(true);
+    try {
+      const res = await fetchApi<any>(`/bookings/${booking.id}/assign-technician`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          technicianName:  customTechName,
+          technicianPhone: customTechPhone,
+        }),
+      }).catch(() => null);
+      if (res?.success) {
         setCustomTechName('');
         setCustomTechPhone('');
         loadDashboardData();
@@ -235,6 +398,9 @@ export default function ServiceOperationsDashboard() {
     }
   };
 
+  const [customTechName,  setCustomTechName]  = useState('');
+  const [customTechPhone, setCustomTechPhone] = useState('');
+
   // Slot Handlers
   const handleSaveSlotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,28 +408,21 @@ export default function ServiceOperationsDashboard() {
     try {
       if (editingSlot) {
         const res = await updateServiceSlot(editingSlot.id, {
-          startTime: slotFormData.startTime,
-          endTime: slotFormData.endTime,
+          startTime:   slotFormData.startTime,
+          endTime:     slotFormData.endTime,
           maxCapacity: slotFormData.maxCapacity,
-          serviceId: slotFormData.serviceId || undefined,
+          serviceId:   slotFormData.serviceId || undefined,
         });
-        if (res?.success) {
-          setShowSlotModal(false);
-          setEditingSlot(null);
-          loadSlots();
-        }
+        if (res?.success) { setShowSlotModal(false); setEditingSlot(null); loadSlots(); }
       } else {
         const res = await createServiceSlot({
-          serviceId: slotFormData.serviceId || undefined,
-          date: slotFormData.date,
-          startTime: slotFormData.startTime,
-          endTime: slotFormData.endTime,
+          serviceId:   slotFormData.serviceId || undefined,
+          date:        slotFormData.date,
+          startTime:   slotFormData.startTime,
+          endTime:     slotFormData.endTime,
           maxCapacity: slotFormData.maxCapacity,
         });
-        if (res?.success) {
-          setShowSlotModal(false);
-          loadSlots();
-        }
+        if (res?.success) { setShowSlotModal(false); loadSlots(); }
       }
     } catch (err: any) {
       alert(err?.message || 'Failed to save slot');
@@ -273,178 +432,146 @@ export default function ServiceOperationsDashboard() {
   };
 
   const handleToggleBlock = async (slotId: string) => {
-    try {
-      await toggleBlockServiceSlot(slotId);
-      loadSlots();
-    } catch (err: any) {
-      alert(err?.message || 'Failed to toggle block status');
-    }
+    try { await toggleBlockServiceSlot(slotId); loadSlots(); }
+    catch (err: any) { alert(err?.message || 'Failed'); }
   };
 
   const handleDeleteSlot = async (slotId: string) => {
-    if (!confirm('Are you sure you want to delete this time slot?')) return;
-    try {
-      await deleteServiceSlot(slotId);
-      loadSlots();
-    } catch (err: any) {
-      alert(err?.message || 'Failed to delete slot');
-    }
+    if (!confirm('Delete this time slot?')) return;
+    try { await deleteServiceSlot(slotId); loadSlots(); }
+    catch (err: any) { alert(err?.message || 'Failed'); }
   };
 
+  // ── Derived data ──────────────────────────────────────────────────────────────
   const filteredBookings = bookings.filter((b) => {
     if (filterTab === 'ALL') return true;
     if (filterTab === 'ASSIGNED') return b.status === 'TECHNICIAN_ASSIGNED' || b.status === 'TECHNICIAN_ON_THE_WAY';
-    if (filterTab === 'COMPLETED')
-      return b.status === 'WORK_COMPLETED' || b.status === 'CUSTOMER_CONFIRMED' || b.status === 'COMPLETED';
+    if (filterTab === 'COMPLETED') return b.status === 'WORK_COMPLETED' || b.status === 'CUSTOMER_CONFIRMED' || b.status === 'COMPLETED';
     return b.status === filterTab;
   });
 
   const getTabCount = (tabId: string) => {
     if (tabId === 'ALL') return bookings.length;
-    if (tabId === 'ASSIGNED') {
-      return bookings.filter((b) => b.status === 'TECHNICIAN_ASSIGNED' || b.status === 'TECHNICIAN_ON_THE_WAY').length;
-    }
-    if (tabId === 'COMPLETED') {
-      return bookings.filter((b) => b.status === 'WORK_COMPLETED' || b.status === 'CUSTOMER_CONFIRMED' || b.status === 'COMPLETED').length;
-    }
+    if (tabId === 'ASSIGNED') return bookings.filter((b) => b.status === 'TECHNICIAN_ASSIGNED' || b.status === 'TECHNICIAN_ON_THE_WAY').length;
+    if (tabId === 'COMPLETED') return bookings.filter((b) => b.status === 'WORK_COMPLETED' || b.status === 'CUSTOMER_CONFIRMED' || b.status === 'COMPLETED').length;
     return bookings.filter((b) => b.status === tabId).length;
   };
 
-  // Slot capacity calculations
-  const totalCapacityCount = slots.reduce((acc, s) => acc + s.maxCapacity, 0);
-  const totalBookedCount = slots.reduce((acc, s) => acc + s.bookedCapacity, 0);
+  const totalCapacityCount  = slots.reduce((acc, s) => acc + s.maxCapacity, 0);
+  const totalBookedCount    = slots.reduce((acc, s) => acc + s.bookedCapacity, 0);
   const totalAvailableCount = slots.reduce((acc, s) => acc + Math.max(0, s.maxCapacity - s.bookedCapacity), 0);
 
+  const FILTER_TABS = [
+    { id: 'ALL',       label: 'All Requests'   },
+    { id: 'PENDING',   label: 'New Requests'   },
+    { id: 'CONFIRMED', label: 'Confirmed Jobs' },
+    { id: 'ASSIGNED',  label: 'Assigned Jobs'  },
+    { id: 'IN_PROGRESS', label: 'In Progress'  },
+    { id: 'COMPLETED', label: 'Completed Jobs' },
+    { id: 'CANCELLED', label: 'Cancelled Jobs' },
+  ];
+
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 font-sans">
-      {/* Top Banner */}
-      <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 border border-blue-500/20 shadow-xl text-white space-y-6">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center font-black text-white text-2xl shadow-md border border-blue-400/30 shrink-0">
-              🛡️
-            </div>
+    <div className="min-h-screen bg-[#0a0b14] font-sans pb-20 space-y-6">
 
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl md:text-2xl font-black text-white">
-                  DOHS Sheba Service Operations Control
-                </h1>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  Service Manager Portal
-                </span>
+      {/* ── Top Hero Banner ── */}
+      <div className="rounded-3xl bg-[#12131f] border border-[#242539] shadow-2xl overflow-hidden">
+        {/* Glow line */}
+        <div className="h-1 bg-gradient-to-r from-[#7c6ff0] via-purple-400 to-blue-500 opacity-80" />
+
+        <div className="p-6 md:p-8 space-y-6">
+          {/* Title row */}
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#7c6ff0] flex items-center justify-center font-black text-white text-xl shadow-lg shadow-[#7c6ff0]/30 shrink-0">
+                🛡️
               </div>
-              <p className="text-xs text-blue-200/80 mt-1">
-                Manage service requests, create time slots, set technician capacity per slot, and assign technicians in real time.
-              </p>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl md:text-2xl font-black text-white">
+                    DOHS Sheba Service Operations Control
+                  </h1>
+                  <span className="px-3 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 flex items-center gap-1 shrink-0">
+                    <ShieldCheck className="w-3 h-3" /> Service Manager Portal
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Manage service requests, create time slots, set technician capacity per slot, and assign technicians in real time.
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                loadDashboardData();
-                loadSlots();
-              }}
+              onClick={() => { loadDashboardData(); loadSlots(); }}
               disabled={loading || slotsLoading}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/15 transition-all flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-[#171829] hover:bg-[#1e1f36] text-white font-bold text-xs border border-[#242539] transition-all flex items-center gap-2 cursor-pointer shrink-0"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading || slotsLoading ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
+              <RefreshCw className={`w-3.5 h-3.5 text-[#7c6ff0] ${loading || slotsLoading ? 'animate-spin' : ''}`} />
+              Refresh
             </button>
           </div>
-        </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-3 pt-2 border-t border-white/10">
-          <button
-            onClick={() => setActiveMainTab('BOOKINGS')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer ${
-              activeMainTab === 'BOOKINGS'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-white/10 text-blue-100 hover:bg-white/20'
-            }`}
-          >
-            <Wrench className="w-4 h-4" />
-            <span>Service Bookings Queue ({bookings.length})</span>
-          </button>
+          {/* Main Nav Tabs */}
+          <div className="flex items-center gap-3 pt-4 border-t border-[#242539]">
+            <button
+              onClick={() => setActiveMainTab('BOOKINGS')}
+              className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer border ${
+                activeMainTab === 'BOOKINGS'
+                  ? 'bg-[#7c6ff0] text-white border-[#7c6ff0] shadow-lg shadow-[#7c6ff0]/25'
+                  : 'bg-[#171829] text-slate-300 border-[#242539] hover:border-[#7c6ff0]/30'
+              }`}
+            >
+              <Wrench className="w-3.5 h-3.5" />
+              Service Bookings Queue ({bookings.length})
+            </button>
 
-          <button
-            onClick={() => setActiveMainTab('SLOTS')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer ${
-              activeMainTab === 'SLOTS'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-white/10 text-blue-100 hover:bg-white/20'
-            }`}
-          >
-            <Clock className="w-4 h-4 text-amber-400" />
-            <span>Time Slots & Technician Capacity ({slots.length})</span>
-          </button>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-white/10 text-xs">
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-            <span className="text-blue-200/70 font-semibold">New Requests</span>
-            <div className="text-2xl font-black text-amber-400">{stats.pendingCount}</div>
+            <button
+              onClick={() => setActiveMainTab('SLOTS')}
+              className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer border ${
+                activeMainTab === 'SLOTS'
+                  ? 'bg-[#7c6ff0] text-white border-[#7c6ff0] shadow-lg shadow-[#7c6ff0]/25'
+                  : 'bg-[#171829] text-slate-300 border-[#242539] hover:border-[#7c6ff0]/30'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              Time Slots & Technician Capacity ({slots.length})
+            </button>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-            <span className="text-blue-200/70 font-semibold">Active Jobs</span>
-            <div className="text-2xl font-black text-blue-400">{stats.activeCount}</div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-            <span className="text-blue-200/70 font-semibold">Today Available Slots</span>
-            <div className="text-2xl font-black text-emerald-400">{totalAvailableCount} Techs</div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-            <span className="text-blue-200/70 font-semibold">Total Revenue</span>
-            <div className="text-2xl font-black text-white">{formatCurrency(stats.totalEarnings)}</div>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+            <StatCard label="New Requests"        value={<span className="text-amber-400">{stats.pendingCount}</span>}          icon={AlertCircle}  accent="bg-amber-500/20" />
+            <StatCard label="Active Jobs"         value={<span className="text-blue-400">{stats.activeCount}</span>}             icon={Activity}     accent="bg-blue-500/20" />
+            <StatCard label="Today Available Slots" value={<span className="text-emerald-400">{totalAvailableCount} Techs</span>} icon={Users}        accent="bg-emerald-500/20" />
+            <StatCard label="Total Revenue"       value={formatCurrency(stats.totalEarnings)}                                    icon={TrendingUp}   accent="bg-[#7c6ff0]/30" />
           </div>
         </div>
       </div>
 
       {/* ── TAB 1: SERVICE BOOKINGS QUEUE ── */}
       {activeMainTab === 'BOOKINGS' && (
-        <div className="space-y-6">
-          {/* Filter Tabs */}
-          <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-            <div className="flex items-center gap-2">
-              {[
-                { id: 'ALL', label: 'All Requests' },
-                { id: 'PENDING', label: 'New Requests' },
-                { id: 'CONFIRMED', label: 'Confirmed Jobs' },
-                { id: 'ASSIGNED', label: 'Assigned Jobs' },
-                { id: 'IN_PROGRESS', label: 'In Progress' },
-                { id: 'COMPLETED', label: 'Completed Jobs' },
-                { id: 'CANCELLED', label: 'Cancelled Jobs' },
-              ].map((tab) => {
-                const count = getTabCount(tab.id);
+        <div className="space-y-5">
+          {/* Horizontal Scrollable Filter Tabs */}
+          <div className="p-2 bg-[#12131f] rounded-2xl border border-[#242539] overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1.5 min-w-max">
+              {FILTER_TABS.map((tab) => {
+                const count    = getTabCount(tab.id);
                 const isActive = filterTab === tab.id;
-
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setFilterTab(tab.id as any)}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                    className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer border ${
                       isActive
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-[#7c6ff0] text-white border-[#7c6ff0] shadow-md shadow-[#7c6ff0]/20'
+                        : 'bg-transparent text-slate-400 border-transparent hover:bg-[#171829] hover:text-slate-200 hover:border-[#242539]'
                     }`}
                   >
                     <span>{tab.label}</span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-all ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : count > 0
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-slate-200/80 text-slate-500'
-                      }`}
-                    >
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                      isActive ? 'bg-white/20 text-white' : count > 0 ? 'bg-[#7c6ff0]/15 text-[#7c6ff0]' : 'bg-[#242539] text-slate-500'
+                    }`}>
                       {count}
                     </span>
                   </button>
@@ -453,189 +580,29 @@ export default function ServiceOperationsDashboard() {
             </div>
           </div>
 
-          {/* Bookings Queue */}
-          <div className="space-y-4">
+          {/* Bookings List */}
+          <div className="space-y-3">
             {loading ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-44 rounded-3xl bg-slate-100 animate-pulse" />
+                  <div key={i} className="h-40 rounded-2xl bg-[#12131f] border border-[#242539] animate-pulse" />
                 ))}
               </div>
             ) : filteredBookings.length === 0 ? (
-              <div className="p-12 text-center border border-dashed border-slate-200 rounded-3xl bg-white space-y-2">
-                <Wrench className="w-10 h-10 text-slate-400 mx-auto" />
-                <p className="font-extrabold text-lg text-slate-800">No Service Requests Found</p>
+              <div className="p-14 text-center border border-dashed border-[#242539] rounded-2xl bg-[#12131f] space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-[#171829] border border-[#242539] flex items-center justify-center mx-auto">
+                  <Wrench className="w-6 h-6 text-slate-500" />
+                </div>
+                <p className="font-extrabold text-lg text-slate-300">No Service Requests Found</p>
                 <p className="text-xs text-slate-500">There are no bookings matching this status filter.</p>
               </div>
             ) : (
               filteredBookings.map((b) => (
-                <div
+                <BookingJobCard
                   key={b.id}
-                  className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4 hover:shadow-md transition-all"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200">
-                          #{b.id.slice(-8).toUpperCase()}
-                        </span>
-                        <span className="text-xs text-slate-700 font-bold flex items-center gap-1">
-                          <User className="w-3.5 h-3.5 text-blue-600" />
-                          {b.customer?.name || 'Resident Customer'} ({b.customer?.phone || 'No Phone'})
-                        </span>
-                      </div>
-                      <h3 className="font-extrabold text-lg text-slate-900 mt-1">
-                        {b.service?.title || 'Home Maintenance Service'}
-                      </h3>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
-                        Status: {b.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Details & Address */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className="space-y-1">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                        Customer Information & Location
-                      </span>
-                      <div className="font-semibold text-slate-800 flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                        <span>{b.address?.line1 || b.notes || 'Mohakhali DOHS Residence'}</span>
-                      </div>
-                      <div className="text-slate-500 flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>Scheduled: {new Date(b.scheduledAt).toLocaleString()}</span>
-                      </div>
-                      {b.slot && (
-                        <div className="text-amber-700 font-bold flex items-center gap-1.5 pt-0.5">
-                          <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                          <span>
-                            Booked Slot: {b.slot.startTime} – {b.slot.endTime}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                        Assigned Internal Technician
-                      </span>
-                      {b.technicianName || b.technician?.name ? (
-                        <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 font-bold flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            <UserCheck className="w-4 h-4 text-purple-600" />
-                            <span>{b.technicianName || b.technician?.name}</span>
-                          </div>
-                          <span className="text-[11px] text-purple-700 font-medium">
-                            {b.technicianPhone || b.technician?.phone}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 font-bold flex items-center justify-between">
-                          <span>No technician assigned yet</span>
-                          <button
-                            onClick={() => {
-                              setSelectedBookingForAssign(b);
-                              setSelectedTechId(technicians[0]?.id || '');
-                            }}
-                            className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-xs cursor-pointer"
-                          >
-                            Assign Now
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Action Controls */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setContactModalBooking(b)}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center gap-1.5 border border-slate-200 cursor-pointer"
-                      >
-                        <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Contact Customer</span>
-                      </button>
-
-                      {b.notes && <span className="text-slate-500 text-[11px]">"{b.notes}"</span>}
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {b.status === 'PENDING' && (
-                        <>
-                          <button
-                            onClick={() => handleStatusUpdate(b.id, 'CONFIRMED')}
-                            disabled={updatingId === b.id}
-                            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold shadow-xs flex items-center gap-1.5 cursor-pointer"
-                          >
-                            {updatingId === b.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                            <span>Accept Request</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleStatusUpdate(b.id, 'CANCELLED')}
-                            disabled={updatingId === b.id}
-                            className="px-3.5 py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 font-bold flex items-center gap-1 cursor-pointer"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Reject</span>
-                          </button>
-                        </>
-                      )}
-
-                      {['PENDING', 'CONFIRMED'].includes(b.status) && (
-                        <button
-                          onClick={() => {
-                            setSelectedBookingForAssign(b);
-                            setSelectedTechId(technicians[0]?.id || '');
-                          }}
-                          className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-xs flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <UserCheck className="w-3.5 h-3.5" />
-                          <span>Assign Technician</span>
-                        </button>
-                      )}
-
-                      {b.status === 'TECHNICIAN_ASSIGNED' && (
-                        <button
-                          onClick={() => handleStatusUpdate(b.id, 'TECHNICIAN_ON_THE_WAY')}
-                          disabled={updatingId === b.id}
-                          className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs flex items-center gap-1.5 cursor-pointer"
-                        >
-                          {updatingId === b.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                          <span>Mark Tech On The Way</span>
-                        </button>
-                      )}
-
-                      {b.status === 'TECHNICIAN_ON_THE_WAY' && (
-                        <button
-                          onClick={() => handleStatusUpdate(b.id, 'IN_PROGRESS')}
-                          disabled={updatingId === b.id}
-                          className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold shadow-xs flex items-center gap-1.5 cursor-pointer"
-                        >
-                          {updatingId === b.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                          <span>Mark Work In Progress</span>
-                        </button>
-                      )}
-
-                      {b.status === 'IN_PROGRESS' && (
-                        <button
-                          onClick={() => handleStatusUpdate(b.id, 'WORK_COMPLETED')}
-                          disabled={updatingId === b.id}
-                          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs flex items-center gap-1.5 cursor-pointer"
-                        >
-                          {updatingId === b.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                          <span>Mark Work Completed</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  booking={b}
+                  onOpenSheet={(booking) => setSheetBooking(booking)}
+                />
               ))
             )}
           </div>
@@ -644,229 +611,121 @@ export default function ServiceOperationsDashboard() {
 
       {/* ── TAB 2: TIME SLOTS & TECHNICIAN CAPACITY MANAGEMENT ── */}
       {activeMainTab === 'SLOTS' && (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Controls Bar */}
-          <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="p-4 bg-[#12131f] rounded-2xl border border-[#242539] flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              <span className="text-xs font-bold text-slate-700 shrink-0">Filter Date:</span>
+              <span className="text-xs font-bold text-slate-400 shrink-0">Filter Date:</span>
               <input
                 type="date"
                 value={slotsDate}
-                onChange={(e) => {
-                  setSlotsDate(e.target.value);
-                  loadSlots(e.target.value);
-                }}
-                className="h-10 px-3 rounded-xl border border-slate-300 text-xs font-bold bg-slate-50 focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
+                onChange={(e) => { setSlotsDate(e.target.value); loadSlots(e.target.value); }}
+                className="h-10 px-3 rounded-xl border border-[#242539] text-xs font-bold bg-[#171829] text-slate-200 focus:ring-2 focus:ring-[#7c6ff0] w-full sm:w-auto outline-none"
               />
             </div>
-
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-              <button
-                onClick={() => {
-                  setEditingSlot(null);
-                  setSlotFormData({
-                    serviceId: '',
-                    date: slotsDate,
-                    startTime: '10:00 AM',
-                    endTime: '11:00 AM',
-                    maxCapacity: 2,
-                  });
-                  setShowSlotModal(true);
-                }}
-                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 cursor-pointer w-full sm:w-auto justify-center"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create Time Slot</span>
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setEditingSlot(null);
+                setSlotFormData({ serviceId: '', date: slotsDate, startTime: '10:00 AM', endTime: '11:00 AM', maxCapacity: 2 });
+                setShowSlotModal(true);
+              }}
+              className="px-5 py-2.5 rounded-xl bg-[#7c6ff0] hover:bg-[#695bdc] text-white font-extrabold text-xs shadow-md shadow-[#7c6ff0]/20 flex items-center gap-1.5 cursor-pointer w-full sm:w-auto justify-center transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Create Time Slot
+            </button>
           </div>
 
-          {/* Slots Capacity Overview Grid */}
+          {/* Capacity Overview */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-5 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-1">
-              <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Remaining Capacity</span>
-              <div className="text-3xl font-black text-emerald-800">{totalAvailableCount} Techs</div>
-              <p className="text-[11px] text-emerald-600">Available across all active slots for {slotsDate}</p>
-            </div>
-
-            <div className="p-5 rounded-3xl bg-amber-50 border border-amber-200 text-amber-950 space-y-1">
-              <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Booked Tech Jobs</span>
-              <div className="text-3xl font-black text-amber-800">{totalBookedCount} Bookings</div>
-              <p className="text-[11px] text-amber-600">Capacity currently occupied by customers</p>
-            </div>
-
-            <div className="p-5 rounded-3xl bg-blue-50 border border-blue-200 text-blue-950 space-y-1">
-              <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">Max Roster Capacity</span>
-              <div className="text-3xl font-black text-blue-800">{totalCapacityCount} Total</div>
-              <p className="text-[11px] text-blue-600">Total technician capacity allocated</p>
-            </div>
+            <StatCard label="Remaining Capacity"   value={<span className="text-emerald-400">{totalAvailableCount} Techs</span>}    icon={Users}       accent="bg-emerald-500/20" />
+            <StatCard label="Booked Tech Jobs"      value={<span className="text-amber-400">{totalBookedCount} Bookings</span>}     icon={Activity}    accent="bg-amber-500/20" />
+            <StatCard label="Max Roster Capacity"   value={<span className="text-[#7c6ff0]">{totalCapacityCount} Total</span>}      icon={BarChart2}   accent="bg-[#7c6ff0]/25" />
           </div>
 
-          {/* Time Slots Cards Grid */}
+          {/* Slots Grid */}
           <div className="space-y-4">
-            <h3 className="font-black text-slate-900 text-base flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-500" />
-              <span>Created Availability Time Slots ({slots.length})</span>
+            <h3 className="font-black text-slate-200 text-sm flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-400" />
+              Created Availability Time Slots ({slots.length})
             </h3>
 
             {slotsLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-44 rounded-3xl bg-slate-100 animate-pulse" />
+                  <div key={i} className="h-44 rounded-2xl bg-[#12131f] border border-[#242539] animate-pulse" />
                 ))}
               </div>
             ) : slots.length === 0 ? (
-              <div className="p-12 text-center border border-dashed border-slate-200 rounded-3xl bg-white space-y-3">
-                <Clock className="w-10 h-10 text-slate-400 mx-auto" />
-                <p className="font-extrabold text-lg text-slate-800">No Time Slots Created for {slotsDate}</p>
-                <p className="text-xs text-slate-500">
-                  Create time slots with technician capacity so residents can book your service.
-                </p>
+              <div className="p-12 text-center border border-dashed border-[#242539] rounded-2xl bg-[#12131f] space-y-3">
+                <Clock className="w-10 h-10 text-slate-600 mx-auto" />
+                <p className="font-extrabold text-lg text-slate-300">No Time Slots Created for {slotsDate}</p>
+                <p className="text-xs text-slate-500">Create time slots with technician capacity so residents can book your service.</p>
                 <button
-                  onClick={() => {
-                    setEditingSlot(null);
-                    setSlotFormData({
-                      serviceId: '',
-                      date: slotsDate,
-                      startTime: '10:00 AM',
-                      endTime: '11:00 AM',
-                      maxCapacity: 2,
-                    });
-                    setShowSlotModal(true);
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-black text-xs inline-flex items-center gap-1.5 cursor-pointer"
+                  onClick={() => { setEditingSlot(null); setSlotFormData({ serviceId: '', date: slotsDate, startTime: '10:00 AM', endTime: '11:00 AM', maxCapacity: 2 }); setShowSlotModal(true); }}
+                  className="px-5 py-2.5 rounded-xl bg-[#7c6ff0] text-white font-black text-xs inline-flex items-center gap-1.5 cursor-pointer hover:bg-[#695bdc] transition-all"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Create First Slot</span>
+                  Create First Slot
                 </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {slots.map((slot) => {
                   const remCap = Math.max(0, slot.maxCapacity - slot.bookedCapacity);
-
-                  let statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300';
-                  let statusText = `${remCap} Technicians Available`;
-
-                  if (slot.status === 'BLOCKED') {
-                    statusBadgeClass = 'bg-slate-200 text-slate-800 border-slate-300';
-                    statusText = 'BLOCKED (MANUAL)';
-                  } else if (slot.status === 'FULL') {
-                    statusBadgeClass = 'bg-rose-100 text-rose-800 border-rose-300';
-                    statusText = 'FULLY BOOKED';
-                  } else if (slot.status === 'PARTIALLY_BOOKED') {
-                    statusBadgeClass = 'bg-amber-100 text-amber-800 border-amber-300';
-                    statusText = `PARTIALLY BOOKED (${remCap} Tech Remaining)`;
-                  }
+                  const pct    = Math.min(100, Math.round((slot.bookedCapacity / slot.maxCapacity) * 100));
+                  const barColor = slot.status === 'FULL' ? 'bg-red-500' : slot.status === 'PARTIALLY_BOOKED' ? 'bg-amber-500' : 'bg-emerald-500';
+                  let statusBadgeCls = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                  let statusLabel   = `${remCap} Available`;
+                  if (slot.status === 'BLOCKED')          { statusBadgeCls = 'bg-slate-500/10 text-slate-400 border-slate-500/20'; statusLabel = 'BLOCKED'; }
+                  else if (slot.status === 'FULL')         { statusBadgeCls = 'bg-red-500/10 text-red-400 border-red-500/20';       statusLabel = 'FULLY BOOKED'; }
+                  else if (slot.status === 'PARTIALLY_BOOKED') { statusBadgeCls = 'bg-amber-500/10 text-amber-400 border-amber-500/20'; statusLabel = `PARTIAL (${remCap} left)`; }
 
                   return (
                     <div
                       key={slot.id}
-                      className={`p-5 rounded-3xl bg-white border shadow-xs space-y-4 transition-all ${
-                        slot.status === 'BLOCKED'
-                          ? 'border-slate-300 opacity-75'
-                          : slot.status === 'FULL'
-                          ? 'border-rose-200'
-                          : 'border-slate-200 hover:shadow-md'
-                      }`}
+                      className={`p-5 rounded-2xl bg-[#12131f] border border-[#242539] space-y-4 transition-all ${slot.status === 'BLOCKED' ? 'opacity-60' : 'hover:border-[#7c6ff0]/30'}`}
                     >
-                      <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="flex items-start justify-between gap-2 border-b border-[#242539] pb-3">
                         <div>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            {slot.service?.title || 'All Provider Services'}
-                          </span>
-                          <h4 className="font-black text-slate-900 text-base flex items-center gap-1.5 mt-0.5">
-                            <Clock className="w-4 h-4 text-blue-600" />
-                            <span>
-                              {slot.startTime} – {slot.endTime}
-                            </span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{slot.service?.title || 'All Provider Services'}</span>
+                          <h4 className="font-black text-slate-100 text-base flex items-center gap-1.5 mt-0.5">
+                            <Clock className="w-4 h-4 text-[#7c6ff0]" />
+                            {slot.startTime} – {slot.endTime}
                           </h4>
                         </div>
-
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black border ${statusBadgeClass}`}>
-                          {slot.status}
-                        </span>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${statusBadgeCls}`}>{slot.status}</span>
                       </div>
 
-                      {/* Capacity Bar */}
-                      <div className="space-y-1 text-xs">
-                        <div className="flex items-center justify-between text-slate-700 font-bold">
-                          <span className="flex items-center gap-1">
-                            <Users className="w-3.5 h-3.5 text-blue-600" />
-                            Technician Capacity:
-                          </span>
-                          <span className="font-mono">
-                            {slot.bookedCapacity} / {slot.maxCapacity} Booked
-                          </span>
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between text-slate-300 font-bold">
+                          <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5 text-[#7c6ff0]" /> Technician Capacity:</span>
+                          <span className="font-mono">{slot.bookedCapacity} / {slot.maxCapacity} Booked</span>
                         </div>
-
-                        <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-                          <div
-                            className={`h-full transition-all duration-500 ${
-                              slot.status === 'FULL'
-                                ? 'bg-rose-500'
-                                : slot.status === 'PARTIALLY_BOOKED'
-                                ? 'bg-amber-500'
-                                : 'bg-emerald-500'
-                            }`}
-                            style={{
-                              width: `${Math.min(100, Math.round((slot.bookedCapacity / slot.maxCapacity) * 100))}%`,
-                            }}
-                          />
+                        <div className="h-2 rounded-full bg-[#171829] overflow-hidden border border-[#242539]">
+                          <div className={`h-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
                         </div>
-
-                        <p className="text-[11px] font-semibold text-slate-500 pt-0.5">{statusText}</p>
+                        <p className="text-[11px] font-semibold text-slate-500">{statusLabel}</p>
                       </div>
 
-                      {/* Action buttons */}
-                      <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 text-xs">
+                      <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#242539] text-xs">
                         <button
                           onClick={() => handleToggleBlock(slot.id)}
-                          className={`px-3 py-1.5 rounded-xl font-bold border flex items-center gap-1 cursor-pointer transition-all ${
-                            slot.status === 'BLOCKED'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                              : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                          }`}
+                          className={`px-3 py-1.5 rounded-xl font-bold border flex items-center gap-1 cursor-pointer transition-all text-[11px] ${slot.status === 'BLOCKED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-[#171829] text-slate-400 border-[#242539] hover:bg-[#1e1f36]'}`}
                         >
-                          {slot.status === 'BLOCKED' ? (
-                            <>
-                              <Unlock className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Unblock</span>
-                            </>
-                          ) : (
-                            <>
-                              <Lock className="w-3.5 h-3.5 text-slate-500" />
-                              <span>Block Slot</span>
-                            </>
-                          )}
+                          {slot.status === 'BLOCKED' ? <><Unlock className="w-3.5 h-3.5" /><span>Unblock</span></> : <><Lock className="w-3.5 h-3.5" /><span>Block Slot</span></>}
                         </button>
-
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => {
-                              setEditingSlot(slot);
-                              setSlotFormData({
-                                serviceId: slot.serviceId || '',
-                                date: new Date(slot.date).toISOString().split('T')[0],
-                                startTime: slot.startTime,
-                                endTime: slot.endTime,
-                                maxCapacity: slot.maxCapacity,
-                              });
-                              setShowSlotModal(true);
-                            }}
-                            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer"
+                            onClick={() => { setEditingSlot(slot); setSlotFormData({ serviceId: slot.serviceId || '', date: new Date(slot.date).toISOString().split('T')[0], startTime: slot.startTime, endTime: slot.endTime, maxCapacity: slot.maxCapacity }); setShowSlotModal(true); }}
+                            className="p-2 rounded-xl bg-[#171829] hover:bg-[#1e1f36] text-slate-400 border border-[#242539] cursor-pointer"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
-
                           <button
                             onClick={() => handleDeleteSlot(slot.id)}
                             disabled={slot.bookedCapacity > 0}
-                            className={`p-2 rounded-xl border cursor-pointer ${
-                              slot.bookedCapacity > 0
-                                ? 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed'
-                                : 'bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200'
-                            }`}
+                            className={`p-2 rounded-xl border cursor-pointer ${slot.bookedCapacity > 0 ? 'bg-[#12131f] text-slate-600 border-[#242539] cursor-not-allowed' : 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/20'}`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -881,118 +740,70 @@ export default function ServiceOperationsDashboard() {
         </div>
       )}
 
+      {/* ── Detail Bottom Sheet ── */}
+      <DetailBottomSheet
+        booking={sheetBooking}
+        isOpen={!!sheetBooking}
+        onClose={() => setSheetBooking(null)}
+        technicians={technicians}
+        onStatusChange={handleStatusUpdate}
+        onAssignTechnician={handleAssignTechnicianDirect}
+        updating={!!updatingId}
+        assigning={assigning}
+      />
+
       {/* ── Create / Edit Time Slot Modal ── */}
       {showSlotModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 bg-[#0a0b14]/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-[#12131f] rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-[#242539]">
+            <div className="flex items-center justify-between border-b border-[#242539] pb-3">
               <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-blue-600" />
-                <h3 className="font-extrabold text-base text-slate-900">
-                  {editingSlot ? 'Edit Time Slot' : 'Create New Time Slot'}
-                </h3>
+                <Clock className="w-5 h-5 text-[#7c6ff0]" />
+                <h3 className="font-extrabold text-base text-white">{editingSlot ? 'Edit Time Slot' : 'Create New Time Slot'}</h3>
               </div>
-              <button
-                onClick={() => {
-                  setShowSlotModal(false);
-                  setEditingSlot(null);
-                }}
-                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 cursor-pointer"
-              >
+              <button onClick={() => { setShowSlotModal(false); setEditingSlot(null); }} className="w-8 h-8 rounded-full bg-[#171829] flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#242539] cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveSlotSubmit} className="space-y-4 text-xs font-semibold">
+            <form onSubmit={handleSaveSlotSubmit} className="space-y-4 text-xs font-semibold text-slate-300">
               <div>
-                <label className="block text-slate-600 mb-1">Service (Optional - Default All Services)</label>
-                <select
-                  value={slotFormData.serviceId}
-                  onChange={(e) => setSlotFormData({ ...slotFormData, serviceId: e.target.value })}
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-blue-500"
-                >
+                <label className="block text-slate-400 mb-1">Service (Optional)</label>
+                <select value={slotFormData.serviceId} onChange={(e) => setSlotFormData({ ...slotFormData, serviceId: e.target.value })} className="w-full h-11 px-3.5 rounded-xl border border-[#242539] bg-[#171829] text-slate-200 font-medium focus:ring-2 focus:ring-[#7c6ff0] outline-none">
                   <option value="">-- All Provider Services --</option>
-                  {myServices.map((srv) => (
-                    <option key={srv.id} value={srv.id}>
-                      {srv.title}
-                    </option>
-                  ))}
+                  {myServices.map((srv) => <option key={srv.id} value={srv.id}>{srv.title}</option>)}
                 </select>
               </div>
 
               {!editingSlot && (
                 <div>
-                  <label className="block text-slate-600 mb-1">Date *</label>
-                  <input
-                    type="date"
-                    value={slotFormData.date}
-                    onChange={(e) => setSlotFormData({ ...slotFormData, date: e.target.value })}
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+                  <label className="block text-slate-400 mb-1">Date *</label>
+                  <input type="date" value={slotFormData.date} onChange={(e) => setSlotFormData({ ...slotFormData, date: e.target.value })} className="w-full h-11 px-3.5 rounded-xl border border-[#242539] bg-[#171829] text-slate-200 font-medium focus:ring-2 focus:ring-[#7c6ff0] outline-none" required />
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-600 mb-1">Start Time *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 10:00 AM"
-                    value={slotFormData.startTime}
-                    onChange={(e) => setSlotFormData({ ...slotFormData, startTime: e.target.value })}
-                    className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white font-medium"
-                    required
-                  />
+                  <label className="block text-slate-400 mb-1">Start Time *</label>
+                  <input type="text" placeholder="10:00 AM" value={slotFormData.startTime} onChange={(e) => setSlotFormData({ ...slotFormData, startTime: e.target.value })} className="w-full h-10 px-3 rounded-xl border border-[#242539] bg-[#171829] text-slate-200 font-medium outline-none focus:ring-2 focus:ring-[#7c6ff0]" required />
                 </div>
-
                 <div>
-                  <label className="block text-slate-600 mb-1">End Time *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 11:00 AM"
-                    value={slotFormData.endTime}
-                    onChange={(e) => setSlotFormData({ ...slotFormData, endTime: e.target.value })}
-                    className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white font-medium"
-                    required
-                  />
+                  <label className="block text-slate-400 mb-1">End Time *</label>
+                  <input type="text" placeholder="11:00 AM" value={slotFormData.endTime} onChange={(e) => setSlotFormData({ ...slotFormData, endTime: e.target.value })} className="w-full h-10 px-3 rounded-xl border border-[#242539] bg-[#171829] text-slate-200 font-medium outline-none focus:ring-2 focus:ring-[#7c6ff0]" required />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-600 mb-1">Available Technicians Capacity *</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={slotFormData.maxCapacity}
-                  onChange={(e) => setSlotFormData({ ...slotFormData, maxCapacity: parseInt(e.target.value) || 1 })}
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <p className="text-[11px] text-slate-400 font-normal mt-1">
-                  How many technicians can be assigned during this timeframe (e.g. 3 technicians).
-                </p>
+                <label className="block text-slate-400 mb-1">Available Technician Capacity *</label>
+                <input type="number" min={1} max={20} value={slotFormData.maxCapacity} onChange={(e) => setSlotFormData({ ...slotFormData, maxCapacity: parseInt(e.target.value) || 1 })} className="w-full h-11 px-3.5 rounded-xl border border-[#242539] bg-[#171829] text-slate-200 font-medium focus:ring-2 focus:ring-[#7c6ff0] outline-none" required />
+                <p className="text-[11px] text-slate-500 font-normal mt-1">How many technicians can be assigned during this timeframe.</p>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSlotModal(false);
-                    setEditingSlot(null);
-                  }}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={slotSubmitting}
-                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black shadow-md flex items-center gap-1.5 cursor-pointer"
-                >
+              <div className="flex justify-end gap-2 pt-3 border-t border-[#242539]">
+                <button type="button" onClick={() => { setShowSlotModal(false); setEditingSlot(null); }} className="px-4 py-2.5 rounded-xl border border-[#242539] text-slate-300 font-bold hover:bg-[#171829] cursor-pointer">Cancel</button>
+                <button type="submit" disabled={slotSubmitting} className="px-6 py-2.5 rounded-xl bg-[#7c6ff0] hover:bg-[#695bdc] text-white font-black shadow-md shadow-[#7c6ff0]/20 flex items-center gap-1.5 cursor-pointer transition-all">
                   {slotSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>{editingSlot ? 'Update Slot' : 'Create Slot'}</span>
+                  {editingSlot ? 'Update Slot' : 'Create Slot'}
                 </button>
               </div>
             </form>
@@ -1000,143 +811,37 @@ export default function ServiceOperationsDashboard() {
         </div>
       )}
 
-      {/* Manual Technician Assignment Modal */}
-      {selectedBookingForAssign && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-purple-600" />
-                <h3 className="font-extrabold text-base text-slate-900">Assign Technician from Roster</h3>
-              </div>
-              <button
-                onClick={() => setSelectedBookingForAssign(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-blue-50 text-blue-900 text-xs border border-blue-200 space-y-1">
-              <div className="font-bold">Booking #{selectedBookingForAssign.id.slice(-8).toUpperCase()}</div>
-              <div>{selectedBookingForAssign.service?.title}</div>
-            </div>
-
-            <form onSubmit={handleAssignTechnicianSubmit} className="space-y-4 text-xs font-semibold">
-              <div>
-                <label className="block text-slate-600 mb-1">Select Technician Created By Admin</label>
-                <select
-                  value={selectedTechId}
-                  onChange={(e) => setSelectedTechId(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="">-- Custom Technician Below --</option>
-                  {technicians.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.specialty || 'General'}) - {t.phone}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {!selectedTechId && (
-                <div className="space-y-3 p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div>
-                    <label className="block text-slate-600 mb-1">Technician Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Rakib Hassan"
-                      value={customTechName}
-                      onChange={(e) => setCustomTechName(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white"
-                      required={!selectedTechId}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 mb-1">Phone Number</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. +880 1711-000000"
-                      value={customTechPhone}
-                      onChange={(e) => setCustomTechPhone(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-white"
-                      required={!selectedTechId}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setSelectedBookingForAssign(null)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={assigning}
-                  className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black shadow-md flex items-center gap-1.5 cursor-pointer"
-                >
-                  {assigning && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>Confirm Assignment</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Customer Contact Modal */}
+      {/* ── Customer Contact Modal ── */}
       {contactModalBooking && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 bg-[#0a0b14]/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-[#12131f] rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-[#242539]">
+            <div className="flex items-center justify-between border-b border-[#242539] pb-3">
               <div className="flex items-center gap-2">
-                <PhoneCall className="w-5 h-5 text-blue-600" />
-                <h3 className="font-extrabold text-base text-slate-900">Customer Details</h3>
+                <PhoneCall className="w-5 h-5 text-[#7c6ff0]" />
+                <h3 className="font-extrabold text-base text-white">Customer Details</h3>
               </div>
-              <button
-                onClick={() => setContactModalBooking(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 cursor-pointer"
-              >
+              <button onClick={() => setContactModalBooking(null)} className="w-8 h-8 rounded-full bg-[#171829] flex items-center justify-center text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-3 text-xs font-semibold">
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <div className="text-slate-400 uppercase text-[10px] font-bold">Resident Name</div>
-                <div className="text-slate-900 text-sm font-black">
-                  {contactModalBooking.customer?.name || 'Resident Customer'}
+              {[
+                { label: 'Resident Name',    value: contactModalBooking.customer?.name  || 'Guest Customer' },
+                { label: 'Contact Phone',    value: contactModalBooking.customer?.phone || 'No phone provided', isPhone: true },
+                { label: 'Location Address', value: contactModalBooking.address?.line1  || contactModalBooking.notes || 'DOHS Residence' },
+              ].map((item) => (
+                <div key={item.label} className="p-3 rounded-2xl bg-[#171829] border border-[#242539] space-y-1">
+                  <div className="text-slate-500 uppercase text-[10px] font-bold">{item.label}</div>
+                  <div className={`text-sm font-extrabold ${(item as any).isPhone ? 'text-[#7c6ff0]' : 'text-slate-200'}`}>{item.value}</div>
                 </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <div className="text-slate-400 uppercase text-[10px] font-bold">Contact Phone</div>
-                <div className="text-blue-600 text-sm font-black">
-                  {contactModalBooking.customer?.phone || 'No phone provided'}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                <div className="text-slate-400 uppercase text-[10px] font-bold">Location Address</div>
-                <div className="text-slate-800 font-medium">
-                  {contactModalBooking.address?.line1 || contactModalBooking.notes || 'DOHS Residence'}
-                </div>
-              </div>
+              ))}
             </div>
 
-            <div className="pt-2">
-              <a
-                href={`tel:${contactModalBooking.customer?.phone || ''}`}
-                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Phone className="w-4 h-4" />
-                <span>Call Resident Directly</span>
-              </a>
-            </div>
+            <a href={`tel:${contactModalBooking.customer?.phone || ''}`} className="w-full py-3 rounded-xl bg-[#7c6ff0] hover:bg-[#695bdc] text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all block">
+              <Phone className="w-4 h-4" />
+              Call Resident Directly
+            </a>
           </div>
         </div>
       )}
