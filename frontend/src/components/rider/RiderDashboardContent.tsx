@@ -16,6 +16,42 @@ import {
 import { CurrentMissionView } from './CurrentMissionView';
 import ProfileManagementContent from '../dashboard/ProfileManagementContent';
 
+function RequestCardTimer({ expiresAt, onExpire }: { expiresAt: number; onExpire?: () => void }) {
+  const [timeLeftSec, setTimeLeftSec] = useState<number>(() =>
+    Math.max(0, Math.floor((expiresAt - Date.now()) / 1000))
+  );
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+      setTimeLeftSec(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+        if (onExpire) onExpire();
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt, onExpire]);
+
+  const mins = Math.floor(timeLeftSec / 60);
+  const secs = timeLeftSec % 60;
+  const formattedTime = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  const isUrgent = timeLeftSec < 60;
+
+  return (
+    <span
+      className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-black uppercase tracking-wider flex items-center gap-1 border transition-all ${
+        isUrgent
+          ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse'
+          : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+      }`}
+    >
+      <Clock className="w-3 h-3" />
+      <span>{formattedTime}</span>
+    </span>
+  );
+}
+
 // Audio chime synthesis & Haptic Vibration for incoming dispatch request
 let sharedRiderAudioCtx: AudioContext | null = null;
 
@@ -774,9 +810,14 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
             ) : (
               <div className="space-y-3">
                 {openOrders.map((ord) => {
-                  const cName = ord.customerName || ord.user?.name || ord.guestName || 'Customer';
+                  const cName = (ord.notes && ord.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) || (ord.customerName && ord.customerName !== 'Guest Customer' ? ord.customerName : null) || (ord.customer?.name && ord.customer.name !== 'Guest Customer' ? ord.customer.name : null) || ord.guestName || ord.customerName || ord.customer?.name || 'Customer';
                   const distance = ord.pickupDistance || '1.2 km';
                   const fee = ord.netEarning ?? ord.earnings ?? Math.round(((ord.deliveryFee || 50) * (ord.riderCommissionPercent || 80)) / 100);
+                  const expTime = ord.dispatchExpiresAt
+                    ? new Date(ord.dispatchExpiresAt).getTime()
+                    : ord.dispatchStartedAt
+                    ? new Date(ord.dispatchStartedAt).getTime() + 300000
+                    : new Date(ord.createdAt || Date.now()).getTime() + 300000;
 
                   return (
                     <div
@@ -784,9 +825,17 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
                       className="p-4 rounded-3xl bg-[#0F172A] border-2 border-dashed border-amber-500/60 shadow-xl space-y-3.5 relative"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-wider border border-amber-500/30 flex items-center gap-1">
-                          ⏱ NEW REQUEST
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <RequestCardTimer
+                            expiresAt={expTime}
+                            onExpire={() => {
+                              setOpenOrders((prev) => prev.filter((o) => o.id !== ord.id));
+                            }}
+                          />
+                          <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                            NEW REQUEST
+                          </span>
+                        </div>
                         <span className="text-xs font-bold text-slate-400">Pickup {distance}</span>
                       </div>
 

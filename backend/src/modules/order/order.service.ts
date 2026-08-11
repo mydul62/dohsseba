@@ -387,7 +387,7 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus) =>
   const targetStatus = isDispatchTrigger ? 'READY_FOR_RIDER' : status;
 
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + 30000); // 30s timeout
+  const expiresAt = new Date(now.getTime() + 300000); // 5-minute timeout (300 seconds)
 
   const updateData: any = {
     status: targetStatus,
@@ -435,7 +435,7 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus) =>
       riderCommissionPercent: commissionPercent,
       earnings: netEarning,
       estimatedEarnings: netEarning,
-      countdown: 30,
+      countdown: 300,
       dispatchStartedAt: now.toISOString(),
       dispatchExpiresAt: expiresAt.toISOString(),
       createdAt: updated.createdAt,
@@ -446,7 +446,7 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus) =>
     emitToOnlineRiders('rider:new_order', broadcastPayload);
     emitToRole('RIDER', 'rider:new_order', broadcastPayload);
 
-    // Schedule 30-Second Timeout Fallback
+    // Schedule 5-Minute Timeout Fallback (300,000 ms)
     setTimeout(async () => {
       try {
         const currentOrder = await prisma.order.findUnique({ where: { id: orderId } });
@@ -459,7 +459,7 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus) =>
           emitToOnlineRiders('RIDER_ORDER_TIMEOUT', { orderId });
           emitToAdminRoom('MANUAL_ASSIGNMENT_REQUIRED', {
             orderId,
-            reason: 'Dispatch 30-second timer expired. No online rider accepted.',
+            reason: 'Dispatch 5-minute timer expired. No online rider accepted.',
           });
           if (order.customerId) {
             emitToUser(order.customerId, 'ORDER_STATUS_UPDATED', { orderId, status: 'WAITING_FOR_MANUAL_ASSIGNMENT' });
