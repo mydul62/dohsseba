@@ -87,6 +87,8 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
     items.reduce((sum: number, i: any) => sum + Number(i.price || i.unitPrice || 0) * Number(i.quantity || 1), 0);
 
   const deliveryFee = currentMission.deliveryFee ?? currentMission.deliveryCharge ?? 50;
+  const commPercent = currentMission.riderCommissionPercent ?? 80;
+  const riderIncome = currentMission.netEarning ?? currentMission.earnings ?? Math.round((deliveryFee * commPercent) / 100);
   const discount = currentMission.discount ?? currentMission.couponDiscount ?? 0;
   const couponCode = currentMission.couponCode || currentMission.coupon?.code || null;
   const totalAmount = currentMission.totalAmount || subTotal + deliveryFee - discount;
@@ -231,7 +233,7 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
         </div>
 
         <span className="text-base font-black text-emerald-400 font-mono">
-          +৳{deliveryFee || 50}
+          +৳{riderIncome}
         </span>
       </div>
 

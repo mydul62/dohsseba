@@ -521,6 +521,9 @@ export const getTodayStats = async (riderId: string) => {
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
+  let settings = await (prisma as any).siteSetting.findUnique({ where: { id: 'default' } });
+  const commissionPercent = settings?.riderCommissionPercent ?? 80;
+
   const profile = await prisma.riderProfile.findUnique({ where: { userId: riderId } }).catch(() => null);
   const profileId = profile?.id;
 
@@ -535,7 +538,7 @@ export const getTodayStats = async (riderId: string) => {
     riderMatchConditions.push({ riderAssignment: { riderId: profileId } });
   }
 
-  const [todayDeliveries, activeOrders] = await Promise.all([
+  const [todayDeliveries, activeOrders, todayDeliveredOrders] = await Promise.all([
     prisma.order.count({
       where: {
         OR: riderMatchConditions,
@@ -549,22 +552,26 @@ export const getTodayStats = async (riderId: string) => {
         status: { in: ['RIDER_ASSIGNED', 'PICKUP_STARTED', 'PICKED_UP', 'ON_THE_WAY', 'ARRIVED'] },
       },
     }),
+    prisma.order.findMany({
+      where: {
+        OR: riderMatchConditions,
+        status: 'DELIVERED',
+        updatedAt: { gte: startOfDay },
+      },
+      select: { deliveryFee: true, totalAmount: true },
+    }),
   ]);
 
-  const todayEarnings = await prisma.order.aggregate({
-    where: {
-      OR: riderMatchConditions,
-      status: 'DELIVERED',
-      updatedAt: { gte: startOfDay },
-    },
-    _sum: { deliveryFee: true, totalAmount: true },
-  });
+  const rawDeliveryFeeSum = todayDeliveredOrders.reduce((sum, o) => sum + (o.deliveryFee || 50), 0);
+  const calculatedTodayEarnings = Math.round((rawDeliveryFeeSum * commissionPercent) / 100);
+  const todayOrderValue = todayDeliveredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
   return {
     todayDeliveries,
     activeOrders,
-    todayEarnings: todayEarnings._sum.deliveryFee ?? 0,
-    todayOrderValue: todayEarnings._sum.totalAmount ?? 0,
+    todayEarnings: calculatedTodayEarnings,
+    todayOrderValue,
+    riderCommissionPercent: commissionPercent,
     totalTrips: profile?.totalTrips ?? 0,
     totalEarnings: profile?.totalEarnings ?? 0,
     rating: profile?.rating ?? 5.0,

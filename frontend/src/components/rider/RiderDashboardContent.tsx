@@ -730,7 +730,7 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
                 {openOrders.map((ord) => {
                   const cName = ord.customerName || ord.user?.name || ord.guestName || 'Customer';
                   const distance = ord.pickupDistance || '1.2 km';
-                  const fee = ord.deliveryFee || 65;
+                  const fee = ord.netEarning ?? ord.earnings ?? Math.round(((ord.deliveryFee || 50) * (ord.riderCommissionPercent || 80)) / 100);
 
                   return (
                     <div
@@ -807,7 +807,7 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
                   Order Details #{selectedOrderDetails.id?.slice(-8).toUpperCase()}
                 </h3>
                 <span className="text-xs text-emerald-400 font-bold font-mono">
-                  Earnings: +৳{selectedOrderDetails.deliveryFee || 50}
+                  Earnings: +৳{selectedOrderDetails.netEarning ?? selectedOrderDetails.earnings ?? Math.round(((selectedOrderDetails.deliveryFee || 50) * (selectedOrderDetails.riderCommissionPercent || 80)) / 100)}
                 </span>
               </div>
               <button
