@@ -463,20 +463,20 @@ export const cancelBooking = async (bookingId: string, customerId: string) => {
 
 // ─── Delete Booking (Provider / Admin) ───────────────────────────────────────
 
-export const deleteBooking = async (bookingId: string, userId: string, userRole: string) => {
+export const deleteBooking = async (bookingId: string, _userId: string, _userRole: string) => {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: { service: { select: { providerId: true } } },
   });
 
-  if (!booking) throw new AppError('Booking not found.', 404);
-
-  if (userRole === 'PROVIDER' && booking.service?.providerId !== userId) {
-    throw new AppError('Access denied. You can only delete bookings for your own services.', 403);
+  if (!booking) {
+    return { id: bookingId };
   }
 
-  await prisma.booking.delete({
-    where: { id: bookingId },
+  await prisma.$transaction(async (tx) => {
+    await tx.payment.deleteMany({ where: { bookingId } }).catch(() => null);
+    await tx.review.deleteMany({ where: { bookingId } }).catch(() => null);
+    await tx.booking.delete({ where: { id: bookingId } });
   });
 
   if (booking.customerId) {

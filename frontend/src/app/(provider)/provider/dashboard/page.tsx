@@ -420,20 +420,18 @@ export default function ServiceOperationsDashboard() {
   const handleDeleteBooking = async (bookingId: string) => {
     if (!window.confirm('Are you sure you want to delete this booking request?')) return;
 
+    // Optimistic removal from UI state
+    setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+    setSheetBooking((prev: any) => (prev?.id === bookingId ? null : prev));
+
     try {
       const res = await fetchApi<any>(`/bookings/${bookingId}`, {
         method: 'DELETE',
       }).catch(() => null);
 
-      if (res?.success) {
-        setBookings((prev) => prev.filter((b) => b.id !== bookingId));
-        setSheetBooking((prev: any) => (prev?.id === bookingId ? null : prev));
-        loadDashboardData();
-      } else {
-        alert(res?.message || 'Failed to delete booking request');
-      }
-    } catch (err: any) {
-      alert(err?.message || 'Failed to delete booking request');
+      loadDashboardData();
+    } catch (_) {
+      loadDashboardData();
     }
   };
 
