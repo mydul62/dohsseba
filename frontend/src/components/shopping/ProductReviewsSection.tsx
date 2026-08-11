@@ -77,6 +77,8 @@ export function ProductReviewsSection({ productIdOrSlug, onRatingUpdated }: Prod
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMoreModal, setHasMoreModal] = useState(false);
 
+  const [reviewerNameInput, setReviewerNameInput] = useState('');
+
   const loadSummary = useCallback(async () => {
     try {
       const res = await fetchProductReviewSummary(productIdOrSlug, 1, 10);
@@ -89,6 +91,9 @@ export function ProductReviewsSection({ productIdOrSlug, onRatingUpdated }: Prod
         if (res.data.userReview) {
           setRatingInput(res.data.userReview.rating);
           setCommentInput(res.data.userReview.comment || '');
+          setReviewerNameInput(res.data.userReview.user?.name || user?.name || '');
+        } else if (user?.name) {
+          setReviewerNameInput(user.name);
         }
       }
     } catch (err) {
@@ -96,7 +101,7 @@ export function ProductReviewsSection({ productIdOrSlug, onRatingUpdated }: Prod
     } finally {
       setLoading(false);
     }
-  }, [productIdOrSlug, onRatingUpdated]);
+  }, [productIdOrSlug, onRatingUpdated, user?.name]);
 
   useEffect(() => {
     loadSummary();
@@ -116,6 +121,7 @@ export function ProductReviewsSection({ productIdOrSlug, onRatingUpdated }: Prod
         productId,
         rating: ratingInput,
         comment: commentInput.trim(),
+        reviewerName: reviewerNameInput.trim() || undefined,
       });
 
       if (res?.success) {
@@ -285,6 +291,17 @@ export function ProductReviewsSection({ productIdOrSlug, onRatingUpdated }: Prod
           </div>
 
           <form onSubmit={handleSubmitReview} className="space-y-3.5 text-xs">
+            <div>
+              <label className="block font-bold text-foreground mb-1">Your Name (আপনার নাম)</label>
+              <input
+                type="text"
+                value={reviewerNameInput}
+                onChange={(e) => setReviewerNameInput(e.target.value)}
+                placeholder="Enter your name (e.g. Sharmin Sultana, Tanvir Ahmed, Guest)..."
+                className="w-full p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-background border border-border text-foreground text-xs focus:outline-none focus:border-emerald-600 font-medium"
+              />
+            </div>
+
             <div>
               <label className="block font-bold text-foreground mb-1">Rating (রেটিং নির্বাচন করুন) *</label>
               <StarRating rating={ratingInput} interactive onRate={setRatingInput} />

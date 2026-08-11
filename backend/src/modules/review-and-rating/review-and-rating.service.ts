@@ -78,16 +78,29 @@ export const getProductReviewSummary = async (
   const sumRatings = allReviewsForDistribution.reduce((acc, r) => acc + r.rating, 0);
   const averageRating = totalCount > 0 ? Number((sumRatings / totalCount).toFixed(1)) : 0;
 
-  const latestReviews = reviews.slice(0, 2);
+  const formatReview = (r: any) =>
+    r
+      ? {
+          ...r,
+          user: {
+            ...r.user,
+            name: r.reviewerName || r.user?.name || 'DOHS Resident',
+          },
+        }
+      : null;
+
+  const formattedReviews = reviews.map(formatReview);
+  const latestReviews = formattedReviews.slice(0, 2);
 
   let userReview: any = null;
   let hasPurchased = false;
 
   if (userId) {
-    userReview = await prisma.review.findFirst({
+    const rawUserReview = await prisma.review.findFirst({
       where: { productId, userId },
       include: { user: { select: { id: true, name: true, avatar: true } } },
     });
+    userReview = formatReview(rawUserReview);
 
     const completedOrderCount = await prisma.orderItem.count({
       where: {
@@ -107,7 +120,7 @@ export const getProductReviewSummary = async (
     totalReviews: totalCount,
     ratingDistribution,
     latestReviews,
-    reviews,
+    reviews: formattedReviews,
     totalCount,
     page,
     limit,
@@ -157,6 +170,8 @@ export const createOrUpdateProductReview = async (
     throw new AppError('Unable to process review. Please log in first.', 400);
   }
 
+  const customName = data.reviewerName?.trim() || null;
+
   const purchasedItem = await prisma.orderItem.findFirst({
     where: {
       productId,
@@ -177,6 +192,7 @@ export const createOrUpdateProductReview = async (
       data: {
         rating,
         comment: data.comment?.trim() || null,
+        reviewerName: customName,
         updatedAt: new Date(),
       },
       include: { user: { select: { id: true, name: true, avatar: true } } },
@@ -188,6 +204,7 @@ export const createOrUpdateProductReview = async (
         productId,
         rating,
         comment: data.comment?.trim() || null,
+        reviewerName: customName,
       },
       include: { user: { select: { id: true, name: true, avatar: true } } },
     });

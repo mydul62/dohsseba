@@ -37,7 +37,7 @@ export const fetchProductReviewSummary = async (productIdOrSlug: string, page = 
   return res;
 };
 
-export const submitProductReview = async (data: { productId: string; rating: number; comment?: string }) => {
+export const submitProductReview = async (data: { productId: string; rating: number; comment?: string; reviewerName?: string }) => {
   const res = await fetchApi<any>('/review-and-rating', {
     method: 'POST',
     body: JSON.stringify(data),
