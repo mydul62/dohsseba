@@ -10,9 +10,16 @@ export const getTechnicians = async () => {
 
 export const getActiveTechnicians = async () => {
   if (!(prisma as any).technician) return [];
-  return (prisma as any).technician.findMany({
+  const all: any[] = await (prisma as any).technician.findMany({
     where: { isActive: true },
     orderBy: { name: 'asc' },
+  });
+  // Deduplicate by id (guard against duplicate rows from DB joins)
+  const seen = new Set<string>();
+  return all.filter((t: any) => {
+    if (seen.has(t.id)) return false;
+    seen.add(t.id);
+    return true;
   });
 };
 

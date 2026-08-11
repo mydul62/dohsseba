@@ -154,11 +154,12 @@ const ensureCompanyServices = async () => {
       if (techCount === 0) {
         await (prisma as any).technician.createMany({
           data: [
-            { name: 'Rakib Ahmed', phone: '+8801711223344', specialty: 'Electrical & AC', isActive: true },
-            { name: 'Hasan Mahmud', phone: '+8801722556677', specialty: 'Plumbing & Sanitary', isActive: true },
-            { name: 'Mahmudul Islam', phone: '+8801733889900', specialty: 'Appliance Repair', isActive: true },
-            { name: 'Sabbir Hossain', phone: '+8801744112233', specialty: 'General Handyman', isActive: true },
+            { name: 'Rakib Ahmed',    phone: '+8801711223344', specialty: 'Electrical & AC',      isActive: true },
+            { name: 'Hasan Mahmud',   phone: '+8801722556677', specialty: 'Plumbing & Sanitary',  isActive: true },
+            { name: 'Mahmudul Islam', phone: '+8801733889900', specialty: 'Appliance Repair',     isActive: true },
+            { name: 'Sabbir Hossain', phone: '+8801744112233', specialty: 'General Handyman',     isActive: true },
           ],
+          skipDuplicates: true,
         });
       }
     }
