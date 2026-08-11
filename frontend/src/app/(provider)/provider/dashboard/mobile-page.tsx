@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { fetchApi } from '@/lib/api-client';
@@ -640,7 +640,7 @@ export default function MobileProviderDashboard() {
       if (srvr?.success && Array.isArray(srvr.data)) setMyServices(srvr.data);
 
       if (tr?.success && Array.isArray(tr.data) && tr.data.length > 0) {
-        const unique = tr.data.filter((t: any, i: number, a: any[]) => a.findIndex((x: any) => x.id === t.id) === i);
+        const unique = tr.data.filter((t: any, i: number, a: any[]) => a.findIndex((x: any) => (x.name || '').toLowerCase().trim() === (t.name || '').toLowerCase().trim()) === i);
         setTechnicians(unique);
       } else {
         setTechnicians([
@@ -797,7 +797,7 @@ export default function MobileProviderDashboard() {
       {sheetBooking && (
         <MobileDetailSheet
           booking={sheetBooking}
-          technicians={technicians.filter((t, i, a) => a.findIndex((x) => x.id === t.id) === i)}
+          technicians={technicians.filter((t, i, a) => a.findIndex((x) => (x.name || '').toLowerCase().trim() === (t.name || '').toLowerCase().trim()) === i)}
           onClose={() => setSheetBooking(null)}
           onStatusChange={handleStatusUpdate}
           onAssignTechnician={handleAssign}

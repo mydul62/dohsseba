@@ -111,7 +111,7 @@ export const getBookingById = async (bookingId: string, userId: string, role: st
 
 export const createBooking = async (
   customerId?: string,
-  data?: { serviceId: string; addressId?: string; scheduledAt?: string; notes?: string; slotId?: string }
+  data?: { serviceId: string; addressId?: string; addressText?: string; scheduledAt?: string; notes?: string; slotId?: string }
 ) => {
   if (!data || !data.serviceId) {
     throw new AppError('Service ID is required.', 400);
@@ -160,9 +160,30 @@ export const createBooking = async (
 
   if (!service) throw new AppError('Service not found.', 404);
 
-  let address = (data.addressId && data.addressId !== 'default-address-id')
-    ? await prisma.address.findFirst({ where: { id: data.addressId, userId: effectiveCustomerId } }).catch(() => null)
-    : null;
+  let addressTextToUse = data.addressText?.trim();
+  if (!addressTextToUse && data.notes) {
+    const match = data.notes.match(/Address:\s*([^.]+)/i);
+    if (match && match[1] && match[1].trim()) {
+      addressTextToUse = match[1].trim();
+    }
+  }
+
+  let address: any = null;
+
+  if (addressTextToUse && addressTextToUse !== 'Mohakhali DOHS Residence') {
+    address = await prisma.address.create({
+      data: {
+        userId: effectiveCustomerId,
+        label: 'DOHS Service Location',
+        line1: addressTextToUse,
+        area: 'Mohakhali DOHS',
+        city: 'Dhaka',
+        isDefault: false,
+      },
+    });
+  } else if (data.addressId && data.addressId !== 'default-address-id') {
+    address = await prisma.address.findFirst({ where: { id: data.addressId, userId: effectiveCustomerId } }).catch(() => null);
+  }
 
   if (!address) {
     address = await prisma.address.findFirst({ where: { userId: effectiveCustomerId } });
@@ -171,7 +192,7 @@ export const createBooking = async (
         data: {
           userId: effectiveCustomerId,
           label: 'Default DOHS Address',
-          line1: 'Mohakhali DOHS Residence',
+          line1: addressTextToUse || 'Mohakhali DOHS Residence',
           area: 'Mohakhali DOHS',
           city: 'Dhaka',
           isDefault: true,

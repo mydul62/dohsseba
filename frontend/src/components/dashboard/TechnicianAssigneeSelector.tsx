@@ -18,9 +18,9 @@ export function TechnicianAssigneeSelector({
   onAssignTechnician,
   assigning,
 }: TechnicianAssigneeSelectorProps) {
-  // Deduplicate by id (guard against API returning the same technician twice)
+  // Deduplicate by name (guard against API returning duplicate technician rows)
   const technicians = rawTechnicians.filter(
-    (t, idx, arr) => arr.findIndex((x) => x.id === t.id) === idx
+    (t, idx, arr) => arr.findIndex((x) => (x.name || '').toLowerCase().trim() === (t.name || '').toLowerCase().trim()) === idx
   );
   const getInitials = (name: string) => {
     if (!name) return 'TN';

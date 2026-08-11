@@ -143,29 +143,24 @@ export function BookingClient({ service }: BookingClientProps) {
     setValidationError('');
 
     try {
-      // First get user default address or use text
-      const addressRes = await fetchApi<any>('/users/addresses').catch(() => null);
-      let addressId = addressRes?.data?.[0]?.id;
-
-      if (!addressId) {
-        // Create quick address
-        const newAddressRes = await fetchApi<any>('/users/addresses', {
-          method: 'POST',
-          body: JSON.stringify({
-            label: 'DOHS Service Address',
-            line1: address,
-            area: 'Mohakhali DOHS',
-            city: 'Dhaka',
-          }),
-        }).catch(() => null);
-        addressId = newAddressRes?.data?.id;
-      }
+      // Always create quick address with the exact location string typed by the customer
+      const newAddressRes = await fetchApi<any>('/users/addresses', {
+        method: 'POST',
+        body: JSON.stringify({
+          label: 'DOHS Service Address',
+          line1: address.trim(),
+          area: 'Mohakhali DOHS',
+          city: 'Dhaka',
+        }),
+      }).catch(() => null);
+      const addressId = newAddressRes?.data?.id;
 
       const bookingRes = await fetchApi<any>('/bookings', {
         method: 'POST',
         body: JSON.stringify({
           serviceId: service.id,
-          addressId: addressId || 'default-address-id',
+          addressId: addressId || undefined,
+          addressText: address.trim(),
           slotId: selectedSlotId || undefined,
           // Pass the customer-selected date so backend capacity check uses the right date
           scheduledAt: selectedDate
