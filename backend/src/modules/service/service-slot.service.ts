@@ -47,10 +47,11 @@ export const getAvailableSlots = async (params: { serviceId?: string; providerId
   if (serviceId) {
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (service) {
-      whereClause.OR = [
-        { serviceId: service.id },
-        { providerId: service.providerId, serviceId: null },
-      ];
+      // Show all slots belonging to this provider:
+      // - slots for this specific service
+      // - provider-wide slots (serviceId = null)
+      // - slots created for any other service of this provider (backward compat)
+      whereClause.providerId = service.providerId;
     } else {
       whereClause.serviceId = serviceId;
     }
