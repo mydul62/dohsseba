@@ -2,7 +2,8 @@ import { body, param } from 'express-validator';
 
 export const createBookingValidator = [
   body('serviceId').notEmpty().withMessage('Service ID is required'),
-  body('addressId').notEmpty().withMessage('Address ID is required'),
+  body('addressId').optional().trim(),
+  body('addressText').optional().trim(),
   body('scheduledAt')
     .notEmpty().withMessage('Scheduled date is required')
     .isISO8601().withMessage('Invalid date format'),

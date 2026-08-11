@@ -143,23 +143,10 @@ export function BookingClient({ service }: BookingClientProps) {
     setValidationError('');
 
     try {
-      // Always create quick address with the exact location string typed by the customer
-      const newAddressRes = await fetchApi<any>('/users/addresses', {
-        method: 'POST',
-        body: JSON.stringify({
-          label: 'DOHS Service Address',
-          line1: address.trim(),
-          area: 'Mohakhali DOHS',
-          city: 'Dhaka',
-        }),
-      }).catch(() => null);
-      const addressId = newAddressRes?.data?.id;
-
       const bookingRes = await fetchApi<any>('/bookings', {
         method: 'POST',
         body: JSON.stringify({
           serviceId: service.id,
-          addressId: addressId || undefined,
           addressText: address.trim(),
           slotId: selectedSlotId || undefined,
           // Pass the customer-selected date so backend capacity check uses the right date
@@ -168,17 +155,19 @@ export function BookingClient({ service }: BookingClientProps) {
             : new Date().toISOString(),
           notes: `Schedule: ${dateSlot}. Phone: ${phone}. Address: ${address}. Notes: ${notes}`,
         }),
-      }).catch((err) => {
-        setValidationError(err?.message || 'Failed to place booking. Please try another slot.');
-        return null;
       });
 
       if (bookingRes?.success && bookingRes.data) {
         setCreatedBooking(bookingRes.data);
+        setValidationError('');
+        setIsCompleted(true);
+      } else {
+        setValidationError(bookingRes?.message || 'Failed to place booking. Please try another slot.');
       }
+    } catch (err: any) {
+      setValidationError(err?.message || 'Failed to place booking. Please try another slot.');
     } finally {
       setLoading(false);
-      setIsCompleted(true);
     }
   };
 
