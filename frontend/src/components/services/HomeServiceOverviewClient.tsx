@@ -127,15 +127,15 @@ export function HomeServiceOverviewClient({ initialServices }: { initialServices
                   </div>
 
                   <div className="flex flex-col sm:flex-row md:flex-col items-start md:items-end justify-between w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 gap-3 shrink-0">
-                    <div className="text-left md:text-right">
-                      <span className="text-xs text-slate-400 block font-medium">Service Fee</span>
-                      <span className="text-2xl font-black text-slate-900">
-                        ৳{service.price}
-                      </span>
-                      <span className="text-xs text-slate-500 font-semibold block">
-                        per {service.priceUnit || 'job'}
-                      </span>
-                    </div>
+                  <div className="text-left md:text-right">
+                    <span className="text-[11px] text-slate-400 block font-medium">Service Pricing</span>
+                    <span className="text-xs font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full inline-block my-1">
+                      Handled After Inspection
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-semibold block">
+                      (পরিদর্শনের পর বাজেট নির্ধারণ)
+                    </span>
+                  </div>
 
                     <Link
                       href={`/services/home-service/book/${service.id}`}

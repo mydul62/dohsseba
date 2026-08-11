@@ -533,17 +533,13 @@ export function BookingClient({ service }: BookingClientProps) {
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 space-y-2 text-xs border border-slate-100">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Base Service Price ({service.title}):</span>
-                    <span className="font-semibold text-slate-900">{formatCurrency(service.price)}</span>
+                <div className="p-4 rounded-2xl bg-slate-50 space-y-2.5 text-xs border border-slate-100">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-semibold">Service Fee Policy:</span>
+                    <span className="font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                      Handled After Inspection
+                    </span>
                   </div>
-                  {selectedAddons.map((addon) => (
-                    <div key={addon.id} className="flex justify-between text-slate-500">
-                      <span>Addon ({addon.title}):</span>
-                      <span className="font-semibold text-slate-900">+{formatCurrency(addon.price)}</span>
-                    </div>
-                  ))}
                   <div className="flex justify-between">
                     <span className="text-slate-500">Service Location:</span>
                     <span className="font-semibold text-slate-900">{address}</span>
@@ -556,48 +552,26 @@ export function BookingClient({ service }: BookingClientProps) {
                     <span className="text-slate-500">Scheduled Time:</span>
                     <span className="font-semibold text-slate-900">{dateSlot}</span>
                   </div>
-                  <div className="border-t border-slate-200 pt-2 flex justify-between font-extrabold text-sm">
-                    <span className="text-slate-900">Total Booking Amount:</span>
-                    <span className="text-blue-600">{formatCurrency(totalPrice)}</span>
+                  <div className="border-t border-slate-200 pt-2 flex justify-between font-extrabold text-xs">
+                    <span className="text-slate-900">Upfront Booking Charge:</span>
+                    <span className="text-emerald-700">৳0 (Free Booking - No upfront payment)</span>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
-                      Payment Method
+                      Payment Policy
                     </label>
                     <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                      Pay Cash After Completion
+                      Pay After Completion & Inspection
                     </span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                      { id: 'cod', label: 'Cash After Service', available: true },
-                      { id: 'bkash', label: 'bKash Mobile', available: false },
-                      { id: 'nagad', label: 'Nagad Wallet', available: false },
-                      { id: 'card', label: 'Debit/Credit Card', available: false },
-                    ].map((pm) => (
-                      <div
-                        key={pm.id}
-                        onClick={() => {
-                          if (pm.available) setPaymentMethod(pm.id as any);
-                        }}
-                        className={`relative p-3.5 rounded-2xl border text-center transition-all text-xs font-bold ${
-                          pm.available && paymentMethod === pm.id
-                            ? 'bg-blue-50/50 border-blue-600 text-blue-700 shadow-xs cursor-pointer'
-                            : 'border-slate-200 bg-slate-50 text-slate-400 opacity-60 cursor-not-allowed'
-                        }`}
-                      >
-                        <span>{pm.label}</span>
-                      </div>
-                    ))}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-emerald-50 text-emerald-800 text-xs border border-emerald-200">
                   <ShieldCheck className="w-5 h-5 shrink-0 text-emerald-600" />
-                  <span>DOHS Sheba Managed Service. Certified technicians assigned internally. Pay cash upon job completion.</span>
+                  <span>DOHS Sheba Managed Service. Provider/technician will inspect requirement and quote price before work starts.</span>
                 </div>
 
                 <div className="flex justify-between pt-4 border-t border-slate-100">
@@ -614,10 +588,10 @@ export function BookingClient({ service }: BookingClientProps) {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
+                    className="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
                     {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                    <span>Confirm Booking ({formatCurrency(totalPrice)})</span>
+                    <span>Confirm Booking Request</span>
                   </button>
                 </div>
               </form>
@@ -648,21 +622,9 @@ export function BookingClient({ service }: BookingClientProps) {
 
               <div className="pt-3 border-t border-slate-100 space-y-2 text-xs">
                 <div className="flex justify-between text-slate-600">
-                  <span>Base Price:</span>
-                  <span className="font-bold text-slate-900">{formatCurrency(service.price)}</span>
+                  <span>Price Policy:</span>
+                  <span className="font-bold text-emerald-700">Quoted After Inspection</span>
                 </div>
-
-                {selectedAddons.length > 0 && (
-                  <div className="space-y-1 pt-1 border-t border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Addons Selected:</span>
-                    {selectedAddons.map((addon) => (
-                      <div key={addon.id} className="flex justify-between text-slate-600 text-[11px]">
-                        <span className="truncate max-w-[140px]">{addon.title}</span>
-                        <span className="font-semibold text-blue-600">+{formatCurrency(addon.price)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
                 {dateSlot && (
                   <div className="pt-2 border-t border-slate-100 text-[11px] space-y-1">
@@ -673,9 +635,9 @@ export function BookingClient({ service }: BookingClientProps) {
                   </div>
                 )}
 
-                <div className="pt-3 border-t border-slate-200 flex justify-between font-black text-sm text-slate-900">
-                  <span>Total Amount:</span>
-                  <span className="text-blue-600 text-base">{formatCurrency(totalPrice)}</span>
+                <div className="pt-3 border-t border-slate-200 flex justify-between font-black text-xs text-slate-900">
+                  <span>Upfront Charge:</span>
+                  <span className="text-emerald-600 font-bold">৳0 (Free Booking)</span>
                 </div>
               </div>
             </div>
@@ -690,11 +652,11 @@ export function BookingClient({ service }: BookingClientProps) {
 
           <div className="space-y-2">
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-              Booking Confirmed (PENDING)
+              Booking Request Received (PENDING)
             </span>
             <h2 className="text-3xl font-extrabold text-slate-900">Booking Placed Successfully!</h2>
             <p className="text-sm text-slate-600 max-w-md mx-auto">
-              The <strong className="text-slate-900">DOHS Sheba Service Operations Team</strong> will review your request and assign a certified technician.
+              The <strong className="text-slate-900">DOHS Sheba Service Operations Team</strong> will review your request and contact you to inspect and confirm pricing.
             </p>
           </div>
 
@@ -702,7 +664,7 @@ export function BookingClient({ service }: BookingClientProps) {
           <div id="printable-invoice" className="p-6 rounded-3xl bg-slate-50 border border-slate-200 max-w-lg mx-auto text-left text-xs space-y-3 print:border-none print:shadow-none print:bg-white">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div>
-                <span className="font-black text-base text-slate-900 block">DOHS Sheba Official Service Invoice</span>
+                <span className="font-black text-base text-slate-900 block">DOHS Sheba Official Service Ticket</span>
                 <span className="text-[10px] text-slate-400 font-bold">Mohakhali & Baridhara DOHS Maintenance Desk</span>
               </div>
               <span className="font-mono font-extrabold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
@@ -714,6 +676,10 @@ export function BookingClient({ service }: BookingClientProps) {
               <div className="flex justify-between">
                 <span className="text-slate-500">Service Request:</span>
                 <span className="font-extrabold text-slate-900">{service.title}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Service Pricing:</span>
+                <span className="font-extrabold text-emerald-700">Handled After Inspection</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Assigned Provider:</span>
@@ -736,22 +702,9 @@ export function BookingClient({ service }: BookingClientProps) {
               </div>
             </div>
 
-            {/* Selected Addons Breakdown */}
-            {selectedAddons.length > 0 && (
-              <div className="pt-2 border-t border-slate-200 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Service Addons Breakdown:</span>
-                {selectedAddons.map((addon) => (
-                  <div key={addon.id} className="flex justify-between text-slate-700 font-medium">
-                    <span>{addon.title}</span>
-                    <span className="font-bold text-blue-600">+{formatCurrency(addon.price)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="border-t-2 border-dashed border-slate-300 pt-3 flex justify-between font-black text-base text-slate-900">
-              <span>Total Due (Pay Cash):</span>
-              <span className="text-blue-600">{formatCurrency(totalPrice)}</span>
+            <div className="border-t-2 border-dashed border-slate-300 pt-3 flex justify-between font-black text-sm text-slate-900">
+              <span>Upfront Payment:</span>
+              <span className="text-emerald-600 font-bold">৳0 (Pay After Work Done)</span>
             </div>
           </div>
 

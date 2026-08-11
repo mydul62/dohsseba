@@ -265,25 +265,15 @@ export function ServiceFilterSidebar({
           </div>
         </div>
 
-        {/* Price Filter */}
-        <div className="space-y-3 border-t border-border pt-4">
-          <div className="flex justify-between text-xs font-semibold">
-            <span className="text-muted-foreground">Max Starting Price</span>
-            <span className="font-bold text-primary">৳{maxPrice}</span>
+        {/* Pricing Policy Banner */}
+        <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 space-y-1 text-xs">
+          <div className="font-extrabold text-emerald-900 flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Inspection-Based Pricing</span>
           </div>
-          <input
-            type="range"
-            min="300"
-            max="5000"
-            step="100"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(Number(e.target.value))}
-            className="w-full accent-primary cursor-pointer"
-          />
-          <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
-            <span>৳300</span>
-            <span>৳5000</span>
-          </div>
+          <p className="text-[11px] text-emerald-800 leading-relaxed font-medium">
+            Service charges are quoted manually by our team/technician after inspecting your exact requirement. No upfront payment required.
+          </p>
         </div>
 
         {/* Rating Filter */}
