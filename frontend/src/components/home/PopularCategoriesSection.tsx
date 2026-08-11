@@ -21,8 +21,8 @@ interface CategoryNode {
 import { SHOPPING_CATEGORIES } from '@/constants/products';
 
 export function PopularCategoriesSection() {
-  const [categories, setCategories] = useState<CategoryNode[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<CategoryNode[]>(SHOPPING_CATEGORIES as any[]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const API = getApiBaseUrl();

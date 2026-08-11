@@ -6,6 +6,7 @@ import { ProductGridSkeleton } from '@/components/ui/SkeletonLoaders';
 import { Sparkles, Star, ChevronRight } from 'lucide-react';
 import { getApiBaseUrl } from '@/lib/api-client';
 import Link from 'next/link';
+import { ALL_PRODUCTS } from '@/constants/products';
 
 interface FeaturedProduct {
   id: string;
@@ -24,7 +25,9 @@ interface FeaturedProduct {
 }
 
 export function FeaturedProductsSection({ initialProducts }: { initialProducts?: any[] }) {
-  const [products, setProducts] = useState<FeaturedProduct[] | null>(initialProducts && initialProducts.length > 0 ? initialProducts : null);
+  const [products, setProducts] = useState<FeaturedProduct[]>(
+    initialProducts && initialProducts.length > 0 ? initialProducts : (ALL_PRODUCTS as any[])
+  );
 
   useEffect(() => {
     if (initialProducts && initialProducts.length > 0) return;

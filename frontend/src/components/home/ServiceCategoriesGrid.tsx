@@ -28,7 +28,7 @@ interface ServiceCategory {
 
 export function ServiceCategoriesGrid() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [services, setServices] = useState<ServiceCategory[] | null>(null);
+  const [services, setServices] = useState<ServiceCategory[]>(FALLBACK_SERVICES);
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);

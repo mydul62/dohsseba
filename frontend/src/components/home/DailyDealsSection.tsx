@@ -45,7 +45,7 @@ const TABS = [
 
 export function DailyDealsSection() {
   const [activeTab, setActiveTab] = useState('all');
-  const [products, setProducts]   = useState<DealProduct[] | null>(null);
+  const [products, setProducts]   = useState<DealProduct[]>(ALL_PRODUCTS as any[]);
 
   // Initialize to zeros to avoid SSR/client mismatch — real value set after mount
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });

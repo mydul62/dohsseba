@@ -24,8 +24,8 @@ interface Product {
 }
 
 export function ForYouProductsSection() {
-  const [products, setProducts]   = useState<Product[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const [products, setProducts]   = useState<Product[]>(ALL_PRODUCTS as any[]);
+  const [loading, setLoading]     = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage]           = useState(1);
   const [hasMore, setHasMore]     = useState(true);
