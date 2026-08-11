@@ -43,7 +43,8 @@ export function BookingClient({ service }: BookingClientProps) {
   const [selectedSlotId, setSelectedSlotId] = useState<string>('');
   const [dateSlot, setDateSlot] = useState<string>('');
   
-  // 2. Address & Phone blank by default with placeholder instructions
+  // 2. Name, Address & Phone blank by default with placeholder instructions
+  const [customerName, setCustomerName] = useState<string>('');
   const [address, setAddress] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
@@ -112,10 +113,15 @@ export function BookingClient({ service }: BookingClientProps) {
   };
 
   const handleNextFromStep3 = () => {
+    const nameTrimmed = customerName.trim();
     const addressTrimmed = address.trim();
     const cleanPhone = phone.replace(/[\s\-\+\(\)]/g, '').replace(/^88/, '');
     const bdPhoneRegex = /^01[3-9]\d{8}$/;
 
+    if (!nameTrimmed) {
+      setValidationError('আপনার পূর্ণ নাম দেওয়া আবশ্যক। (Your full name is required.)');
+      return;
+    }
     if (!addressTrimmed) {
       setValidationError('আপনার হাউজ ও সেক্টর এড্রেস দেওয়া আবশ্যক। (House & Flat location address is required.)');
       return;
@@ -130,12 +136,13 @@ export function BookingClient({ service }: BookingClientProps) {
 
   const handleConfirmOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    const nameTrimmed = customerName.trim();
     const addressTrimmed = address.trim();
     const cleanPhone = phone.replace(/[\s\-\+\(\)]/g, '').replace(/^88/, '');
     const bdPhoneRegex = /^01[3-9]\d{8}$/;
 
-    if (!dateSlot || !addressTrimmed || !cleanPhone || !bdPhoneRegex.test(cleanPhone)) {
-      setValidationError('১১ ডিজিটের সঠিক মোবাইল নম্বর এবং ডেলিভারি অ্যাড্রেস দেওয়া আবশ্যক।');
+    if (!dateSlot || !nameTrimmed || !addressTrimmed || !cleanPhone || !bdPhoneRegex.test(cleanPhone)) {
+      setValidationError('আপনার নাম, ১১ ডিজিটের সঠিক মোবাইল নম্বর এবং ডেলিভারি অ্যাড্রেস দেওয়া আবশ্যক।');
       return;
     }
 
@@ -147,13 +154,14 @@ export function BookingClient({ service }: BookingClientProps) {
         method: 'POST',
         body: JSON.stringify({
           serviceId: service.id,
+          customerName: nameTrimmed,
           addressText: address.trim(),
           slotId: selectedSlotId || undefined,
           // Pass the customer-selected date so backend capacity check uses the right date
           scheduledAt: selectedDate
             ? new Date(selectedDate).toISOString()
             : new Date().toISOString(),
-          notes: `Schedule: ${dateSlot}. Phone: ${phone}. Address: ${address}. Notes: ${notes}`,
+          notes: `Name: ${nameTrimmed}. Schedule: ${dateSlot}. Phone: ${phone}. Address: ${address}. Notes: ${notes}`,
         }),
       });
 
@@ -438,6 +446,23 @@ export function BookingClient({ service }: BookingClientProps) {
                 <div className="space-y-4 text-xs font-semibold">
                   <div>
                     <label className="block text-slate-600 mb-1 font-bold">
+                      Your Full Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => {
+                        setCustomerName(e.target.value);
+                        setValidationError('');
+                      }}
+                      placeholder="e.g. Rahim Ahmed"
+                      className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-slate-400"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 mb-1 font-bold">
                       DOHS House Address <span className="text-rose-500">*</span>
                     </label>
                     <input
@@ -526,6 +551,10 @@ export function BookingClient({ service }: BookingClientProps) {
                     <span className="font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
                       Handled After Inspection
                     </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Customer Name:</span>
+                    <span className="font-semibold text-slate-900">{customerName}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Service Location:</span>

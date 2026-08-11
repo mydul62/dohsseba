@@ -111,7 +111,7 @@ export const getBookingById = async (bookingId: string, userId: string, role: st
 
 export const createBooking = async (
   customerId?: string,
-  data?: { serviceId: string; addressId?: string; addressText?: string; scheduledAt?: string; notes?: string; slotId?: string }
+  data?: { serviceId: string; addressId?: string; addressText?: string; customerName?: string; scheduledAt?: string; notes?: string; slotId?: string }
 ) => {
   if (!data || !data.serviceId) {
     throw new AppError('Service ID is required.', 400);
@@ -127,7 +127,7 @@ export const createBooking = async (
       const pass = await bcrypt.hash('guest12345', 10);
       guestUser = await prisma.user.create({
         data: {
-          name: 'Guest Customer',
+          name: data.customerName?.trim() || 'Guest Customer',
           email: 'guest.customer@dohssheba.com',
           password: pass,
           role: 'CUSTOMER',
@@ -136,8 +136,18 @@ export const createBooking = async (
           isActive: true,
         },
       });
+    } else if (data.customerName?.trim()) {
+      await prisma.user.update({
+        where: { id: guestUser.id },
+        data: { name: data.customerName.trim() },
+      }).catch(() => null);
     }
     effectiveCustomerId = guestUser.id;
+  } else if (data.customerName?.trim()) {
+    await prisma.user.update({
+      where: { id: effectiveCustomerId },
+      data: { name: data.customerName.trim() },
+    }).catch(() => null);
   }
 
   let service = await prisma.service.findFirst({ where: { id: data.serviceId, isActive: true } });
