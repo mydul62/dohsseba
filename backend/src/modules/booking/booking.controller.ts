@@ -37,7 +37,8 @@ export const getBooking = async (req: AuthRequest, res: Response, next: NextFunc
 // POST /api/v1/bookings
 export const createBooking = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const booking = await bookingService.createBooking(req.user!.id, req.body);
+    const customerId = req.user?.id;
+    const booking = await bookingService.createBooking(customerId, req.body);
     return sendResponse(res, 201, 'Booking created successfully', booking);
   } catch (error) { next(error); }
 };
