@@ -47,17 +47,21 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
 
   // Customer Information
   const customerName =
+    currentMission.customerName ||
     currentMission.customer?.name ||
     currentMission.guestName ||
     currentMission.user?.name ||
-    'Rahim Chowdhury';
+    (currentMission.notes && currentMission.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) ||
+    'Resident Customer';
 
   const customerPhone =
     currentMission.customerPhone ||
     currentMission.customer?.phone ||
     currentMission.phone ||
     currentMission.address?.phone ||
-    '+880 1711-000000';
+    currentMission.user?.phone ||
+    (currentMission.notes && currentMission.notes.match(/Phone:\s*([0-9\+\-\s]+)/i)?.[1]?.trim()) ||
+    'N/A';
 
   const customerAddressText =
     currentMission.deliveryAddress ||
@@ -70,7 +74,9 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
     ]
       .filter(Boolean)
       .join(', ') ||
-    'House #12, Road #04, DOHS Mohakhali, Dhaka';
+    currentMission.address?.line1 ||
+    (currentMission.notes && currentMission.notes.match(/Address:\s*([^.\n]+)/i)?.[1]?.trim()) ||
+    'DOHS Location, Dhaka';
 
   // Products & Financial Breakdown
   const items = currentMission.items || currentMission.orderItems || currentMission.cartItems || [];

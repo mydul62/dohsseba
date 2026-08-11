@@ -98,8 +98,27 @@ export const getOpenOrders = async () => {
   return rawOrders.map((o) => {
     const baseFee = o.deliveryFee || 50;
     const netEarning = Math.round((baseFee * commissionPercent) / 100);
+
+    let parsedAddress = o.address?.line1 || (o as any).deliveryAddress;
+    let parsedPhone = (o as any).customerPhone || o.customer?.phone;
+    let parsedName = (o as any).customerName || o.customer?.name || (o as any).guestName;
+
+    if (o.notes) {
+      if (!parsedPhone) {
+        const pMatch = o.notes.match(/Phone:\s*([0-9\+\-\s]+)/i);
+        if (pMatch && pMatch[1]) parsedPhone = pMatch[1].trim();
+      }
+      if (!parsedAddress) {
+        const aMatch = o.notes.match(/Address:\s*([^.]+)/i);
+        if (aMatch && aMatch[1]) parsedAddress = aMatch[1].trim();
+      }
+    }
+
     return {
       ...o,
+      customerName: parsedName || 'DOHS Resident',
+      customerPhone: parsedPhone || 'N/A',
+      deliveryAddress: parsedAddress || o.address?.line1 || 'DOHS Location, Dhaka',
       riderCommissionPercent: commissionPercent,
       netEarning,
       earnings: netEarning,
@@ -281,7 +300,7 @@ export const getAssignedRiderByOrder = async (orderId: string) => {
 // ─── Get Active Assigned Missions ─────────────────────────────────────────────
 
 export const getActiveMissions = async (riderId: string) => {
-  return prisma.order.findMany({
+  const missions = await prisma.order.findMany({
     where: {
       OR: [{ riderId }, { assignedRiderId: riderId }],
       status: {
@@ -298,6 +317,30 @@ export const getActiveMissions = async (riderId: string) => {
         },
       },
     },
+  });
+
+  return missions.map((o) => {
+    let parsedAddress = o.address?.line1 || (o as any).deliveryAddress;
+    let parsedPhone = (o as any).customerPhone || o.customer?.phone;
+    let parsedName = (o as any).customerName || o.customer?.name || (o as any).guestName;
+
+    if (o.notes) {
+      if (!parsedPhone) {
+        const pMatch = o.notes.match(/Phone:\s*([0-9\+\-\s]+)/i);
+        if (pMatch && pMatch[1]) parsedPhone = pMatch[1].trim();
+      }
+      if (!parsedAddress) {
+        const aMatch = o.notes.match(/Address:\s*([^.]+)/i);
+        if (aMatch && aMatch[1]) parsedAddress = aMatch[1].trim();
+      }
+    }
+
+    return {
+      ...o,
+      customerName: parsedName || 'DOHS Resident',
+      customerPhone: parsedPhone || 'N/A',
+      deliveryAddress: parsedAddress || o.address?.line1 || 'DOHS Location, Dhaka',
+    };
   });
 };
 

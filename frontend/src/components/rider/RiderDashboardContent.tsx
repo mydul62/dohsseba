@@ -520,9 +520,9 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
               {filteredHistory.map((ord: any) => {
                 const isDelivered = ord.status === 'DELIVERED' || ord.status === 'COMPLETED';
                 const isCancelled = ord.status === 'CANCELLED' || ord.status === 'REJECTED';
-                const cName = ord.customerName || ord.customer?.name || ord.user?.name || ord.guestName || 'Resident Customer';
-                const cPhone = ord.phone || ord.customer?.phone || ord.user?.phone || ord.customerPhone || 'N/A';
-                const addr = ord.address?.line1 || ord.address || ord.deliveryAddress || 'DOHS Location, Dhaka';
+                const cName = ord.customerName || ord.customer?.name || ord.user?.name || ord.guestName || (ord.notes && ord.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) || 'Resident Customer';
+                const cPhone = ord.phone || ord.customerPhone || ord.customer?.phone || ord.user?.phone || ord.address?.phone || (ord.notes && ord.notes.match(/Phone:\s*([0-9\+\-\s]+)/i)?.[1]?.trim()) || 'N/A';
+                const addr = ord.deliveryAddress || ord.guestAddress || ord.address?.line1 || (typeof ord.address === 'string' ? ord.address : null) || (ord.notes && ord.notes.match(/Address:\s*([^.\n]+)/i)?.[1]?.trim()) || 'DOHS Location, Dhaka';
                 const itemsList = ord.items || [];
 
                 return (
@@ -823,15 +823,15 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
             <div className="p-4 rounded-2xl bg-[#0B1120] border border-slate-800/80 space-y-2 text-xs">
               <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Customer Info</span>
               <p className="font-extrabold text-white text-sm">
-                {selectedOrderDetails.customerName || selectedOrderDetails.user?.name || selectedOrderDetails.customer?.name || selectedOrderDetails.guestName || 'Valued Customer'}
+                {selectedOrderDetails.customerName || selectedOrderDetails.user?.name || selectedOrderDetails.customer?.name || selectedOrderDetails.guestName || (selectedOrderDetails.notes && selectedOrderDetails.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) || 'Valued Customer'}
               </p>
               <p className="text-slate-300 font-mono">
-                Phone: {selectedOrderDetails.phone || selectedOrderDetails.user?.phone || selectedOrderDetails.customer?.phone || selectedOrderDetails.customerPhone || 'N/A'}
+                Phone: {selectedOrderDetails.phone || selectedOrderDetails.customerPhone || selectedOrderDetails.user?.phone || selectedOrderDetails.customer?.phone || selectedOrderDetails.address?.phone || (selectedOrderDetails.notes && selectedOrderDetails.notes.match(/Phone:\s*([0-9\+\-\s]+)/i)?.[1]?.trim()) || 'N/A'}
               </p>
               <div className="pt-2 border-t border-slate-800 text-slate-300 flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <p className="font-medium">
-                  {selectedOrderDetails.address?.line1 || selectedOrderDetails.address || selectedOrderDetails.deliveryAddress || 'DOHS Location, Dhaka'}
+                  {selectedOrderDetails.deliveryAddress || selectedOrderDetails.guestAddress || selectedOrderDetails.address?.line1 || (typeof selectedOrderDetails.address === 'string' ? selectedOrderDetails.address : null) || (selectedOrderDetails.notes && selectedOrderDetails.notes.match(/Address:\s*([^.\n]+)/i)?.[1]?.trim()) || 'DOHS Location, Dhaka'}
                 </p>
               </div>
             </div>
