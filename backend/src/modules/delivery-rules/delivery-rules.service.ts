@@ -218,3 +218,127 @@ export const deleteRule = async (id: string) => {
 
   return prisma.deliveryRule.delete({ where: { id } });
 };
+
+// ─── Delivery Speed Options (Dynamic Checkout Options) ──────────────────────
+
+export const getDeliveryOptions = async (onlyActive = false) => {
+  let options = await prisma.deliveryOption.findMany({
+    where: onlyActive ? { isActive: true } : {},
+    orderBy: { priority: 'asc' },
+  });
+
+  if (options.length === 0) {
+    const count = await prisma.deliveryOption.count();
+    if (count === 0) {
+      await prisma.deliveryOption.createMany({
+        data: [
+          {
+            title: '45-minute express',
+            badge: 'FASTEST',
+            description: 'A local DOHS rider picks up your fresh items immediately.',
+            speedKey: 'express',
+            priority: 1,
+            isActive: true,
+          },
+          {
+            title: 'Scheduled slot',
+            badge: null,
+            description: 'Tomorrow morning, 8:00–10:00 AM.',
+            speedKey: 'scheduled',
+            priority: 2,
+            isActive: true,
+          },
+        ],
+      });
+      options = await prisma.deliveryOption.findMany({
+        where: onlyActive ? { isActive: true } : {},
+        orderBy: { priority: 'asc' },
+      });
+    }
+  }
+
+  return options;
+};
+
+export const createDeliveryOption = async (data: {
+  title: string;
+  badge?: string;
+  description: string;
+  speedKey?: string;
+  extraCharge?: number;
+  priority?: number;
+  isActive?: boolean;
+}) => {
+  if (!data.title || !data.description) {
+    throw new AppError('Title and description are required.', 400);
+  }
+
+  const speedKey = (data.speedKey || data.title.toLowerCase().replace(/[^a-z0-9]/g, '_')).trim();
+
+  const existing = await prisma.deliveryOption.findUnique({ where: { speedKey } });
+  if (existing) {
+    throw new AppError(`Delivery option with key "${speedKey}" already exists.`, 400);
+  }
+
+  return prisma.deliveryOption.create({
+    data: {
+      title: data.title.trim(),
+      badge: data.badge?.trim() || null,
+      description: data.description.trim(),
+      speedKey,
+      extraCharge: Number(data.extraCharge) || 0,
+      priority: Number(data.priority) || 0,
+      isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
+    },
+  });
+};
+
+export const updateDeliveryOption = async (
+  id: string,
+  data: {
+    title?: string;
+    badge?: string;
+    description?: string;
+    extraCharge?: number;
+    priority?: number;
+    isActive?: boolean;
+  }
+) => {
+  const existing = await prisma.deliveryOption.findUnique({ where: { id } });
+  if (!existing) {
+    throw new AppError('Delivery option not found.', 404);
+  }
+
+  return prisma.deliveryOption.update({
+    where: { id },
+    data: {
+      title: data.title !== undefined ? data.title.trim() : existing.title,
+      badge: data.badge !== undefined ? (data.badge.trim() || null) : existing.badge,
+      description: data.description !== undefined ? data.description.trim() : existing.description,
+      extraCharge: data.extraCharge !== undefined ? Number(data.extraCharge) : existing.extraCharge,
+      priority: data.priority !== undefined ? Number(data.priority) : existing.priority,
+      isActive: data.isActive !== undefined ? Boolean(data.isActive) : existing.isActive,
+    },
+  });
+};
+
+export const toggleDeliveryOption = async (id: string) => {
+  const existing = await prisma.deliveryOption.findUnique({ where: { id } });
+  if (!existing) {
+    throw new AppError('Delivery option not found.', 404);
+  }
+
+  return prisma.deliveryOption.update({
+    where: { id },
+    data: { isActive: !existing.isActive },
+  });
+};
+
+export const deleteDeliveryOption = async (id: string) => {
+  const existing = await prisma.deliveryOption.findUnique({ where: { id } });
+  if (!existing) {
+    throw new AppError('Delivery option not found.', 404);
+  }
+
+  return prisma.deliveryOption.delete({ where: { id } });
+};

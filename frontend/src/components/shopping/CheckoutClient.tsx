@@ -37,13 +37,26 @@ export function CheckoutClient() {
   const { fetchRules, calculateFee } = useDeliveryRulesStore();
   const { success: toastSuccess, error: toastError } = useToast();
 
-  const [deliverySpeed, setDeliverySpeed] = useState<'express' | 'scheduled'>('express');
+  const [deliverySpeed, setDeliverySpeed] = useState<string>('express');
+  const [deliveryOptions, setDeliveryOptions] = useState<any[]>([]);
   const [customerName, setCustomerName] = useState((user as any)?.name || 'Green Market DOHS');
   const [address, setAddress] = useState('House 42, Road 7, DOHS Mohakhali');
   const [phone, setPhone] = useState(user?.phone || '01580 450353');
   const [paymentMethod, setPaymentMethod] = useState<'bkash' | 'nagad' | 'card' | 'cod'>('cod');
   const [isPlaced, setIsPlaced] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState('');
+
+  // Fetch dynamic delivery speed options from DB
+  useEffect(() => {
+    fetchApi<any[]>('/delivery-rules/options')
+      .then((res) => {
+        if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+          setDeliveryOptions(res.data);
+          setDeliverySpeed(res.data[0].speedKey);
+        }
+      })
+      .catch(() => null);
+  }, []);
 
   // ── Coupon State ───────────────────────────────────────────────────────────
   const [couponInput, setCouponInput] = useState('');
@@ -427,56 +440,57 @@ export function CheckoutClient() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* 45-minute express */}
-                <div
-                  onClick={() => setDeliverySpeed('express')}
-                  className={`relative rounded-2xl p-4 sm:p-5 cursor-pointer transition-all ${
-                    deliverySpeed === 'express'
-                      ? 'border-2 border-[#1c5335] bg-[#fbfdfb] shadow-2xs'
-                      : 'border border-[#e8e4d9] bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <span className="bg-[#fbf4e6] text-[#b3771e] text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md uppercase inline-block mb-1.5">
-                    FASTEST
-                  </span>
-                  <h4 className="font-extrabold text-[#1c5335] text-xs sm:text-sm">
-                    45-minute express
-                  </h4>
-                  <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
-                    A local DOHS rider picks up your fresh items immediately.
-                  </p>
-                  {deliverySpeed === 'express' ? (
-                    <div className="w-5 h-5 rounded-full bg-[#1c5335] text-white flex items-center justify-center absolute top-3.5 right-3.5">
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                {(deliveryOptions.length > 0
+                  ? deliveryOptions
+                  : [
+                      {
+                        id: 'opt_1',
+                        speedKey: 'express',
+                        title: '45-minute express',
+                        badge: 'FASTEST',
+                        description: 'A local DOHS rider picks up your fresh items immediately.',
+                      },
+                      {
+                        id: 'opt_2',
+                        speedKey: 'scheduled',
+                        title: 'Scheduled slot',
+                        badge: null,
+                        description: 'Tomorrow morning, 8:00–10:00 AM.',
+                      },
+                    ]
+                ).map((opt) => {
+                  const isSelected = deliverySpeed === opt.speedKey;
+                  return (
+                    <div
+                      key={opt.id || opt.speedKey}
+                      onClick={() => setDeliverySpeed(opt.speedKey)}
+                      className={`relative rounded-2xl p-4 sm:p-5 cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-2 border-[#1c5335] bg-[#fbfdfb] shadow-2xs'
+                          : 'border border-[#e8e4d9] bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      {opt.badge && (
+                        <span className="bg-[#fbf4e6] text-[#b3771e] text-[9px] font-black tracking-wider px-2 py-0.5 rounded-md uppercase inline-block mb-1.5">
+                          {opt.badge}
+                        </span>
+                      )}
+                      <h4 className="font-extrabold text-[#1c5335] text-xs sm:text-sm">
+                        {opt.title}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
+                        {opt.description}
+                      </p>
+                      {isSelected ? (
+                        <div className="w-5 h-5 rounded-full bg-[#1c5335] text-white flex items-center justify-center absolute top-3.5 right-3.5">
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 absolute top-3.5 right-3.5" />
+                      )}
                     </div>
-                  ) : (
-                    <div className="w-5 h-5 rounded-full border-2 border-slate-300 absolute top-3.5 right-3.5" />
-                  )}
-                </div>
-
-                {/* Scheduled Slot */}
-                <div
-                  onClick={() => setDeliverySpeed('scheduled')}
-                  className={`relative rounded-2xl p-4 sm:p-5 cursor-pointer transition-all ${
-                    deliverySpeed === 'scheduled'
-                      ? 'border-2 border-[#1c5335] bg-[#fbfdfb] shadow-2xs'
-                      : 'border border-[#e8e4d9] bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <h4 className="font-bold text-slate-800 text-xs sm:text-sm mb-1.5 pt-4 sm:pt-0">
-                    Scheduled slot
-                  </h4>
-                  <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
-                    Tomorrow morning, 8:00–10:00 AM.
-                  </p>
-                  {deliverySpeed === 'scheduled' ? (
-                    <div className="w-5 h-5 rounded-full bg-[#1c5335] text-white flex items-center justify-center absolute top-3.5 right-3.5">
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    </div>
-                  ) : (
-                    <div className="w-5 h-5 rounded-full border-2 border-slate-300 absolute top-3.5 right-3.5" />
-                  )}
-                </div>
+                  );
+                })}
               </div>
             </div>
 

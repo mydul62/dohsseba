@@ -714,6 +714,21 @@ model DeliveryRule {
   @@map("delivery_rules")
 }
 
+model DeliveryOption {
+  id          String   @id @default(cuid())
+  title       String   // e.g. "45-minute express", "Scheduled slot"
+  badge       String?  // e.g. "FASTEST"
+  description String   // e.g. "A local DOHS rider picks up your fresh items immediately."
+  speedKey    String   @unique // e.g. "express", "scheduled"
+  extraCharge Float    @default(0)
+  isActive    Boolean  @default(true)
+  priority    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("delivery_options")
+}
+
 
 // ─── Dynamic Homepage Systems ───────────────────────────────────────────────
 
