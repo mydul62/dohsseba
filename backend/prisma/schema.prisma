@@ -107,6 +107,7 @@ model User {
   riderLocationHistory RiderLocation[] @relation("RiderLocationHistory")
   refreshTokens    RefreshToken[]
   withdrawalRequests WithdrawalRequest[]
+  serviceSlots       ServiceSlot[]       @relation("ProviderSlots")
 
   @@map("users")
 }
@@ -222,6 +223,7 @@ model Service {
   category  ServiceCategory @relation(fields: [categoryId], references: [id])
   bookings  Booking[]
   reviews   Review[]
+  serviceSlots ServiceSlot[]
 
   @@map("services")
 }
@@ -250,6 +252,7 @@ model Booking {
   customerId      String
   serviceId       String
   addressId       String
+  slotId          String?
   technicianId    String?
   technicianName  String?
   technicianPhone String?
@@ -262,10 +265,11 @@ model Booking {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  customer   User        @relation("CustomerBookings", fields: [customerId], references: [id])
-  service    Service     @relation(fields: [serviceId], references: [id])
-  address    Address     @relation(fields: [addressId], references: [id])
-  technician Technician? @relation(fields: [technicianId], references: [id])
+  customer   User         @relation("CustomerBookings", fields: [customerId], references: [id])
+  service    Service      @relation(fields: [serviceId], references: [id])
+  address    Address      @relation(fields: [addressId], references: [id])
+  slot       ServiceSlot? @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  technician Technician?  @relation(fields: [technicianId], references: [id])
   payment    Payment?
   review     Review?
 
@@ -862,5 +866,37 @@ model WithdrawalRequest {
   @@index([userId])
   @@index([status])
   @@map("withdrawal_requests")
+}
+
+// ─── Service Slot Management & Technician Capacity ─────────────────────────
+
+enum SlotStatus {
+  AVAILABLE
+  PARTIALLY_BOOKED
+  FULL
+  BLOCKED
+  CANCELLED
+}
+
+model ServiceSlot {
+  id             String     @id @default(cuid())
+  providerId     String
+  serviceId      String?
+  date           DateTime
+  startTime      String
+  endTime        String
+  maxCapacity    Int        @default(1)
+  bookedCapacity Int        @default(0)
+  status         SlotStatus @default(AVAILABLE)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  provider User     @relation("ProviderSlots", fields: [providerId], references: [id], onDelete: Cascade)
+  service  Service?  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([providerId, date])
+  @@index([serviceId, date])
+  @@map("service_slots")
 }
 

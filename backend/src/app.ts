@@ -12,7 +12,7 @@ import { notFound } from './middlewares/notFound.middleware';
 // ─── Module & Route Imports ───────────────────────────────────────────────────
 import authRoutes                              from './modules/auth/auth.routes';
 import userRoutes                              from './modules/user/user.routes';
-import serviceRoutes, { categoryRouter as serviceCategoryRoutes } from './modules/service/service.routes';
+import serviceRoutes, { categoryRouter as serviceCategoryRoutes, slotRouter as serviceSlotRoutes } from './modules/service/service.routes';
 import bookingRoutes                           from './modules/booking/booking.routes';
 import productRoutes, { categoryRouter as productCategoryRoutes } from './modules/product/product.routes';
 import cartRoutes                              from './modules/cart/cart.routes';
@@ -107,6 +107,7 @@ app.use(`${API}/auth`,                authRoutes);
 app.use(`${API}/users`,               userRoutes);
 app.use(`${API}/services`,            serviceRoutes);
 app.use(`${API}/service-categories`,  serviceCategoryRoutes);
+app.use(`${API}/service-slots`,       serviceSlotRoutes);
 app.use(`${API}/bookings`,            bookingRoutes);
 app.use(`${API}/products`,            productRoutes);
 app.use(`${API}/product-categories`,  productCategoryRoutes);

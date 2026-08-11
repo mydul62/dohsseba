@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ServiceAddon, ServiceItem } from '@/types/service';
@@ -23,15 +23,24 @@ import {
   Phone,
 } from 'lucide-react';
 
+import { fetchAvailableSlots, ServiceSlotItem } from '@/services/serviceSlot';
+import { useSocket } from '@/hooks/useSocket';
+
 interface BookingClientProps {
   service: ServiceItem;
 }
 
 export function BookingClient({ service }: BookingClientProps) {
+  const { socket } = useSocket();
+
   const [step, setStep] = useState<number>(1);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   
-  // 1. Time Slot empty by default - mandatory selection
+  // 1. Time Slot selection & Date selection
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [availableSlots, setAvailableSlots] = useState<ServiceSlotItem[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState<boolean>(false);
+  const [selectedSlotId, setSelectedSlotId] = useState<string>('');
   const [dateSlot, setDateSlot] = useState<string>('');
   
   // 2. Address & Phone blank by default with placeholder instructions
@@ -39,6 +48,41 @@ export function BookingClient({ service }: BookingClientProps) {
   const [phone, setPhone] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'bkash' | 'nagad' | 'card' | 'cod'>('cod');
+
+  const loadSlots = async (dateStr?: string) => {
+    setSlotsLoading(true);
+    try {
+      const res = await fetchAvailableSlots({ serviceId: service.id, date: dateStr || selectedDate });
+      if (res?.success && Array.isArray(res.data)) {
+        setAvailableSlots(res.data);
+      } else {
+        setAvailableSlots([]);
+      }
+    } catch (_) {
+      setAvailableSlots([]);
+    } finally {
+      setSlotsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSlots(selectedDate);
+  }, [selectedDate, service.id]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleUpdate = () => loadSlots(selectedDate);
+    socket.on('service:slot:availability_updated', handleUpdate);
+    socket.on('service:slot:created', handleUpdate);
+    socket.on('service:slot:updated', handleUpdate);
+    socket.on('service:slot:deleted', handleUpdate);
+    return () => {
+      socket.off('service:slot:availability_updated', handleUpdate);
+      socket.off('service:slot:created', handleUpdate);
+      socket.off('service:slot:updated', handleUpdate);
+      socket.off('service:slot:deleted', handleUpdate);
+    };
+  }, [socket, selectedDate]);
   
   const [validationError, setValidationError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -122,10 +166,14 @@ export function BookingClient({ service }: BookingClientProps) {
         body: JSON.stringify({
           serviceId: service.id,
           addressId: addressId || 'default-address-id',
+          slotId: selectedSlotId || undefined,
           scheduledAt: new Date().toISOString(),
           notes: `Schedule: ${dateSlot}. Phone: ${phone}. Address: ${address}. Notes: ${notes}`,
         }),
-      }).catch(() => null);
+      }).catch((err) => {
+        setValidationError(err?.message || 'Failed to place booking. Please try another slot.');
+        return null;
+      });
 
       if (bookingRes?.success && bookingRes.data) {
         setCreatedBooking(bookingRes.data);
@@ -246,38 +294,123 @@ export function BookingClient({ service }: BookingClientProps) {
                 <div>
                   <h3 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-blue-600" />
-                    Select Preferred Arrival Time Slot <span className="text-rose-500">*</span>
+                    Select Preferred Date & Arrival Time Slot <span className="text-rose-500">*</span>
                   </h3>
                   <p className="text-xs text-slate-500">
-                    DOHS Sheba assigned technician will arrive within your selected time window.
+                    DOHS Sheba assigned technician will arrive within your selected time window based on live roster capacity.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[
-                    'Today (Within 2 Hours - Express)',
-                    'Today Evening (5:00 PM - 8:00 PM)',
-                    'Tomorrow Morning (9:00 AM - 12:00 PM)',
-                    'Tomorrow Afternoon (2:00 PM - 5:00 PM)',
-                    'Day After Tomorrow (9:00 AM - 12:00 PM)',
-                  ].map((slot) => (
-                    <div
-                      key={slot}
-                      onClick={() => {
-                        setDateSlot(slot);
-                        setValidationError('');
-                      }}
-                      className={`p-4 rounded-2xl border cursor-pointer font-semibold text-xs transition-all flex items-center justify-between ${
-                        dateSlot === slot
-                          ? 'bg-blue-50/50 border-blue-600 text-blue-700 shadow-xs font-bold ring-2 ring-blue-500/20'
-                          : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <span>{slot}</span>
-                      {dateSlot === slot && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
-                    </div>
-                  ))}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                  <span className="font-bold text-slate-700">Service Arrival Date:</span>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => {
+                      setSelectedDate(e.target.value);
+                      setSelectedSlotId('');
+                      setDateSlot('');
+                    }}
+                    className="h-10 px-3 rounded-xl border border-slate-300 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
+
+                {slotsLoading ? (
+                  <div className="py-8 text-center space-y-2">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto" />
+                    <p className="text-xs text-slate-500 font-semibold">Fetching available time slots & technician capacity...</p>
+                  </div>
+                ) : availableSlots.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {availableSlots.map((slot) => {
+                      const remCap = slot.remainingCapacity ?? Math.max(0, slot.maxCapacity - slot.bookedCapacity);
+                      const isFull = slot.status === 'FULL' || remCap <= 0;
+                      const isBlocked = slot.status === 'BLOCKED';
+                      const isDisabled = isFull || isBlocked;
+                      const isSelected = selectedSlotId === slot.id;
+
+                      let capLabel = `${remCap} technician${remCap > 1 ? 's' : ''} available`;
+                      if (remCap === 1) capLabel = '1 technician remaining';
+                      if (isFull) capLabel = 'FULL (No capacity)';
+                      if (isBlocked) capLabel = 'BLOCKED (Unavailable)';
+
+                      return (
+                        <div
+                          key={slot.id}
+                          onClick={() => {
+                            if (isDisabled) return;
+                            setSelectedSlotId(slot.id);
+                            setDateSlot(`${selectedDate} (${slot.startTime} - ${slot.endTime})`);
+                            setValidationError('');
+                          }}
+                          className={`p-4 rounded-2xl border transition-all flex flex-col justify-between space-y-2 ${
+                            isDisabled
+                              ? 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed'
+                              : isSelected
+                              ? 'bg-blue-50/70 border-blue-600 text-blue-900 shadow-xs font-bold ring-2 ring-blue-500/20 cursor-pointer'
+                              : 'border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-extrabold text-xs text-slate-900">
+                              {slot.startTime} – {slot.endTime}
+                            </span>
+                            {isSelected && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span
+                              className={`px-2 py-0.5 rounded-md font-extrabold ${
+                                isDisabled
+                                  ? 'bg-slate-200 text-slate-600'
+                                  : remCap === 1
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              {capLabel}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-xs text-slate-500 italic bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-amber-900">
+                      Note: Provider has not set specific slot limits for {selectedDate}. You can select an estimated arrival time slot below:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        'Morning (9:00 AM - 12:00 PM)',
+                        'Afternoon (2:00 PM - 5:00 PM)',
+                        'Evening (5:00 PM - 8:00 PM)',
+                        'Within 2 Hours (Express Arrival)',
+                      ].map((slotText) => {
+                        const fullSlot = `${selectedDate} (${slotText})`;
+                        const isSelected = dateSlot === fullSlot;
+                        return (
+                          <div
+                            key={slotText}
+                            onClick={() => {
+                              setSelectedSlotId('');
+                              setDateSlot(fullSlot);
+                              setValidationError('');
+                            }}
+                            className={`p-4 rounded-2xl border cursor-pointer font-semibold text-xs transition-all flex items-center justify-between ${
+                              isSelected
+                                ? 'bg-blue-50/50 border-blue-600 text-blue-700 shadow-xs font-bold ring-2 ring-blue-500/20'
+                                : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <span>{slotText}</span>
+                            {isSelected && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-between pt-4 border-t border-slate-100">
                   <button

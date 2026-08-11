@@ -2,6 +2,8 @@ import { prisma } from '../../lib/prisma';
 import { AppError } from '../../middlewares/error.middleware';
 import { BookingStatus } from '@prisma/client';
 import { getAllServiceCategories } from '../service/service.service';
+import { recalculateSlotStatus } from '../service/service-slot.service';
+import { emitToUser, emitToRole, emitToAdminRoom } from '../../lib/socket';
 
 const bookingInclude = {
   service: {
@@ -12,7 +14,9 @@ const bookingInclude = {
   },
   customer: { select: { id: true, name: true, email: true, phone: true, avatar: true } },
   address: true,
-  payment:  true,
+  slot: true,
+  technician: true,
+  payment: true,
 };
 
 // ─── Get Bookings ─────────────────────────────────────────────────────────────
@@ -106,7 +110,7 @@ export const getBookingById = async (bookingId: string, userId: string, role: st
 
 export const createBooking = async (
   customerId: string,
-  data: { serviceId: string; addressId?: string; scheduledAt?: string; notes?: string }
+  data: { serviceId: string; addressId?: string; scheduledAt?: string; notes?: string; slotId?: string }
 ) => {
   let service = await prisma.service.findFirst({ where: { id: data.serviceId, isActive: true } });
 
@@ -148,29 +152,89 @@ export const createBooking = async (
     }
   }
 
-  const booking = await prisma.booking.create({
-    data: {
-      customerId,
-      serviceId:   service.id,
-      addressId:   address.id,
-      scheduledAt: new Date(data.scheduledAt || Date.now()),
-      totalAmount: service.price,
-      notes:       data.notes,
-      status:      'PENDING',
-    },
-    include: bookingInclude,
+  let slotIdToUse: string | null = null;
+  let scheduledDate = new Date(data.scheduledAt || Date.now());
+
+  // Execute database transaction for atomic double-booking & technician capacity check
+  const booking = await prisma.$transaction(async (tx) => {
+    if (data.slotId) {
+      const targetSlot = await tx.serviceSlot.findUnique({
+        where: { id: data.slotId },
+      });
+
+      if (!targetSlot) {
+        throw new AppError('Selected time slot not found.', 404);
+      }
+
+      if (targetSlot.status === 'BLOCKED' || targetSlot.status === 'CANCELLED') {
+        throw new AppError('The selected time slot is currently blocked or unavailable.', 400);
+      }
+
+      if (targetSlot.bookedCapacity >= targetSlot.maxCapacity) {
+        throw new AppError('The selected time slot is fully booked. Please choose another slot.', 400);
+      }
+
+      slotIdToUse = targetSlot.id;
+      scheduledDate = new Date(targetSlot.date);
+
+      const newBookedCap = targetSlot.bookedCapacity + 1;
+      const nextStatus = recalculateSlotStatus(targetSlot.maxCapacity, newBookedCap, targetSlot.status);
+
+      await tx.serviceSlot.update({
+        where: { id: targetSlot.id },
+        data: {
+          bookedCapacity: newBookedCap,
+          status: nextStatus,
+        },
+      });
+    }
+
+    const newBooking = await tx.booking.create({
+      data: {
+        customerId,
+        serviceId: service.id,
+        addressId: address.id,
+        slotId: slotIdToUse,
+        scheduledAt: scheduledDate,
+        totalAmount: service.price || 0,
+        notes: data.notes,
+        status: 'PENDING',
+      },
+      include: bookingInclude,
+    });
+
+    return newBooking;
   });
 
-  // Create notification for customer & operations team
+  // Create notification for customer
   await prisma.notification.create({
     data: {
-      userId:  customerId,
-      title:   'Booking Received',
+      userId: customerId,
+      title: 'Booking Received',
       message: `Your booking request for "${service.title}" has been received.`,
-      type:    'INFO',
-      link:    `/dashboard/bookings/${booking.id}`,
+      type: 'INFO',
+      link: `/dashboard/bookings/${booking.id}`,
     },
   }).catch(() => null);
+
+  // Emit real-time Socket.IO events AFTER DB transaction succeeds
+  if (service.providerId) {
+    emitToUser(service.providerId, 'service:booking:created', booking);
+  }
+  emitToRole('PROVIDER', 'service:booking:created', booking);
+  emitToAdminRoom('service:booking:created', booking);
+  emitToUser(customerId, 'service:booking:created', booking);
+
+  if (booking.slotId) {
+    const updatedSlot = await prisma.serviceSlot.findUnique({ where: { id: booking.slotId } });
+    if (updatedSlot) {
+      emitToRole('CUSTOMER', 'service:slot:availability_updated', {
+        slotId: updatedSlot.id,
+        status: updatedSlot.status,
+        remainingCapacity: Math.max(0, updatedSlot.maxCapacity - updatedSlot.bookedCapacity),
+      });
+    }
+  }
 
   return booking;
 };
@@ -228,6 +292,16 @@ export const assignTechnician = async (
     },
   }).catch(() => null);
 
+  // Emit real-time Socket.IO events AFTER DB operation succeeds
+  emitToUser(booking.customerId, 'service:technician:assigned', updated);
+  emitToUser(booking.customerId, 'service:booking:updated', updated);
+  if (updated.service?.provider?.id) {
+    emitToUser(updated.service.provider.id, 'service:technician:assigned', updated);
+    emitToUser(updated.service.provider.id, 'service:booking:updated', updated);
+  }
+  emitToRole('PROVIDER', 'service:technician:assigned', updated);
+  emitToAdminRoom('service:technician:assigned', updated);
+
   return updated;
 };
 
@@ -241,14 +315,13 @@ export const updateBookingStatus = async (
 ) => {
   let booking = await prisma.booking.findFirst({
     where: { OR: [{ id: bookingId }, { id: { contains: bookingId } }] },
-    include: { service: { select: { title: true } } },
+    include: { service: { select: { title: true, providerId: true } } },
   });
 
   if (!booking) {
-    // Fallback to most recent booking if specific ID not found
     booking = await prisma.booking.findFirst({
       orderBy: { createdAt: 'desc' },
-      include: { service: { select: { title: true } } },
+      include: { service: { select: { title: true, providerId: true } } },
     });
   }
 
@@ -267,6 +340,25 @@ export const updateBookingStatus = async (
     include: bookingInclude,
   });
 
+  // If status is CANCELLED or REJECTED, restore slot capacity if linked
+  if (['CANCELLED', 'REJECTED'].includes(String(status)) && booking.slotId) {
+    const slot = await prisma.serviceSlot.findUnique({ where: { id: booking.slotId } });
+    if (slot) {
+      const newBookedCap = Math.max(0, slot.bookedCapacity - 1);
+      const nextStatus = recalculateSlotStatus(slot.maxCapacity, newBookedCap, slot.status);
+      const updatedSlot = await prisma.serviceSlot.update({
+        where: { id: slot.id },
+        data: { bookedCapacity: newBookedCap, status: nextStatus },
+      });
+
+      emitToRole('CUSTOMER', 'service:slot:availability_updated', {
+        slotId: updatedSlot.id,
+        status: updatedSlot.status,
+        remainingCapacity: Math.max(0, updatedSlot.maxCapacity - updatedSlot.bookedCapacity),
+      });
+    }
+  }
+
   // Notify customer
   await prisma.notification.create({
     data: {
@@ -278,6 +370,14 @@ export const updateBookingStatus = async (
     },
   }).catch(() => null);
 
+  // Emit real-time Socket.IO events AFTER DB operation succeeds
+  emitToUser(booking.customerId, 'service:booking:updated', updated);
+  if (booking.service?.providerId) {
+    emitToUser(booking.service.providerId, 'service:booking:updated', updated);
+  }
+  emitToRole('PROVIDER', 'service:booking:updated', updated);
+  emitToAdminRoom('service:booking:updated', updated);
+
   return updated;
 };
 
@@ -286,6 +386,7 @@ export const updateBookingStatus = async (
 export const cancelBooking = async (bookingId: string, customerId: string) => {
   const booking = await prisma.booking.findFirst({
     where: { id: bookingId, customerId },
+    include: { service: { select: { providerId: true } } },
   });
   if (!booking) throw new AppError('Booking not found.', 404);
 
@@ -293,8 +394,38 @@ export const cancelBooking = async (bookingId: string, customerId: string) => {
     throw new AppError('This booking cannot be cancelled after technician assignment.', 400);
   }
 
-  return prisma.booking.update({
+  const updated = await prisma.booking.update({
     where: { id: bookingId },
     data:  { status: 'CANCELLED' },
+    include: bookingInclude,
   });
+
+  // Restore slot capacity if linked
+  if (booking.slotId) {
+    const slot = await prisma.serviceSlot.findUnique({ where: { id: booking.slotId } });
+    if (slot) {
+      const newBookedCap = Math.max(0, slot.bookedCapacity - 1);
+      const nextStatus = recalculateSlotStatus(slot.maxCapacity, newBookedCap, slot.status);
+      const updatedSlot = await prisma.serviceSlot.update({
+        where: { id: slot.id },
+        data: { bookedCapacity: newBookedCap, status: nextStatus },
+      });
+
+      emitToRole('CUSTOMER', 'service:slot:availability_updated', {
+        slotId: updatedSlot.id,
+        status: updatedSlot.status,
+        remainingCapacity: Math.max(0, updatedSlot.maxCapacity - updatedSlot.bookedCapacity),
+      });
+    }
+  }
+
+  // Emit real-time Socket.IO events
+  emitToUser(customerId, 'service:booking:cancelled', updated);
+  if (booking.service?.providerId) {
+    emitToUser(booking.service.providerId, 'service:booking:cancelled', updated);
+  }
+  emitToRole('PROVIDER', 'service:booking:cancelled', updated);
+  emitToAdminRoom('service:booking:cancelled', updated);
+
+  return updated;
 };

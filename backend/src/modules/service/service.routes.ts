@@ -49,5 +49,17 @@ router.delete('/:id',
   serviceController.deleteService
 );
 
-export { categoryRouter };
+import * as serviceSlotController from './service-slot.controller';
+
+// ─── Service Slots ────────────────────────────────────────────────────────────
+const slotRouter = Router();
+
+slotRouter.get('/available',        serviceSlotController.getAvailableSlots);
+slotRouter.get('/provider',         protect, authorize('PROVIDER', 'ADMIN', 'SUPER_ADMIN'), serviceSlotController.getProviderSlots);
+slotRouter.post('/',                protect, authorize('PROVIDER', 'ADMIN', 'SUPER_ADMIN'), serviceSlotController.createSlot);
+slotRouter.put('/:id',             protect, authorize('PROVIDER', 'ADMIN', 'SUPER_ADMIN'), serviceSlotController.updateSlot);
+slotRouter.patch('/:id/block',     protect, authorize('PROVIDER', 'ADMIN', 'SUPER_ADMIN'), serviceSlotController.toggleBlockSlot);
+slotRouter.delete('/:id',          protect, authorize('PROVIDER', 'ADMIN', 'SUPER_ADMIN'), serviceSlotController.deleteSlot);
+
+export { categoryRouter, slotRouter };
 export default router;
