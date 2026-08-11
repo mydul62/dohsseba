@@ -12,12 +12,16 @@ interface TechnicianAssigneeSelectorProps {
 }
 
 export function TechnicianAssigneeSelector({
-  technicians,
+  technicians: rawTechnicians,
   assignedTechnicianId,
   assignedTechnicianName,
   onAssignTechnician,
   assigning,
 }: TechnicianAssigneeSelectorProps) {
+  // Deduplicate by id (guard against API returning the same technician twice)
+  const technicians = rawTechnicians.filter(
+    (t, idx, arr) => arr.findIndex((x) => x.id === t.id) === idx
+  );
   const getInitials = (name: string) => {
     if (!name) return 'TN';
     const parts = name.trim().split(' ');

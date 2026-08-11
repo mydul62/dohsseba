@@ -259,7 +259,11 @@ export default function ServiceOperationsDashboard() {
       }
 
       if (techRes?.success && Array.isArray(techRes.data) && techRes.data.length > 0) {
-        setTechnicians(techRes.data);
+        // Deduplicate by id to prevent double-rendering in the selector grid
+        const unique = techRes.data.filter(
+          (t: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.id === t.id) === idx
+        );
+        setTechnicians(unique);
       } else {
         setTechnicians([
           { id: 't1', name: 'Rakib Ahmed',     phone: '+880 1711-223344', specialty: 'Electrical & AC' },
