@@ -27,7 +27,7 @@ export const getProductReviews = async (req: AuthRequest, res: Response, next: N
 
 export const createReview = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
     const result = await reviewAndRatingService.createOrUpdateProductReview(userId, req.body);
 
     res.status(201).json({

@@ -102,12 +102,10 @@ export function ProductReviewsSection({ productIdOrSlug, onRatingUpdated }: Prod
     loadSummary();
   }, [loadSummary]);
 
+  const [reviewerName, setReviewerName] = useState('');
+
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      toastError('Please log in first to write a product review.');
-      return;
-    }
     if (ratingInput < 1 || ratingInput > 5) {
       toastError('Please select a rating between 1 and 5 stars.');
       return;
@@ -215,13 +213,13 @@ export function ProductReviewsSection({ productIdOrSlug, onRatingUpdated }: Prod
           </h2>
         </div>
 
-        {user && !userReview && !showForm && (
+        {!userReview && !showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
+            className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
           >
             <MessageSquare className="w-4 h-4" />
-            <span>Write a Review</span>
+            <span>Write a Review (রিভিউ লিখুন)</span>
           </button>
         )}
       </div>
@@ -268,7 +266,7 @@ export function ProductReviewsSection({ productIdOrSlug, onRatingUpdated }: Prod
       </div>
 
       {/* ── User Review Submission / Edit Box ── */}
-      {(showForm || isEditing) && user && (
+      {(showForm || isEditing) && (
         <div className="p-6 rounded-3xl bg-secondary/50 border border-emerald-500/30 space-y-4 animate-fade-in">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <h3 className="font-extrabold text-foreground text-sm flex items-center gap-2">
@@ -384,13 +382,13 @@ export function ProductReviewsSection({ productIdOrSlug, onRatingUpdated }: Prod
             <MessageSquare className="w-10 h-10 text-muted-foreground mx-auto opacity-40" />
             <p className="font-bold text-foreground text-base">No reviews yet</p>
             <p className="text-xs text-muted-foreground">Be the first to review this product!</p>
-            {user && !userReview && (
+            {!userReview && (
               <button
                 onClick={() => setShowForm(true)}
-                className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md cursor-pointer transition-all active:scale-95"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>Write First Review</span>
+                <span>Write First Review (প্রথম রিভিউটি আপনি দিন)</span>
               </button>
             )}
           </div>

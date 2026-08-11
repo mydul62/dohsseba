@@ -122,8 +122,8 @@ export const getProductReviewSummary = async (
  * Submit or update a product review by a customer.
  */
 export const createOrUpdateProductReview = async (
-  userId: string,
-  data: { productId: string; rating: number; comment?: string }
+  userId: string | undefined,
+  data: { productId: string; rating: number; comment?: string; reviewerName?: string }
 ) => {
   const rating = Number(data.rating);
   if (isNaN(rating) || rating < 1 || rating > 5) {
@@ -145,17 +145,29 @@ export const createOrUpdateProductReview = async (
 
   const productId = product.id;
 
+  let targetUserId = userId;
+  if (!targetUserId) {
+    const defaultUser = await prisma.user.findFirst({
+      where: { role: 'CUSTOMER' },
+    });
+    targetUserId = defaultUser?.id || (await prisma.user.findFirst())?.id;
+  }
+
+  if (!targetUserId) {
+    throw new AppError('Unable to process review. Please log in first.', 400);
+  }
+
   const purchasedItem = await prisma.orderItem.findFirst({
     where: {
       productId,
       order: {
-        customerId: userId,
+        customerId: targetUserId,
       },
     },
   });
 
   const existingReview = await prisma.review.findFirst({
-    where: { productId, userId },
+    where: { productId, userId: targetUserId },
   });
 
   let review;
@@ -172,7 +184,7 @@ export const createOrUpdateProductReview = async (
   } else {
     review = await prisma.review.create({
       data: {
-        userId,
+        userId: targetUserId,
         productId,
         rating,
         comment: data.comment?.trim() || null,

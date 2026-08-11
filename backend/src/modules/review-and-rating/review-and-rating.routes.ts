@@ -15,8 +15,8 @@ router.get(
   reviewAndRatingController.getSellerReviews
 );
 
-// Protected customer review actions
-router.post('/', protect, reviewAndRatingController.createReview);
+// Protected or optionally authenticated customer review actions
+router.post('/', optionalAuth, reviewAndRatingController.createReview);
 router.put('/:reviewId', protect, reviewAndRatingController.updateReview);
 router.delete('/:reviewId', protect, reviewAndRatingController.deleteReview);
 
