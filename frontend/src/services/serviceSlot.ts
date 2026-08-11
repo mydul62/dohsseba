@@ -40,10 +40,10 @@ export const fetchProviderSlots = async (date?: string) => {
 
 export const createServiceSlot = async (data: {
   serviceId?: string;
-  date: string;
   startTime: string;
   endTime: string;
   maxCapacity?: number;
+  // date is intentionally omitted — slots are recurring (no fixed date)
 }) => {
   const res = await fetchApi<ServiceSlotItem>('/service-slots', {
     method: 'POST',

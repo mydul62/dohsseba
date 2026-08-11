@@ -167,7 +167,10 @@ export function BookingClient({ service }: BookingClientProps) {
           serviceId: service.id,
           addressId: addressId || 'default-address-id',
           slotId: selectedSlotId || undefined,
-          scheduledAt: new Date().toISOString(),
+          // Pass the customer-selected date so backend capacity check uses the right date
+          scheduledAt: selectedDate
+            ? new Date(selectedDate).toISOString()
+            : new Date().toISOString(),
           notes: `Schedule: ${dateSlot}. Phone: ${phone}. Address: ${address}. Notes: ${notes}`,
         }),
       }).catch((err) => {

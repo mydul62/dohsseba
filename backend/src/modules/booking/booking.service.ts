@@ -3,7 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { AppError } from '../../middlewares/error.middleware';
 import { BookingStatus } from '@prisma/client';
 import { getAllServiceCategories } from '../service/service.service';
-import { recalculateSlotStatus } from '../service/service-slot.service';
+import { countBookingsForSlotOnDate } from '../service/service-slot.service';
 import { emitToUser, emitToRole, emitToAdminRoom, getIO } from '../../lib/socket';
 
 const bookingInclude = {
@@ -181,9 +181,10 @@ export const createBooking = async (
   }
 
   let slotIdToUse: string | null = null;
+  // scheduledAt from request carries the customer-selected date
   let scheduledDate = new Date(data.scheduledAt || Date.now());
 
-  // Execute database transaction for atomic double-booking & technician capacity check
+  // Execute database transaction for atomic double-booking & per-date capacity check
   const booking = await prisma.$transaction(async (tx) => {
     if (data.slotId) {
       const targetSlot = await tx.serviceSlot.findUnique({
@@ -198,23 +199,18 @@ export const createBooking = async (
         throw new AppError('The selected time slot is currently blocked or unavailable.', 400);
       }
 
-      if (targetSlot.bookedCapacity >= targetSlot.maxCapacity) {
-        throw new AppError('The selected time slot is fully booked. Please choose another slot.', 400);
+      // ── Recurring-slot capacity check: count bookings for THIS slot on THIS date ──
+      // Never use slot.bookedCapacity (that is always 0 for recurring slots)
+      const bookedOnDate = await countBookingsForSlotOnDate(targetSlot.id, scheduledDate, tx);
+      if (bookedOnDate >= targetSlot.maxCapacity) {
+        throw new AppError(
+          'The selected time slot is fully booked for this date. Please choose another slot or date.',
+          400
+        );
       }
 
       slotIdToUse = targetSlot.id;
-      scheduledDate = new Date(targetSlot.date);
-
-      const newBookedCap = targetSlot.bookedCapacity + 1;
-      const nextStatus = recalculateSlotStatus(targetSlot.maxCapacity, newBookedCap, targetSlot.status);
-
-      await tx.serviceSlot.update({
-        where: { id: targetSlot.id },
-        data: {
-          bookedCapacity: newBookedCap,
-          status: nextStatus,
-        },
-      });
+      // Do NOT update slot.bookedCapacity — availability is computed dynamically per date
     }
 
     const newBooking = await tx.booking.create({
@@ -379,23 +375,12 @@ export const updateBookingStatus = async (
     include: bookingInclude,
   });
 
-  // If status is CANCELLED or REJECTED, restore slot capacity if linked
+  // Recurring slots: availability is computed dynamically — no bookedCapacity update needed.
+  // Cancelled bookings are excluded from the count automatically.
   if (['CANCELLED', 'REJECTED'].includes(String(status)) && booking.slotId) {
-    const slot = await prisma.serviceSlot.findUnique({ where: { id: booking.slotId } });
-    if (slot) {
-      const newBookedCap = Math.max(0, slot.bookedCapacity - 1);
-      const nextStatus = recalculateSlotStatus(slot.maxCapacity, newBookedCap, slot.status);
-      const updatedSlot = await prisma.serviceSlot.update({
-        where: { id: slot.id },
-        data: { bookedCapacity: newBookedCap, status: nextStatus },
-      });
-
-      emitToRole('CUSTOMER', 'service:slot:availability_updated', {
-        slotId: updatedSlot.id,
-        status: updatedSlot.status,
-        remainingCapacity: Math.max(0, updatedSlot.maxCapacity - updatedSlot.bookedCapacity),
-      });
-    }
+    emitToRole('CUSTOMER', 'service:slot:availability_updated', {
+      slotId: booking.slotId,
+    });
   }
 
   // Notify customer
@@ -439,23 +424,9 @@ export const cancelBooking = async (bookingId: string, customerId: string) => {
     include: bookingInclude,
   });
 
-  // Restore slot capacity if linked
+  // Recurring slots: availability is computed dynamically — no bookedCapacity update needed.
   if (booking.slotId) {
-    const slot = await prisma.serviceSlot.findUnique({ where: { id: booking.slotId } });
-    if (slot) {
-      const newBookedCap = Math.max(0, slot.bookedCapacity - 1);
-      const nextStatus = recalculateSlotStatus(slot.maxCapacity, newBookedCap, slot.status);
-      const updatedSlot = await prisma.serviceSlot.update({
-        where: { id: slot.id },
-        data: { bookedCapacity: newBookedCap, status: nextStatus },
-      });
-
-      emitToRole('CUSTOMER', 'service:slot:availability_updated', {
-        slotId: updatedSlot.id,
-        status: updatedSlot.status,
-        remainingCapacity: Math.max(0, updatedSlot.maxCapacity - updatedSlot.bookedCapacity),
-      });
-    }
+    emitToRole('CUSTOMER', 'service:slot:availability_updated', { slotId: booking.slotId });
   }
 
   // Emit real-time Socket.IO events

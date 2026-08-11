@@ -621,7 +621,7 @@ export default function MobileProviderDashboard() {
   const [sheetBooking, setSheetBooking] = useState<any | null>(null);
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [myServices, setMyServices]   = useState<any[]>([]);
-  const [slotFormData, setSlotFormData] = useState({ serviceId: '', date: new Date().toISOString().split('T')[0], startTime: '10:00 AM', endTime: '11:00 AM', maxCapacity: 2 });
+  const [slotFormData, setSlotFormData] = useState({ serviceId: '', startTime: '10:00 AM', endTime: '11:00 AM', maxCapacity: 2 });
   const [slotSubmitting, setSlotSubmitting] = useState(false);
 
   const [stats, setStats] = useState({ todayEarnings: 0, totalJobsCompleted: 0, rating: 4.9, pendingCount: 0, activeCount: 0, assignedCount: 0, totalEarnings: 0 });
@@ -707,7 +707,7 @@ export default function MobileProviderDashboard() {
     e.preventDefault();
     setSlotSubmitting(true);
     try {
-      const res = await createServiceSlot({ serviceId: slotFormData.serviceId || undefined, date: slotFormData.date, startTime: slotFormData.startTime, endTime: slotFormData.endTime, maxCapacity: slotFormData.maxCapacity });
+      const res = await createServiceSlot({ serviceId: slotFormData.serviceId || undefined, startTime: slotFormData.startTime, endTime: slotFormData.endTime, maxCapacity: slotFormData.maxCapacity });
       if (res?.success) { setShowSlotModal(false); loadSlots(); }
     } catch (_) {} finally { setSlotSubmitting(false); }
   };
@@ -759,7 +759,7 @@ export default function MobileProviderDashboard() {
             slots={slots} slotsDate={slotsDate} setSlotsDate={setSlotsDate}
             slotsLoading={slotsLoading} onLoadSlots={loadSlots}
             onToggleBlock={handleToggleBlock} onDeleteSlot={handleDeleteSlot}
-            onCreateSlot={() => { setSlotFormData({ serviceId: '', date: slotsDate, startTime: '10:00 AM', endTime: '11:00 AM', maxCapacity: 2 }); setShowSlotModal(true); }}
+            onCreateSlot={() => { setSlotFormData({ serviceId: '', startTime: '10:00 AM', endTime: '11:00 AM', maxCapacity: 2 }); setShowSlotModal(true); }}
           />
         )}
         {mobileTab === 'team' && <TeamTab technicians={technicians} />}
@@ -816,10 +816,6 @@ export default function MobileProviderDashboard() {
               <button onClick={() => setShowSlotModal(false)} className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400" style={{ background: PANEL_ALT }}><X className="w-4 h-4" /></button>
             </div>
             <form onSubmit={handleSaveSlot} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-400 mb-1">Date *</label>
-                <input type="date" value={slotFormData.date} onChange={(e) => setSlotFormData({ ...slotFormData, date: e.target.value })} className="w-full h-10 px-3 rounded-xl text-slate-200 outline-none" style={{ background: PANEL_ALT, border: `1px solid ${BORDER}` }} required />
-              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-400 mb-1">Start *</label>
@@ -844,5 +840,7 @@ export default function MobileProviderDashboard() {
     </div>
   );
 }
+
+
 
 

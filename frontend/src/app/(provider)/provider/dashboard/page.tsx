@@ -421,7 +421,6 @@ export default function ServiceOperationsDashboard() {
       } else {
         const res = await createServiceSlot({
           serviceId:   slotFormData.serviceId || undefined,
-          date:        slotFormData.date,
           startTime:   slotFormData.startTime,
           endTime:     slotFormData.endTime,
           maxCapacity: slotFormData.maxCapacity,
