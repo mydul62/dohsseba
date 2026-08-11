@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useCartStore } from '@/store/useCartStore';
 import { useSiteSettingsStore } from '@/store/useSiteSettingsStore';
+import { useDeliveryRulesStore } from '@/store/useDeliveryRulesStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { formatCurrency } from '@/utils/cn';
 import { ShoppingBag, X, Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
@@ -12,13 +13,14 @@ import Link from 'next/link';
 export function CartDrawer() {
   const router = useRouter();
   const { items, isOpen, closeCart, updateQuantity, removeItem, getSubtotal } = useCartStore();
-  const { freeDeliveryThreshold } = useSiteSettingsStore();
+  const { fetchRules, calculateFee } = useDeliveryRulesStore();
   const { isBn } = useTranslation();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    fetchRules();
+  }, [fetchRules]);
 
   // Prevent background scroll when drawer is open
   useEffect(() => {
@@ -40,7 +42,7 @@ export function CartDrawer() {
   };
 
   const subtotal = getSubtotal();
-  const deliveryFee = subtotal >= freeDeliveryThreshold || subtotal === 0 ? 0 : 50;
+  const { deliveryFee, isFree, amountNeededForFree } = calculateFee(subtotal);
   const total = subtotal + deliveryFee;
 
   return (
@@ -171,26 +173,26 @@ export function CartDrawer() {
               <div className="flex justify-between text-slate-500 font-medium">
                 <span>{isBn ? 'ডেলিভারি চার্জ (ডিএইচএস এলাকা)' : 'Delivery Charge (DOHS Area)'}</span>
                 <span className="font-bold text-slate-900">
-                  {deliveryFee === 0 ? (
+                  {deliveryFee === 0 || isFree ? (
                     <span className="text-[#7eb343] font-extrabold">{isBn ? 'ফ্রি' : 'FREE'}</span>
                   ) : (
                     `৳${formatCurrency(deliveryFee)}`
                   )}
                 </span>
               </div>
-              {subtotal < freeDeliveryThreshold ? (
+              {amountNeededForFree > 0 ? (
                 <p className="text-[11px] text-amber-800 bg-amber-50/90 p-2.5 rounded-xl text-center font-bold border border-amber-200 shadow-2xs">
                   {isBn
-                    ? `ফ্রি ডেলিভারির জন্য আরও ৳${formatCurrency(freeDeliveryThreshold - subtotal)} টাকার পণ্য যুক্ত করুন!`
-                    : `Add ৳${formatCurrency(freeDeliveryThreshold - subtotal)} more for FREE delivery!`}
+                    ? `ফ্রি ডেলিভারির জন্য আরও ৳${formatCurrency(amountNeededForFree)} টাকার পণ্য যুক্ত করুন!`
+                    : `Add ৳${formatCurrency(amountNeededForFree)} more for FREE delivery!`}
                 </p>
-              ) : (
+              ) : isFree ? (
                 <p className="text-[11px] text-emerald-800 bg-emerald-50 p-2.5 rounded-xl text-center font-bold border border-emerald-200 shadow-2xs">
                   {isBn
                     ? `🎉 অভিনন্দন! আপনি ফ্রি ডেলিভারি আনলক করেছেন!`
                     : `🎉 Congratulations! You unlocked FREE delivery!`}
                 </p>
-              )}
+              ) : null}
               <div className="border-t border-slate-100 pt-2 flex justify-between font-black text-sm sm:text-base">
                 <span className="text-slate-900">{isBn ? 'মোট মূল্য' : 'Total Amount'}</span>
                 <span className="text-[#7eb343]">৳{formatCurrency(total)}</span>

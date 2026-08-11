@@ -30,6 +30,7 @@ import technicianRoutes                        from './modules/technician/techni
 import homepageRoutes                         from './routes/homepage.routes';
 import adminHomepageRoutes                    from './routes/adminHomepage.routes';
 import brandRoutes                            from './routes/brand.routes';
+import deliveryRulesRoutes                    from './modules/delivery-rules/delivery-rules.routes';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -122,6 +123,7 @@ app.use(`${API}/technicians`,          technicianRoutes);
 app.use(`${API}/homepage`,            homepageRoutes);
 app.use(`${API}/admin/homepage`,      adminHomepageRoutes);
 app.use(`${API}/brands`,              brandRoutes);
+app.use(`${API}/delivery-rules`,      deliveryRulesRoutes);
 app.get(`${API}/settings`,            adminController.getSiteSettings);
 
 // ─── 404 & Error ─────────────────────────────────────────────────────────────

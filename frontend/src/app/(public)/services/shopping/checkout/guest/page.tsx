@@ -22,13 +22,14 @@ import {
 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useSiteSettingsStore } from '@/store/useSiteSettingsStore';
+import { useDeliveryRulesStore } from '@/store/useDeliveryRulesStore';
 import { fetchApi } from '@/lib/api-client';
 import { formatCurrency } from '@/utils/cn';
 
 export default function GuestCheckoutPage() {
   const router = useRouter();
   const { items, getSubtotal, clearCart } = useCartStore();
-  const { freeDeliveryThreshold, defaultDeliveryFee } = useSiteSettingsStore();
+  const { fetchRules, calculateFee } = useDeliveryRulesStore();
 
   const [mounted, setMounted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -45,10 +46,11 @@ export default function GuestCheckoutPage() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    fetchRules();
+  }, [fetchRules]);
 
   const subtotal = getSubtotal();
-  const deliveryFee = subtotal >= freeDeliveryThreshold || subtotal === 0 ? 0 : defaultDeliveryFee;
+  const { deliveryFee } = calculateFee(subtotal);
   const total = subtotal + deliveryFee;
 
   if (!mounted) return null;

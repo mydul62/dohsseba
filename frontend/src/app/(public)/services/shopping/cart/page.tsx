@@ -16,14 +16,21 @@ import {
   Truck,
 } from 'lucide-react';
 
+import { useDeliveryRulesStore } from '@/store/useDeliveryRulesStore';
+
 export default function FullCartPage() {
   const { items, updateQuantity, removeItem, clearCart, getSubtotal } = useCartStore();
+  const { fetchRules, calculateFee } = useDeliveryRulesStore();
   const [couponCode, setCouponCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [couponMsg, setCouponMsg] = useState('');
 
+  React.useEffect(() => {
+    fetchRules();
+  }, [fetchRules]);
+
   const subtotal = getSubtotal();
-  const deliveryFee = subtotal > 500 ? 0 : 50;
+  const { deliveryFee, isFree, amountNeededForFree } = calculateFee(subtotal);
   const total = Math.max(0, subtotal - appliedDiscount + (items.length > 0 ? deliveryFee : 0));
 
   const handleApplyCoupon = (e: React.FormEvent) => {
@@ -70,9 +77,11 @@ export default function FullCartPage() {
           <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2 font-semibold">
             <Truck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
             <span>
-              {subtotal >= 500
+              {isFree
                 ? '🎉 Congratulations! You qualify for FREE DOHS Express Delivery.'
-                : `Add ${formatCurrency(500 - subtotal)} more to unlock FREE Delivery.`}
+                : amountNeededForFree > 0
+                ? `Add ${formatCurrency(amountNeededForFree)} more to unlock FREE Delivery.`
+                : `Delivery charge: ৳${formatCurrency(deliveryFee)}`}
             </span>
           </div>
 

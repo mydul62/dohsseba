@@ -50,6 +50,7 @@ import {
   Settings,
   ShoppingCart,
   Clock,
+  Truck,
 } from 'lucide-react';
 
 interface SubMenuItem {
@@ -214,6 +215,11 @@ export function DashboardSidebar({
               label: 'Website Settings',
               href: '/admin/dashboard/settings',
               icon: <Globe className="w-4 h-4 text-indigo-400" />,
+            },
+            {
+              label: 'Delivery Charge Settings',
+              href: '/admin/dashboard/delivery-settings',
+              icon: <Truck className="w-4 h-4 text-emerald-400" />,
             },
             {
               label: 'My Profile & Security',
@@ -432,6 +438,11 @@ export function DashboardSidebar({
               label: 'Settings',
               href: '/seller/dashboard/settings',
               icon: <Sliders className="w-4 h-4" />,
+            },
+            {
+              label: 'Delivery Charge Settings',
+              href: '/seller/dashboard/delivery-settings',
+              icon: <Truck className="w-4 h-4 text-emerald-400" />,
             },
             {
               label: 'My Profile & Security',

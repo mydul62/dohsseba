@@ -22,6 +22,7 @@ async function clearAll() {
   await prisma.review.deleteMany({});
   await prisma.notification.deleteMany({});
   await prisma.coupon.deleteMany({});
+  await prisma.deliveryRule.deleteMany({});
   await prisma.booking.deleteMany({});
   await prisma.address.deleteMany({});
   await prisma.transaction.deleteMany({});
@@ -121,11 +122,21 @@ async function seedProfiles(seller: any, rider: any, provider: any) {
         defaultDeliveryFee: 50,
       },
     });
+
+    const defaultRules = [
+      { minAmount: 0, maxAmount: 499, charge: 50, isFree: false, isActive: true },
+      { minAmount: 500, maxAmount: 999, charge: 80, isFree: false, isActive: true },
+      { minAmount: 1000, maxAmount: null, charge: 0, isFree: true, isActive: true },
+    ];
+
+    for (const rule of defaultRules) {
+      await prisma.deliveryRule.create({ data: rule });
+    }
   } catch (err) {
-    console.warn('SiteSetting notice:', err);
+    console.warn('SiteSetting & DeliveryRules notice:', err);
   }
 
-  console.log('   ✓ Profiles & Site Settings created.');
+  console.log('   ✓ Profiles, Site Settings & Delivery Rules created.');
 }
 
 // ─── 4. BRANDS ────────────────────────────────────────────────────────────────

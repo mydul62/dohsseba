@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useOrderStore } from '@/store/useOrderStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useDeliveryRulesStore } from '@/store/useDeliveryRulesStore';
 import { fetchApi } from '@/lib/api-client';
 import { formatCurrency } from '@/utils/cn';
 import {
@@ -30,6 +31,7 @@ export function CheckoutClient() {
   const { items, getSubtotal, clearCart } = useCartStore();
   const { addOrder } = useOrderStore();
   const { user } = useAuthStore();
+  const { fetchRules, calculateFee } = useDeliveryRulesStore();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [deliverySpeed, setDeliverySpeed] = useState<'express' | 'scheduled'>('express');
@@ -53,12 +55,16 @@ export function CheckoutClient() {
   const [couponError, setCouponError] = useState('');
 
   const subtotal = getSubtotal();
-  const deliveryFee = subtotal > 500 ? 0 : 50;
+  const { deliveryFee } = calculateFee(subtotal);
   const couponDiscount = appliedCoupon?.discount ?? 0;
   const total = Math.max(0, subtotal + (items.length > 0 ? deliveryFee : 0) - couponDiscount);
 
   const [isLoading, setIsLoading] = useState(false);
   const [orderError, setOrderError] = useState('');
+
+  React.useEffect(() => {
+    fetchRules();
+  }, [fetchRules]);
 
   // Prefill phone & address from saved user addresses if available (authenticated users only)
   React.useEffect(() => {

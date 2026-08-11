@@ -697,6 +697,22 @@ model SiteSetting {
   @@map("site_settings")
 }
 
+// ─── Delivery Rules ──────────────────────────────────────────────────────────
+
+model DeliveryRule {
+  id        String   @id @default(cuid())
+  minAmount Float    @default(0)
+  maxAmount Float?   // Null indicates no upper limit (e.g. ৳1000+)
+  charge    Float    @default(0)
+  isFree    Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("delivery_rules")
+}
+
+
 // ─── Dynamic Homepage Systems ───────────────────────────────────────────────
 
 model HeroSlide {

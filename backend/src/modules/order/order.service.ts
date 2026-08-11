@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma';
 import { AppError } from '../../middlewares/error.middleware';
 import { OrderStatus } from '@prisma/client';
 import { emitToOnlineRiders, emitToSellerRoom, emitToUser, emitToOrderRoom, emitToAdminRoom, emitToRole } from '../../lib/socket';
+import { getCalculatedDeliveryFee } from '../delivery-rules/delivery-rules.service';
 
 const orderInclude = {
   address: true,
@@ -156,7 +157,8 @@ export const createOrderFromCart = async (
   });
 
   const subtotal    = orderItems.reduce((s, i) => s + i.price * i.quantity, 0);
-  const deliveryFee = subtotal >= 500 ? 0 : 50;
+  const deliveryCalc = await getCalculatedDeliveryFee(subtotal);
+  const deliveryFee = deliveryCalc.deliveryFee;
   let discount      = 0;
 
   if (data.couponCode) {
@@ -592,10 +594,8 @@ export const createGuestOrder = async (data: {
     };
   });
 
-  let siteSettings = await (prisma as any).siteSetting.findUnique({ where: { id: 'default' } });
-  const threshold = Number(siteSettings?.freeDeliveryThreshold ?? 500);
-  const defaultFee = Number(siteSettings?.defaultDeliveryFee ?? 50);
-  const deliveryFee = subtotal >= threshold || subtotal === 0 ? 0 : defaultFee;
+  const deliveryCalc = await getCalculatedDeliveryFee(subtotal);
+  const deliveryFee = deliveryCalc.deliveryFee;
 
   let discount = 0;
   if (data.couponCode) {
