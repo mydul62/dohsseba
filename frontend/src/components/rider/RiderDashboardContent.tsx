@@ -17,36 +17,82 @@ import { CurrentMissionView } from './CurrentMissionView';
 import ProfileManagementContent from '../dashboard/ProfileManagementContent';
 
 // Audio chime synthesis & Haptic Vibration for incoming dispatch request
-const triggerOrderAlert = () => {
+let sharedRiderAudioCtx: AudioContext | null = null;
+
+const getUnlockedAudioContext = () => {
+  if (typeof window === 'undefined') return null;
   try {
-    const AudioCtx = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
-    if (AudioCtx) {
-      const ctx = new AudioCtx();
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!sharedRiderAudioCtx) {
+      sharedRiderAudioCtx = new AudioCtx();
+    }
+    if (sharedRiderAudioCtx.state === 'suspended') {
+      sharedRiderAudioCtx.resume().catch(() => {});
+    }
+    return sharedRiderAudioCtx;
+  } catch (_) {
+    return null;
+  }
+};
+
+if (typeof window !== 'undefined') {
+  const unlock = () => {
+    getUnlockedAudioContext();
+  };
+  window.addEventListener('click', unlock, { passive: true });
+  window.addEventListener('touchstart', unlock, { passive: true });
+  window.addEventListener('pointerdown', unlock, { passive: true });
+}
+
+export const triggerOrderAlert = () => {
+  try {
+    const ctx = getUnlockedAudioContext();
+    if (ctx) {
       if (ctx.state === 'suspended') {
         ctx.resume().catch(() => {});
       }
-      const playBeep = (freq: number, startTime: number, duration: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, startTime);
-        gain.gain.setValueAtTime(0.7, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(startTime);
-        osc.stop(startTime + duration);
-      };
       const now = ctx.currentTime;
-      playBeep(880, now, 0.2);
-      playBeep(1174.66, now + 0.22, 0.2);
-      playBeep(1480, now + 0.44, 0.35);
+      const playTone = (freq: number, startTime: number, duration: number) => {
+        try {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, startTime);
+          gain.gain.setValueAtTime(0.85, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(startTime);
+          osc.stop(startTime + duration);
+        } catch (_) {}
+      };
+
+      // Loud 2-burst high pitched order dispatch beep
+      playTone(987.77, now, 0.18);        // B5
+      playTone(1318.51, now + 0.20, 0.18);  // E6
+      playTone(1760.00, now + 0.40, 0.35);  // A6
+
+      playTone(987.77, now + 0.85, 0.18);   // B5
+      playTone(1318.51, now + 1.05, 0.18);  // E6
+      playTone(1760.00, now + 1.25, 0.40);  // A6
+    }
+
+    // HTML5 Audio fallback (plays loud notification audio element)
+    if (typeof window !== 'undefined') {
+      try {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        audio.volume = 1.0;
+        audio.play().catch(() => {});
+      } catch (_) {}
     }
 
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate([400, 150, 400, 150, 500]);
+      navigator.vibrate([500, 200, 500, 200, 500]);
     }
-  } catch (_) {}
+  } catch (err) {
+    console.warn('Order alert sound error:', err);
+  }
 };
 
 interface RiderDashboardProps {

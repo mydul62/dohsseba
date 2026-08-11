@@ -435,6 +435,9 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus) =>
     };
 
     emitToOnlineRiders('RIDER_ORDER_BROADCAST', broadcastPayload);
+    emitToRole('RIDER', 'RIDER_ORDER_BROADCAST', broadcastPayload);
+    emitToOnlineRiders('rider:new_order', broadcastPayload);
+    emitToRole('RIDER', 'rider:new_order', broadcastPayload);
 
     // Schedule 30-Second Timeout Fallback
     setTimeout(async () => {
