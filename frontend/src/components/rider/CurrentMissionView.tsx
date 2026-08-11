@@ -64,8 +64,8 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
     'N/A';
 
   const customerAddressText =
-    currentMission.deliveryAddress ||
     currentMission.guestAddress ||
+    currentMission.deliveryAddress ||
     [
       currentMission.address?.line1,
       currentMission.address?.line2,
@@ -76,7 +76,7 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
       .join(', ') ||
     currentMission.address?.line1 ||
     (currentMission.notes && currentMission.notes.match(/Address:\s*([^.\n]+)/i)?.[1]?.trim()) ||
-    'DOHS Location, Dhaka';
+    '';
 
   // Products & Financial Breakdown
   const items = currentMission.items || currentMission.orderItems || currentMission.cartItems || [];

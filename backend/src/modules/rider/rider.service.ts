@@ -99,7 +99,7 @@ export const getOpenOrders = async () => {
     const baseFee = o.deliveryFee || 50;
     const netEarning = Math.round((baseFee * commissionPercent) / 100);
 
-    let parsedAddress = o.address?.line1 || (o as any).deliveryAddress;
+    let parsedAddress = (o as any).guestAddress || (o as any).deliveryAddress || o.address?.line1;
     let parsedPhone = (o as any).customerPhone || o.customer?.phone;
     let parsedName = (o as any).customerName || o.customer?.name || (o as any).guestName;
 
@@ -320,7 +320,7 @@ export const getActiveMissions = async (riderId: string) => {
   });
 
   return missions.map((o) => {
-    let parsedAddress = o.address?.line1 || (o as any).deliveryAddress;
+    let parsedAddress = (o as any).guestAddress || (o as any).deliveryAddress || o.address?.line1;
     let parsedPhone = (o as any).customerPhone || o.customer?.phone;
     let parsedName = (o as any).customerName || o.customer?.name || (o as any).guestName;
 

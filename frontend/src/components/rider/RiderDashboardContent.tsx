@@ -522,7 +522,7 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
                 const isCancelled = ord.status === 'CANCELLED' || ord.status === 'REJECTED';
                 const cName = ord.customerName || ord.customer?.name || ord.user?.name || ord.guestName || (ord.notes && ord.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) || 'Resident Customer';
                 const cPhone = ord.phone || ord.customerPhone || ord.customer?.phone || ord.user?.phone || ord.address?.phone || (ord.notes && ord.notes.match(/Phone:\s*([0-9\+\-\s]+)/i)?.[1]?.trim()) || 'N/A';
-                const addr = ord.deliveryAddress || ord.guestAddress || ord.address?.line1 || (typeof ord.address === 'string' ? ord.address : null) || (ord.notes && ord.notes.match(/Address:\s*([^.\n]+)/i)?.[1]?.trim()) || 'DOHS Location, Dhaka';
+                const addr = ord.guestAddress || ord.deliveryAddress || ord.address?.line1 || (typeof ord.address === 'string' ? ord.address : null) || (ord.notes && ord.notes.match(/Address:\s*([^.\n]+)/i)?.[1]?.trim()) || '';
                 const itemsList = ord.items || [];
 
                 return (
@@ -831,7 +831,7 @@ export function RiderDashboardContent({ initialTab = 'orders' }: RiderDashboardP
               <div className="pt-2 border-t border-slate-800 text-slate-300 flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <p className="font-medium">
-                  {selectedOrderDetails.deliveryAddress || selectedOrderDetails.guestAddress || selectedOrderDetails.address?.line1 || (typeof selectedOrderDetails.address === 'string' ? selectedOrderDetails.address : null) || (selectedOrderDetails.notes && selectedOrderDetails.notes.match(/Address:\s*([^.\n]+)/i)?.[1]?.trim()) || 'DOHS Location, Dhaka'}
+                  {selectedOrderDetails.guestAddress || selectedOrderDetails.deliveryAddress || selectedOrderDetails.address?.line1 || (typeof selectedOrderDetails.address === 'string' ? selectedOrderDetails.address : null) || (selectedOrderDetails.notes && selectedOrderDetails.notes.match(/Address:\s*([^.\n]+)/i)?.[1]?.trim()) || ''}
                 </p>
               </div>
             </div>
