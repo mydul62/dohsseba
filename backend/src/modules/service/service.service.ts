@@ -163,61 +163,6 @@ const ensureCompanyServices = async () => {
         });
       }
     }
-
-    const bookingCount = await prisma.booking.count();
-    if (bookingCount === 0) {
-      let sampleCustomer = await prisma.user.findFirst({ where: { role: 'CUSTOMER' } });
-      if (!sampleCustomer) sampleCustomer = await prisma.user.findFirst();
-
-      if (sampleCustomer) {
-        let sampleAddress = await prisma.address.findFirst({ where: { userId: sampleCustomer.id } }).catch(() => null);
-        if (!sampleAddress) {
-          sampleAddress = await prisma.address.create({
-            data: {
-              userId: sampleCustomer.id,
-              label: 'Resident DOHS Address',
-              line1: 'House 14, Road 5, Mohakhali DOHS',
-              area: 'Mohakhali DOHS',
-              city: 'Dhaka',
-              isDefault: true,
-            },
-          }).catch(() => null);
-        }
-
-        const firstService = await prisma.service.findFirst({ where: { title: { contains: 'AC Jet Cleaning' } } });
-        const secondService = await prisma.service.findFirst({ where: { title: { contains: 'Plumbing' } } });
-
-        if (firstService && sampleAddress) {
-          await prisma.booking.createMany({
-            data: [
-              {
-                id: 'BK-1001',
-                customerId: sampleCustomer.id,
-                serviceId: firstService.id,
-                addressId: sampleAddress.id,
-                scheduledAt: new Date(Date.now() + 86400000),
-                totalAmount: 1200,
-                notes: 'Master AC Jet cleaning requested for Mohakhali DOHS House #14. Phone: +880 1800-000005',
-                status: 'PENDING',
-              },
-              {
-                id: 'BK-1002',
-                customerId: sampleCustomer.id,
-                serviceId: secondService ? secondService.id : firstService.id,
-                addressId: sampleAddress.id,
-                scheduledAt: new Date(Date.now() + 172800000),
-                totalAmount: 850,
-                technicianName: 'Rakib Ahmed',
-                technicianPhone: '+880 1711-223344',
-                notes: 'Bathroom pipe leakage repair',
-                status: 'TECHNICIAN_ASSIGNED',
-              },
-            ],
-            skipDuplicates: true,
-          }).catch(() => null);
-        }
-      }
-    }
   } catch (err) {
     console.warn('ensureCompanyServices notice:', err);
   }
