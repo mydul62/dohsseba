@@ -797,7 +797,7 @@ export default function MobileProviderDashboard() {
       {sheetBooking && (
         <MobileDetailSheet
           booking={sheetBooking}
-          technicians={technicians}
+          technicians={technicians.filter((t, i, a) => a.findIndex((x) => x.id === t.id) === i)}
           onClose={() => setSheetBooking(null)}
           onStatusChange={handleStatusUpdate}
           onAssignTechnician={handleAssign}
@@ -844,3 +844,4 @@ export default function MobileProviderDashboard() {
     </div>
   );
 }
+
