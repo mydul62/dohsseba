@@ -16,7 +16,6 @@ interface DeliveryRulesState {
   };
 }
 
-// Fallback rules if network is offline before initial fetch completes
 const defaultFallbackRules: DeliveryRule[] = [
   { id: 'def-1', minAmount: 0, maxAmount: 499, charge: 50, isFree: false, isActive: true },
   { id: 'def-2', minAmount: 500, maxAmount: 999, charge: 80, isFree: false, isActive: true },
@@ -24,7 +23,7 @@ const defaultFallbackRules: DeliveryRule[] = [
 ];
 
 export const useDeliveryRulesStore = create<DeliveryRulesState>((set, get) => ({
-  rules: defaultFallbackRules,
+  rules: [],
   loading: false,
   loaded: false,
 
@@ -32,7 +31,7 @@ export const useDeliveryRulesStore = create<DeliveryRulesState>((set, get) => ({
     set({ loading: true });
     try {
       const res = await fetchApi<DeliveryRule[]>('/delivery-rules');
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.success && Array.isArray(res.data)) {
         set({ rules: res.data, loaded: true });
       }
     } catch (err) {
@@ -44,7 +43,8 @@ export const useDeliveryRulesStore = create<DeliveryRulesState>((set, get) => ({
 
   calculateFee: (subtotal: number) => {
     const numSubtotal = Number(subtotal) || 0;
-    const activeRules = get().rules.filter((r) => r.isActive).sort((a, b) => a.minAmount - b.minAmount);
+    const rulesList = get().rules.length > 0 ? get().rules : defaultFallbackRules;
+    const activeRules = rulesList.filter((r) => r.isActive).sort((a, b) => a.minAmount - b.minAmount);
 
     if (numSubtotal <= 0) {
       return {

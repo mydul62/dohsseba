@@ -294,8 +294,8 @@ export function DeliveryChargeSettings() {
                 {rules.map((rule) => {
                   const rangeText =
                     rule.maxAmount !== null && rule.maxAmount !== undefined
-                      ? `৳${formatCurrency(rule.minAmount)} – ৳${formatCurrency(rule.maxAmount)}`
-                      : `৳${formatCurrency(rule.minAmount)}+`;
+                      ? `${formatCurrency(rule.minAmount)} – ${formatCurrency(rule.maxAmount)}`
+                      : `${formatCurrency(rule.minAmount)}+`;
 
                   return (
                     <tr
@@ -316,7 +316,7 @@ export function DeliveryChargeSettings() {
                             🎉 {isBn ? 'ফ্রি ডেলিভারি' : 'Free Delivery'}
                           </span>
                         ) : (
-                          <span className="text-white font-mono">৳{formatCurrency(rule.charge)}</span>
+                          <span className="text-white font-mono">{formatCurrency(rule.charge)}</span>
                         )}
                       </td>
                       <td className="py-4 px-4 text-center">

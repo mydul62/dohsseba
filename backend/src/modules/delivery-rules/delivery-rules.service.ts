@@ -33,10 +33,28 @@ export const checkRangeOverlap = async (
 };
 
 export const getAllRules = async (onlyActive = false) => {
-  return prisma.deliveryRule.findMany({
+  let rules = await prisma.deliveryRule.findMany({
     where: onlyActive ? { isActive: true } : {},
     orderBy: { minAmount: 'asc' },
   });
+
+  if (rules.length === 0 && !onlyActive) {
+    const count = await prisma.deliveryRule.count();
+    if (count === 0) {
+      await prisma.deliveryRule.createMany({
+        data: [
+          { minAmount: 0, maxAmount: 499, charge: 50, isFree: false, isActive: true },
+          { minAmount: 500, maxAmount: 999, charge: 80, isFree: false, isActive: true },
+          { minAmount: 1000, maxAmount: null, charge: 0, isFree: true, isActive: true },
+        ],
+      });
+      rules = await prisma.deliveryRule.findMany({
+        orderBy: { minAmount: 'asc' },
+      });
+    }
+  }
+
+  return rules;
 };
 
 export const getCalculatedDeliveryFee = async (subtotal: number) => {
