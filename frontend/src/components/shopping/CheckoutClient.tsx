@@ -39,9 +39,9 @@ export function CheckoutClient() {
 
   const [deliverySpeed, setDeliverySpeed] = useState<string>('express');
   const [deliveryOptions, setDeliveryOptions] = useState<any[]>([]);
-  const [customerName, setCustomerName] = useState((user as any)?.name || 'Green Market DOHS');
-  const [address, setAddress] = useState('House 42, Road 7, DOHS Mohakhali');
-  const [phone, setPhone] = useState(user?.phone || '01580 450353');
+  const [customerName, setCustomerName] = useState((user as any)?.name || '');
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState(user?.phone || '');
   const [paymentMethod, setPaymentMethod] = useState<'bkash' | 'nagad' | 'card' | 'cod'>('cod');
   const [isPlaced, setIsPlaced] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState('');
@@ -517,7 +517,7 @@ export function CheckoutClient() {
                     type="text"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="e.g. Green Market DOHS"
+                    placeholder="e.g. Rahim Ahmed"
                     className="w-full h-11 px-4 rounded-xl border border-[#e5e1d5] bg-[#fbf9f4] text-slate-800 font-medium text-xs sm:text-sm focus:outline-none focus:border-[#1c5335] focus:bg-white transition-all"
                     required
                   />
@@ -529,7 +529,7 @@ export function CheckoutClient() {
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="e.g. House 42, Road 7, DOHS Mohakhali"
+                    placeholder="e.g. House #12, Road #04, DOHS Mohakhali"
                     className="w-full h-11 px-4 rounded-xl border border-[#e5e1d5] bg-[#fbf9f4] text-slate-800 font-medium text-xs sm:text-sm focus:outline-none focus:border-[#1c5335] focus:bg-white transition-all"
                     required
                   />
@@ -541,7 +541,7 @@ export function CheckoutClient() {
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="e.g. 01580 450353"
+                    placeholder="e.g. 01712345678"
                     className="w-full h-11 px-4 rounded-xl border border-[#e5e1d5] bg-[#fbf9f4] text-slate-800 font-medium text-xs sm:text-sm focus:outline-none focus:border-[#1c5335] focus:bg-white transition-all"
                     required
                   />
