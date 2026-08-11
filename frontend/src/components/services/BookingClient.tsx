@@ -155,6 +155,7 @@ export function BookingClient({ service }: BookingClientProps) {
         body: JSON.stringify({
           serviceId: service.id,
           customerName: nameTrimmed,
+          customerPhone: phone.trim(),
           addressText: address.trim(),
           slotId: selectedSlotId || undefined,
           // Pass the customer-selected date so backend capacity check uses the right date

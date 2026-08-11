@@ -32,7 +32,7 @@ export function DetailBottomSheet({
 
   const ticketId = booking.id ? `#${booking.id.slice(-7).toUpperCase()}` : '#DS-8891';
   const customerName = (booking.customer?.name && booking.customer.name !== 'Guest Customer' ? booking.customer.name : null) || (booking.notes && booking.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) || booking.customer?.name || 'Resident Customer';
-  const customerPhone = booking.customer?.phone || booking.notes?.match(/Phone:\s*([\d\+\-\s]+)/)?.[1] || '+8801800000000';
+  const customerPhone = (booking.notes && booking.notes.match(/Phone:\s*([0-9\+\-\s]+)/i)?.[1]?.trim()) || booking.customerPhone || booking.customer?.phone || booking.address?.phone || 'No phone provided';
   const customerAddress = booking.address?.line1 || booking.notes?.match(/Address:\s*([^.]+)/)?.[1] || 'Mohakhali DOHS Residence';
   const scheduledTime = booking.slot
     ? `${booking.slot.startTime} – ${booking.slot.endTime}`

@@ -111,7 +111,7 @@ export const getBookingById = async (bookingId: string, userId: string, role: st
 
 export const createBooking = async (
   customerId?: string,
-  data?: { serviceId: string; addressId?: string; addressText?: string; customerName?: string; scheduledAt?: string; notes?: string; slotId?: string }
+  data?: { serviceId: string; addressId?: string; addressText?: string; customerName?: string; customerPhone?: string; scheduledAt?: string; notes?: string; slotId?: string }
 ) => {
   if (!data || !data.serviceId) {
     throw new AppError('Service ID is required.', 400);
@@ -131,23 +131,33 @@ export const createBooking = async (
           email: 'guest.customer@dohssheba.com',
           password: pass,
           role: 'CUSTOMER',
-          phone: '+8801800000000',
+          phone: data.customerPhone?.trim() || '+8801800000000',
           emailVerified: true,
           isActive: true,
         },
       });
-    } else if (data.customerName?.trim()) {
-      await prisma.user.update({
-        where: { id: guestUser.id },
-        data: { name: data.customerName.trim() },
-      }).catch(() => null);
+    } else {
+      const updatePayload: any = {};
+      if (data.customerName?.trim()) updatePayload.name = data.customerName.trim();
+      if (data.customerPhone?.trim()) updatePayload.phone = data.customerPhone.trim();
+      if (Object.keys(updatePayload).length > 0) {
+        await prisma.user.update({
+          where: { id: guestUser.id },
+          data: updatePayload,
+        }).catch(() => null);
+      }
     }
     effectiveCustomerId = guestUser.id;
-  } else if (data.customerName?.trim()) {
-    await prisma.user.update({
-      where: { id: effectiveCustomerId },
-      data: { name: data.customerName.trim() },
-    }).catch(() => null);
+  } else {
+    const updatePayload: any = {};
+    if (data.customerName?.trim()) updatePayload.name = data.customerName.trim();
+    if (data.customerPhone?.trim()) updatePayload.phone = data.customerPhone.trim();
+    if (Object.keys(updatePayload).length > 0) {
+      await prisma.user.update({
+        where: { id: effectiveCustomerId },
+        data: updatePayload,
+      }).catch(() => null);
+    }
   }
 
   let service = await prisma.service.findFirst({ where: { id: data.serviceId, isActive: true } });

@@ -95,7 +95,7 @@ function BookingJobCard({
 }) {
   const ticketId = `#${booking.id.slice(-7).toUpperCase()}`;
   const customerName = (booking.customer?.name && booking.customer.name !== 'Guest Customer' ? booking.customer.name : null) || (booking.notes && booking.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) || booking.customer?.name || 'Resident Customer';
-  const customerPhone = booking.customer?.phone || booking.notes?.match(/Phone:\s*([\d\+\-\s]+)/)?.[1] || '';
+  const customerPhone = (booking.notes && booking.notes.match(/Phone:\s*([0-9\+\-\s]+)/i)?.[1]?.trim()) || booking.customerPhone || booking.customer?.phone || booking.address?.phone || '';
   const serviceName = booking.service?.title || 'Home Maintenance Service';
   const slotTime = booking.slot ? `${booking.slot.startTime} – ${booking.slot.endTime}` : '';
   const address = booking.address?.line1 || 'Mohakhali DOHS Residence';
@@ -866,7 +866,7 @@ export default function ServiceOperationsDashboard() {
             <div className="space-y-3 text-xs font-semibold">
               {[
                 { label: 'Resident Name',    value: (contactModalBooking.customer?.name && contactModalBooking.customer.name !== 'Guest Customer' ? contactModalBooking.customer.name : null) || (contactModalBooking.notes && contactModalBooking.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) || contactModalBooking.customer?.name || 'Resident Customer' },
-                { label: 'Contact Phone',    value: contactModalBooking.customer?.phone || 'No phone provided', isPhone: true },
+                { label: 'Contact Phone',    value: (contactModalBooking.notes && contactModalBooking.notes.match(/Phone:\s*([0-9\+\-\s]+)/i)?.[1]?.trim()) || contactModalBooking.customerPhone || contactModalBooking.customer?.phone || 'No phone provided', isPhone: true },
                 { label: 'Location Address', value: contactModalBooking.address?.line1  || contactModalBooking.notes || 'DOHS Residence' },
               ].map((item) => (
                 <div key={item.label} className="p-3 rounded-2xl bg-[#171829] border border-[#242539] space-y-1">
