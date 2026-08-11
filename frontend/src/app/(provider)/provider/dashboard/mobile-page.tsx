@@ -387,7 +387,7 @@ function DashboardTab({
 function RequestsTab({
   bookings, loading, onOpenSheet,
 }: { bookings: any[]; loading: boolean; onOpenSheet: (b: any) => void }) {
-  const [filter, setFilter] = useState('ALL');
+  const [filter, setFilter] = useState('PENDING');
   const FILTERS = [
     { id: 'ALL',       label: 'All' },
     { id: 'PENDING',   label: 'New' },
@@ -609,7 +609,7 @@ export default function MobileProviderDashboard() {
   const { user } = useAuthStore();
   const { socket } = useSocket();
 
-  const [mobileTab, setMobileTab]     = useState('dashboard');
+  const [mobileTab, setMobileTab]     = useState('requests');
   const [loading, setLoading]         = useState(true);
   const [bookings, setBookings]       = useState<any[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
@@ -844,4 +844,5 @@ export default function MobileProviderDashboard() {
     </div>
   );
 }
+
 
