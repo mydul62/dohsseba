@@ -31,7 +31,7 @@ export function DetailBottomSheet({
   if (!isOpen || !booking) return null;
 
   const ticketId = booking.id ? `#${booking.id.slice(-7).toUpperCase()}` : '#DS-8891';
-  const customerName = booking.customer?.name || booking.notes?.match(/Phone:\s*(\+?\d+)/)?.[1] ? 'Guest Customer' : 'Resident';
+  const customerName = (booking.customer?.name && booking.customer.name !== 'Guest Customer' ? booking.customer.name : null) || (booking.notes && booking.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) || booking.customer?.name || 'Resident Customer';
   const customerPhone = booking.customer?.phone || booking.notes?.match(/Phone:\s*([\d\+\-\s]+)/)?.[1] || '+8801800000000';
   const customerAddress = booking.address?.line1 || booking.notes?.match(/Address:\s*([^.]+)/)?.[1] || 'Mohakhali DOHS Residence';
   const scheduledTime = booking.slot

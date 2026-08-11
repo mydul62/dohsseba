@@ -479,7 +479,7 @@ function RequestsTab({
                     <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md mr-2" style={{ background: `${PURPLE}20`, color: PURPLE }}>
                       #{b.id.slice(-7).toUpperCase()}
                     </span>
-                    <span className="text-xs text-slate-400">{b.customer?.name || 'Guest Customer'}</span>
+                    <span className="text-xs text-slate-400">{(b.customer?.name && b.customer.name !== 'Guest Customer' ? b.customer.name : null) || (b.notes && b.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) || b.customer?.name || 'Resident Customer'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <StatusPill status={b.status} />
