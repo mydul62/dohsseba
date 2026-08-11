@@ -84,8 +84,15 @@ export const createOrderFromCart = async (
     couponCode?: string;
     notes?: string;
     phone?: string;
+    customerName?: string;
   }
 ) => {
+  if (data.customerName?.trim()) {
+    await prisma.user.update({
+      where: { id: customerId },
+      data: { name: data.customerName.trim() },
+    }).catch(() => null);
+  }
   let address = data.addressId ? await prisma.address.findFirst({ where: { id: data.addressId } }) : null;
   if (!address) {
     address = await prisma.address.findFirst({ where: { userId: customerId } });

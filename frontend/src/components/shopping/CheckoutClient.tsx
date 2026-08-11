@@ -258,12 +258,13 @@ export function CheckoutClient() {
 
       const orderPayload: any = {
         addressId,
+        customerName: nameTrimmed,
         phone,
         items: items.map((i) => ({
           productId: i.product.id,
           quantity: i.quantity,
         })),
-        notes: `Payment: ${paymentMethod.toUpperCase()} | Speed: ${deliverySpeed}`,
+        notes: `Name: ${nameTrimmed}. Phone: ${phone}. Address: ${addressTrimmed}. Payment: ${paymentMethod.toUpperCase()} | Speed: ${deliverySpeed}`,
         ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
       };
 

@@ -45,13 +45,13 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
   const [statusMsg, setStatusMsg] = useState('');
   const [showProductDetails, setShowProductDetails] = useState(false);
 
-  // Customer Information
   const customerName =
+    (currentMission.notes && currentMission.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) ||
+    (currentMission.customerName && currentMission.customerName !== 'Guest Customer' ? currentMission.customerName : null) ||
+    (currentMission.customer?.name && currentMission.customer.name !== 'Guest Customer' ? currentMission.customer.name : null) ||
+    currentMission.guestName ||
     currentMission.customerName ||
     currentMission.customer?.name ||
-    currentMission.guestName ||
-    currentMission.user?.name ||
-    (currentMission.notes && currentMission.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) ||
     'Resident Customer';
 
   const customerPhone =

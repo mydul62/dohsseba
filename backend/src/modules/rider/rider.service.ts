@@ -99,20 +99,9 @@ export const getOpenOrders = async () => {
     const baseFee = o.deliveryFee || 50;
     const netEarning = Math.round((baseFee * commissionPercent) / 100);
 
-    let parsedAddress = (o as any).guestAddress || (o as any).deliveryAddress || o.address?.line1;
-    let parsedPhone = (o as any).customerPhone || o.customer?.phone;
-    let parsedName = (o as any).customerName || o.customer?.name || (o as any).guestName;
-
-    if (o.notes) {
-      if (!parsedPhone) {
-        const pMatch = o.notes.match(/Phone:\s*([0-9\+\-\s]+)/i);
-        if (pMatch && pMatch[1]) parsedPhone = pMatch[1].trim();
-      }
-      if (!parsedAddress) {
-        const aMatch = o.notes.match(/Address:\s*([^.]+)/i);
-        if (aMatch && aMatch[1]) parsedAddress = aMatch[1].trim();
-      }
-    }
+    let parsedName = (o.notes && o.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) || (o as any).customerName || (o as any).guestName || o.customer?.name;
+    let parsedPhone = (o.notes && o.notes.match(/Phone:\s*([0-9\+\-\s]+)/i)?.[1]?.trim()) || (o as any).customerPhone || o.customer?.phone;
+    let parsedAddress = (o as any).guestAddress || (o as any).deliveryAddress || o.address?.line1 || (o.notes && o.notes.match(/Address:\s*([^.\n]+)/i)?.[1]?.trim());
 
     return {
       ...o,
@@ -320,20 +309,9 @@ export const getActiveMissions = async (riderId: string) => {
   });
 
   return missions.map((o) => {
-    let parsedAddress = (o as any).guestAddress || (o as any).deliveryAddress || o.address?.line1;
-    let parsedPhone = (o as any).customerPhone || o.customer?.phone;
-    let parsedName = (o as any).customerName || o.customer?.name || (o as any).guestName;
-
-    if (o.notes) {
-      if (!parsedPhone) {
-        const pMatch = o.notes.match(/Phone:\s*([0-9\+\-\s]+)/i);
-        if (pMatch && pMatch[1]) parsedPhone = pMatch[1].trim();
-      }
-      if (!parsedAddress) {
-        const aMatch = o.notes.match(/Address:\s*([^.]+)/i);
-        if (aMatch && aMatch[1]) parsedAddress = aMatch[1].trim();
-      }
-    }
+    let parsedName = (o.notes && o.notes.match(/Name:\s*([^.\n]+)/i)?.[1]?.trim()) || (o as any).customerName || (o as any).guestName || o.customer?.name;
+    let parsedPhone = (o.notes && o.notes.match(/Phone:\s*([0-9\+\-\s]+)/i)?.[1]?.trim()) || (o as any).customerPhone || o.customer?.phone;
+    let parsedAddress = (o as any).guestAddress || (o as any).deliveryAddress || o.address?.line1 || (o.notes && o.notes.match(/Address:\s*([^.\n]+)/i)?.[1]?.trim());
 
     return {
       ...o,
