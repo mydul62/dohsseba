@@ -22,6 +22,7 @@ import {
   UserCheck,
   Loader2,
   MessageCircle,
+  Trash2,
 } from 'lucide-react';
 import {
   fetchProviderSlots,
@@ -72,6 +73,7 @@ function MobileDetailSheet({
   onClose,
   onStatusChange,
   onAssignTechnician,
+  onDeleteBooking,
   updating,
   assigning,
 }: {
@@ -80,6 +82,7 @@ function MobileDetailSheet({
   onClose: () => void;
   onStatusChange: (id: string, status: string) => void;
   onAssignTechnician: (id: string, tech: any) => void;
+  onDeleteBooking?: (id: string) => void;
   updating: boolean;
   assigning: boolean;
 }) {
@@ -123,9 +126,21 @@ function MobileDetailSheet({
               </span>
               <StatusPill status={booking.status} />
             </div>
-            <button onClick={onClose} className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400" style={{ background: PANEL_ALT }}>
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              {onDeleteBooking && (
+                <button
+                  type="button"
+                  onClick={() => onDeleteBooking(booking.id)}
+                  className="p-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/40 transition-all cursor-pointer"
+                  title="Delete Request"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              <button onClick={onClose} className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400" style={{ background: PANEL_ALT }}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           <h2 className="text-lg font-black text-white leading-tight mt-2">
             {booking.service?.title || 'Home Maintenance Service'}
@@ -385,8 +400,8 @@ function DashboardTab({
 
 // ΓöÇΓöÇΓöÇ Mobile Requests Tab ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function RequestsTab({
-  bookings, loading, onOpenSheet,
-}: { bookings: any[]; loading: boolean; onOpenSheet: (b: any) => void }) {
+  bookings, loading, onOpenSheet, onDeleteBooking,
+}: { bookings: any[]; loading: boolean; onOpenSheet: (b: any) => void; onDeleteBooking?: (id: string) => void }) {
   const [filter, setFilter] = useState('PENDING');
   const FILTERS = [
     { id: 'ALL',       label: 'All' },
@@ -466,7 +481,22 @@ function RequestsTab({
                     </span>
                     <span className="text-xs text-slate-400">{b.customer?.name || 'Guest Customer'}</span>
                   </div>
-                  <StatusPill status={b.status} />
+                  <div className="flex items-center gap-1.5">
+                    <StatusPill status={b.status} />
+                    {onDeleteBooking && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteBooking(b.id);
+                        }}
+                        className="p-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-all cursor-pointer"
+                        title="Delete Request"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <p className="font-extrabold text-white text-sm">{b.service?.title || 'Home Maintenance Service'}</p>
                 <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400 flex-wrap">
@@ -703,6 +733,22 @@ export default function MobileProviderDashboard() {
     try { await deleteServiceSlot(id); loadSlots(); } catch (_) {}
   };
 
+  const handleDeleteBooking = async (bookingId: string) => {
+    if (!confirm('Are you sure you want to delete this booking request?')) return;
+    try {
+      const res = await fetchApi<any>(`/bookings/${bookingId}`, { method: 'DELETE' }).catch(() => null);
+      if (res?.success) {
+        setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+        setSheetBooking((prev: any) => (prev?.id === bookingId ? null : prev));
+        load();
+      } else {
+        alert(res?.message || 'Failed to delete booking request');
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to delete booking request');
+    }
+  };
+
   const handleSaveSlot = async (e: React.FormEvent) => {
     e.preventDefault();
     setSlotSubmitting(true);
@@ -752,7 +798,7 @@ export default function MobileProviderDashboard() {
           <DashboardTab bookings={bookings} stats={stats} slots={slots} loading={loading} onOpenSheet={setSheetBooking} setMobileTab={setMobileTab} />
         )}
         {mobileTab === 'requests' && (
-          <RequestsTab bookings={bookings} loading={loading} onOpenSheet={setSheetBooking} />
+          <RequestsTab bookings={bookings} loading={loading} onOpenSheet={setSheetBooking} onDeleteBooking={handleDeleteBooking} />
         )}
         {mobileTab === 'slots' && (
           <SlotsTab
@@ -801,6 +847,7 @@ export default function MobileProviderDashboard() {
           onClose={() => setSheetBooking(null)}
           onStatusChange={handleStatusUpdate}
           onAssignTechnician={handleAssign}
+          onDeleteBooking={handleDeleteBooking}
           updating={!!updatingId}
           assigning={assigning}
         />

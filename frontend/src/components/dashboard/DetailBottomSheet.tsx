@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, MapPin, Calendar, Clock, Phone, ShieldCheck, Wrench, User } from 'lucide-react';
+import { X, MapPin, Calendar, Clock, Phone, ShieldCheck, Wrench, User, Trash2 } from 'lucide-react';
 import { StatusStepper } from './StatusStepper';
 import { TechnicianAssigneeSelector } from './TechnicianAssigneeSelector';
 
@@ -12,6 +12,7 @@ interface DetailBottomSheetProps {
   technicians: any[];
   onStatusChange: (bookingId: string, status: string) => void;
   onAssignTechnician: (bookingId: string, tech: any) => void;
+  onDeleteBooking?: (bookingId: string) => void;
   updating?: boolean;
   assigning?: boolean;
 }
@@ -23,6 +24,7 @@ export function DetailBottomSheet({
   technicians,
   onStatusChange,
   onAssignTechnician,
+  onDeleteBooking,
   updating,
   assigning,
 }: DetailBottomSheetProps) {
@@ -136,11 +138,21 @@ export function DetailBottomSheet({
         </div>
 
         {/* Quick Action Footer */}
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex items-center justify-between gap-3 pt-2">
+          {onDeleteBooking && (
+            <button
+              type="button"
+              onClick={() => onDeleteBooking(booking.id)}
+              className="px-4 py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete Request</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl border border-[#242539] bg-[#171829] text-slate-300 font-bold text-xs hover:bg-[#242539]"
+            className="px-5 py-2.5 rounded-xl border border-[#242539] bg-[#171829] text-slate-300 font-bold text-xs hover:bg-[#242539] ml-auto"
           >
             Close Sheet
           </button>

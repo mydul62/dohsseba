@@ -68,3 +68,11 @@ export const cancelBooking = async (req: AuthRequest, res: Response, next: NextF
     return sendResponse(res, 200, 'Booking cancelled');
   } catch (error) { next(error); }
 };
+
+// DELETE /api/v1/bookings/:id
+export const deleteBooking = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    await bookingService.deleteBooking(req.params.id as string, req.user!.id, req.user!.role);
+    return sendResponse(res, 200, 'Booking deleted successfully');
+  } catch (error) { next(error); }
+};

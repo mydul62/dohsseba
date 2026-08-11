@@ -36,4 +36,9 @@ router.delete('/:id/cancel',
   bookingController.cancelBooking
 );
 
+router.delete('/:id',
+  authorize('PROVIDER', 'ADMIN', 'SUPER_ADMIN'),
+  bookingController.deleteBooking
+);
+
 export default router;

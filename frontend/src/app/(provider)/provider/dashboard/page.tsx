@@ -87,9 +87,11 @@ function StatCard({ label, value, icon: Icon, accent }: { label: string; value: 
 function BookingJobCard({
   booking,
   onOpenSheet,
+  onDeleteBooking,
 }: {
   booking: any;
   onOpenSheet: (b: any) => void;
+  onDeleteBooking: (id: string) => void;
 }) {
   const ticketId = `#${booking.id.slice(-7).toUpperCase()}`;
   const customerName = booking.customer?.name || 'Guest Customer';
@@ -120,7 +122,20 @@ function BookingJobCard({
             {serviceName}
           </h3>
         </div>
-        <StatusPill status={booking.status} />
+        <div className="flex items-center gap-2">
+          <StatusPill status={booking.status} />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteBooking(booking.id);
+            }}
+            className="p-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-all cursor-pointer active:scale-95"
+            title="Delete Booking Request"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Card Body */}
@@ -402,6 +417,26 @@ export default function ServiceOperationsDashboard() {
     }
   };
 
+  const handleDeleteBooking = async (bookingId: string) => {
+    if (!window.confirm('Are you sure you want to delete this booking request?')) return;
+
+    try {
+      const res = await fetchApi<any>(`/bookings/${bookingId}`, {
+        method: 'DELETE',
+      }).catch(() => null);
+
+      if (res?.success) {
+        setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+        setSheetBooking((prev: any) => (prev?.id === bookingId ? null : prev));
+        loadDashboardData();
+      } else {
+        alert(res?.message || 'Failed to delete booking request');
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to delete booking request');
+    }
+  };
+
   const [customTechName,  setCustomTechName]  = useState('');
   const [customTechPhone, setCustomTechPhone] = useState('');
 
@@ -605,6 +640,7 @@ export default function ServiceOperationsDashboard() {
                   key={b.id}
                   booking={b}
                   onOpenSheet={(booking) => setSheetBooking(booking)}
+                  onDeleteBooking={handleDeleteBooking}
                 />
               ))
             )}
@@ -751,6 +787,7 @@ export default function ServiceOperationsDashboard() {
         technicians={technicians}
         onStatusChange={handleStatusUpdate}
         onAssignTechnician={handleAssignTechnicianDirect}
+        onDeleteBooking={handleDeleteBooking}
         updating={!!updatingId}
         assigning={assigning}
       />
