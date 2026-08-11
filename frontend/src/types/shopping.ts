@@ -49,6 +49,7 @@ export interface ProductItem {
   unitAmount?: number;
   rating: number;
   reviewCount: number;
+  totalReviews?: number;
   image: string;
   galleryImages?: string[];
   stock: number;

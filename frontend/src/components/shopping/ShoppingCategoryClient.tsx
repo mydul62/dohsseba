@@ -236,7 +236,7 @@ export function ShoppingCategoryClient({
                 </button>
               </div>
             ) : (
-              filteredProducts.map((product) => (
+              filteredProducts.map((product: any) => (
                 <ProductCard key={product.id} product={product} />
               ))
             )}

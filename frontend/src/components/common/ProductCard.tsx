@@ -24,6 +24,8 @@ export interface ProductCardProps {
   image?: string;
   badge?: string;
   rating?: number;
+  reviewCount?: number;
+  totalReviews?: number;
   soldCount?: number;
   isHot?: boolean;
   categorySlug?: string;
@@ -41,7 +43,9 @@ export function ProductCard({
   amount,
   image = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&auto=format&fit=crop&q=80',
   badge,
-  rating = 4.5,
+  rating = 0,
+  reviewCount,
+  totalReviews,
   isHot,
   categorySlug = 'groceries',
   categoryName = 'Grocery',
@@ -197,9 +201,16 @@ export function ProductCard({
             )}
           </div>
 
-          <div className="flex items-center gap-1 text-xs font-bold text-slate-700 shrink-0">
-            <span>{rating.toFixed(1)}</span>
-            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+          <div className="flex items-center gap-1 text-[11px] font-bold text-slate-700 shrink-0">
+            {rating > 0 || (totalReviews ?? reviewCount ?? 0) > 0 ? (
+              <>
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <span>{rating.toFixed(1)}</span>
+                <span className="text-[10px] text-slate-400 font-normal">({totalReviews ?? reviewCount ?? 0})</span>
+              </>
+            ) : (
+              <span className="text-[10px] text-slate-400 font-normal">No ratings yet</span>
+            )}
           </div>
         </div>
 
@@ -221,8 +232,14 @@ export function ProductCard({
             </div>
 
             <div className="flex items-center gap-0.5 text-[10px] font-bold text-slate-600 sm:hidden">
-              <span>{rating.toFixed(1)}</span>
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+              {rating > 0 || (totalReviews ?? reviewCount ?? 0) > 0 ? (
+                <>
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  <span>{rating.toFixed(1)} ({totalReviews ?? reviewCount ?? 0})</span>
+                </>
+              ) : (
+                <span className="text-[9px] text-slate-400 font-normal">No ratings</span>
+              )}
             </div>
           </div>
 

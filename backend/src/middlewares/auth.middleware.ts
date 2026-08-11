@@ -73,3 +73,43 @@ export const authorize = (...roles: Role[]) => {
     next();
   };
 };
+
+export const optionalAuth = async (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+) => {
+  try {
+    let token: string | undefined;
+
+    if (req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies?.token) {
+      token = req.cookies.token;
+    } else if (req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    }
+
+    if (token) {
+      const secret = process.env.JWT_SECRET || 'dohssheba_jwt_secret_dev_key_2026';
+      const decoded = jwt.verify(token, secret) as {
+        id: string;
+        email: string;
+        role: Role;
+      };
+
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: { id: true, email: true, role: true, isActive: true },
+      });
+
+      if (user && user.isActive) {
+        req.user = { id: user.id, email: user.email, role: user.role };
+      }
+    }
+  } catch (_) {
+    // Ignore invalid token for optional authentication
+  }
+  next();
+};
+

@@ -9,6 +9,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { formatCurrency } from '@/utils/cn';
 import { ProductCard } from '@/components/common/ProductCard';
+import { ProductReviewsSection } from '@/components/shopping/ProductReviewsSection';
 import { getApiBaseUrl } from '@/lib/api-client';
 import {
   Star,
@@ -327,6 +328,14 @@ export function ProductDetailClient({ product: initialProduct, slug }: ProductDe
         </div>
       </div>
 
+      {/* ── Product Ratings & Reviews Section ── */}
+      <ProductReviewsSection
+        productIdOrSlug={product.id || product.slug || slug || ''}
+        onRatingUpdated={(avg, total) =>
+          setProduct((prev) => ({ ...prev, rating: avg, reviewCount: total }))
+        }
+      />
+
       {/* ── Related Items Section ── */}
       {relatedItems.length > 0 && (
         <section className="space-y-6 pt-4">
@@ -359,8 +368,8 @@ export function ProductDetailClient({ product: initialProduct, slug }: ProductDe
                   originalPrice={origP}
                   unit={rel.unit || 'unit'}
                   image={rel.image || relImg}
-                  badge={rel.discount > 0 ? `${rel.discount}% OFF` : (rel.isFlashSale ? 'FLASH SALE' : undefined)}
-                  rating={rel.rating || 4.8}
+                  rating={rel.rating ?? 0}
+                  totalReviews={rel.totalReviews ?? rel.reviewCount ?? 0}
                   categorySlug={product.categorySlug}
                   categoryName={product.categoryName}
                 />

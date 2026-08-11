@@ -30,9 +30,23 @@ export function ReviewsContent() {
 
   useEffect(() => {
     setLoading(true);
-    fetchApi<any>('/seller/reviews')
-      .then((r) => { if (r.success && Array.isArray(r.data)) setReviews(r.data); })
-      .catch((err) => console.error('Reviews fetch failed:', err))
+    fetchApi<any>('/review-and-rating/seller/reviews')
+      .then((r) => {
+        if (r.success && Array.isArray(r.data)) {
+          setReviews(r.data);
+        } else {
+          fetchApi<any>('/seller/reviews').then((r2) => {
+            if (r2.success && Array.isArray(r2.data)) setReviews(r2.data);
+          });
+        }
+      })
+      .catch(() => {
+        fetchApi<any>('/seller/reviews')
+          .then((r2) => {
+            if (r2.success && Array.isArray(r2.data)) setReviews(r2.data);
+          })
+          .catch((err) => console.error('Reviews fetch failed:', err));
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -151,9 +165,16 @@ export function ReviewsContent() {
                   {(r.user?.name || r.customer || 'A')[0]?.toUpperCase()}
                 </div>
                 <div>
-                  <h4 className="font-bold text-white text-sm">{r.user?.name || r.customer || 'Anonymous Customer'}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-white text-sm">{r.user?.name || r.customer || 'Anonymous Customer'}</h4>
+                    {r.isVerifiedPurchase && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                        <ShieldCheck className="w-3 h-3 text-emerald-400" /> Verified Purchase
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                    <Package className="w-3 h-3 text-indigo-400" /> Purchased: <span className="text-slate-200 font-semibold">{typeof r.product === 'object' ? r.product?.name : (r.product || 'Product')}</span>
+                    <Package className="w-3 h-3 text-indigo-400" /> Product: <span className="text-slate-200 font-semibold">{typeof r.product === 'object' ? r.product?.name : (r.product || 'Product')}</span>
                   </p>
                 </div>
               </div>

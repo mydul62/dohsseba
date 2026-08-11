@@ -138,8 +138,8 @@ export function ForYouProductsSection() {
                 unit={prod.unit}
                 image={prod.image}
                 badge={prod.badge}
-                isHot={prod.isHot}
-                rating={prod.rating}
+                rating={prod.rating ?? 0}
+                totalReviews={(prod as any).totalReviews ?? (prod as any).reviewCount ?? 0}
                 soldCount={prod.soldCount}
                 categorySlug={prod.categorySlug}
                 categoryName={prod.categoryName}

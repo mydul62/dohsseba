@@ -173,7 +173,8 @@ export function CategoryPageClient({
                     unit={p.unit || 'unit'}
                     unitAmount={p.unitAmount ?? p.amount}
                     image={Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : (p.image || undefined)}
-                    rating={Number(p.rating || 4.5)}
+                    rating={Number(p.rating || 0)}
+                    totalReviews={p.totalReviews ?? p.reviewCount ?? 0}
                     categorySlug={categorySlug}
                     categoryName={categoryName}
                   />

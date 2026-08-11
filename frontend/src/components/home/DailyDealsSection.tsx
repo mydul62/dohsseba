@@ -196,7 +196,8 @@ export function DailyDealsSection() {
                   originalPrice={product.originalPrice}
                   unit={product.unit}
                   image={product.image}
-                  rating={product.rating}
+                  rating={product.rating ?? 0}
+                  totalReviews={(product as any).totalReviews ?? (product as any).reviewCount ?? 0}
                   badge={discountPercent > 0 ? `${discountPercent}% OFF` : undefined}
                   isHot={discountPercent > 20}
                   categorySlug={product.categorySlug}

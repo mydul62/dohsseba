@@ -31,6 +31,7 @@ import homepageRoutes                         from './routes/homepage.routes';
 import adminHomepageRoutes                    from './routes/adminHomepage.routes';
 import brandRoutes                            from './routes/brand.routes';
 import deliveryRulesRoutes                    from './modules/delivery-rules/delivery-rules.routes';
+import reviewAndRatingRoutes                  from './modules/review-and-rating/review-and-rating.routes';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -112,6 +113,7 @@ app.use(`${API}/product-categories`,  productCategoryRoutes);
 app.use(`${API}/cart`,                cartRoutes);
 app.use(`${API}/orders`,              orderRoutes);
 app.use(`${API}/reviews`,             reviewRoutes);
+app.use(`${API}/review-and-rating`,   reviewAndRatingRoutes);
 app.use(`${API}/admin`,               adminRoutes);
 app.use(`${API}/seller`,              sellerRoutes);
 app.use(`${API}/wallet`,              walletRoutes);

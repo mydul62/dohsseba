@@ -120,7 +120,8 @@ export function FeaturedProductsSection({ initialProducts }: { initialProducts?:
                   unit={p.unit || 'unit'}
                   unitAmount={p.unitAmount ?? p.amount}
                   image={prodImage}
-                  rating={Number(p.rating || 4.8)}
+                  rating={Number(p.rating || 0)}
+                  totalReviews={(p as any).totalReviews ?? (p as any).reviewCount ?? 0}
                   categorySlug={p.category?.slug}
                   categoryName={p.category?.name}
                 />

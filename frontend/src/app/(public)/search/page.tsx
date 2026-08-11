@@ -110,7 +110,8 @@ function SearchContent() {
                       image={Array.isArray(p.images) && p.images[0] ? p.images[0] : undefined}
                       badge={p.isFeatured ? 'HOT' : discPct > 0 ? `-${discPct}%` : undefined}
                       isHot={Boolean(p.isFeatured)}
-                      rating={Number(p.rating || 4.5)}
+                      rating={Number(p.rating || 0)}
+                      totalReviews={p.totalReviews ?? p.reviewCount ?? 0}
                       categorySlug={p.category?.slug}
                       categoryName={p.category?.name}
                     />

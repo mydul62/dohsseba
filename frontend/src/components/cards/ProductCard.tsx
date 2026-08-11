@@ -94,9 +94,16 @@ export function ProductCard({ product }: ProductCardProps) {
             <span className="text-emerald-600 dark:text-emerald-400 truncate max-w-[120px]">
               {product.shopName}
             </span>
-            <div className="flex items-center gap-0.5 text-amber-500 font-bold">
-              <Star className="w-3 h-3 fill-amber-400" />
-              <span>{product.rating}</span>
+            <div className="flex items-center gap-0.5 text-[10px] text-amber-500 font-bold">
+              {product.rating > 0 || ((product.reviewCount || product.totalReviews || 0) > 0) ? (
+                <>
+                  <Star className="w-3 h-3 fill-amber-400" />
+                  <span>{product.rating}</span>
+                  <span className="text-muted-foreground font-normal">({product.reviewCount || product.totalReviews || 0})</span>
+                </>
+              ) : (
+                <span className="text-[10px] text-muted-foreground font-normal">No ratings</span>
+              )}
             </div>
           </div>
 

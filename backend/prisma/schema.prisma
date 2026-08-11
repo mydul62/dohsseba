@@ -526,6 +526,8 @@ model Review {
   product Product? @relation(fields: [productId], references: [id])
   booking Booking? @relation(fields: [bookingId], references: [id])
 
+  @@index([productId])
+  @@index([userId])
   @@map("reviews")
 }
 
