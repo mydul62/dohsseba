@@ -66,14 +66,6 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
   const customerAddressText =
     currentMission.guestAddress ||
     currentMission.deliveryAddress ||
-    [
-      currentMission.address?.line1,
-      currentMission.address?.line2,
-      currentMission.address?.area,
-      currentMission.address?.city,
-    ]
-      .filter(Boolean)
-      .join(', ') ||
     currentMission.address?.line1 ||
     (currentMission.notes && currentMission.notes.match(/Address:\s*([^.\n]+)/i)?.[1]?.trim()) ||
     '';

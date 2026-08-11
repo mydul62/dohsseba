@@ -39,9 +39,9 @@ export function CheckoutClient() {
 
   const [deliverySpeed, setDeliverySpeed] = useState<string>('express');
   const [deliveryOptions, setDeliveryOptions] = useState<any[]>([]);
-  const [customerName, setCustomerName] = useState((user as any)?.name || '');
+  const [customerName, setCustomerName] = useState('');
   const [address, setAddress] = useState('');
-  const [phone, setPhone] = useState(user?.phone || '');
+  const [phone, setPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'bkash' | 'nagad' | 'card' | 'cod'>('cod');
   const [isPlaced, setIsPlaced] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState('');
@@ -82,23 +82,7 @@ export function CheckoutClient() {
     fetchRules();
   }, [fetchRules]);
 
-  // Prefill phone & address from saved user addresses if available
-  useEffect(() => {
-    if (user?.name) setCustomerName(user.name);
-    if (user?.phone) setPhone(user.phone);
-    if (!user) return;
 
-    fetchApi<any[]>('/users/addresses')
-      .then((res) => {
-        if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
-          const def = res.data.find((a: any) => a.isDefault) || res.data[0];
-          const formatted = `${def.line1}${def.area ? `, ${def.area}` : ''}${def.city ? `, ${def.city}` : ''}`;
-          setAddress(formatted);
-          if (def.phone) setPhone(def.phone);
-        }
-      })
-      .catch(() => null);
-  }, [user]);
 
   // ── Apply Coupon ───────────────────────────────────────────────────────────
   const applyCoupon = async () => {
@@ -213,8 +197,8 @@ export function CheckoutClient() {
       }
 
       let addressId: string | null = null;
-      const addressParts = address.split(',').map((s) => s.trim());
-      const line1 = addressParts[0] || address;
+      const line1 = addressTrimmed;
+      const addressParts = addressTrimmed.split(',').map((s) => s.trim());
       const area = addressParts[1] || 'DOHS Mohakhali';
       const city = addressParts[2] || 'Dhaka';
 
