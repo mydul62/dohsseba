@@ -1,206 +1,332 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchApi } from '@/lib/api-client';
 import { formatCurrency } from '@/utils/cn';
 import {
   ArrowUpRight, Wallet, Building2, Smartphone, CreditCard,
-  ShieldCheck, AlertCircle, CheckCircle2, Loader2, Info, Clock,
+  ShieldCheck, AlertCircle, CheckCircle2, Loader2, Info, Clock, RefreshCw
 } from 'lucide-react';
 
 const METHODS = [
-  { id: 'bkash',    label: 'bKash',                   icon: Smartphone,  account: '01711-000001', fee: '1.5%' },
-  { id: 'dbbl',     label: 'Dutch Bangla Bank (DBBL)', icon: Building2,   account: '148XXXX-12',  fee: 'Free' },
-  { id: 'nagad',    label: 'Nagad',                    icon: Smartphone,  account: '—',           fee: '1.5%' },
-];
-
-const PENDING_REQUESTS = [
-  { id: 'WD-0041', amount: 15000, method: 'bKash (01711-XXXXX)', requestedAt: '25 Jul 2026', status: 'COMPLETED' },
-  { id: 'WD-0040', amount: 20000, method: 'DBBL Bank',           requestedAt: '20 Jul 2026', status: 'COMPLETED' },
-  { id: 'WD-0039', amount: 10000, method: 'bKash (01711-XXXXX)', requestedAt: '14 Jul 2026', status: 'COMPLETED' },
+  { id: 'bkash', label: 'bKash', icon: Smartphone, fee: '1.5%' },
+  { id: 'nagad', label: 'Nagad', icon: Smartphone, fee: '1.5%' },
+  { id: 'bank',  label: 'Bank Transfer (DBBL / Any Bank)', icon: Building2, fee: 'Free' },
 ];
 
 export default function WithdrawPage() {
-  const [method, setMethod]   = useState('bkash');
-  const [amount, setAmount]   = useState('');
-  const [note, setNote]       = useState('');
-  const [loading, setLoading] = useState(false);
+  const [method, setMethod] = useState('bkash');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  
+  const [pageLoading, setPageLoading] = useState(true);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [withdrawable, setWithdrawable] = useState(0);
+  const [requests, setRequests] = useState<any[]>([]);
   const [success, setSuccess] = useState('');
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
 
-  const withdrawable = 38250;
+  const loadData = async () => {
+    setPageLoading(true);
+    try {
+      const [dashRes, walletRes, historyRes] = await Promise.all([
+        fetchApi<any>('/seller/dashboard').catch(() => null),
+        fetchApi<any>('/wallet').catch(() => null),
+        fetchApi<any>('/seller/withdrawals').catch(() => null),
+      ]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+      if (dashRes?.success && dashRes.data) {
+        setWithdrawable(Number(dashRes.data.withdrawableBalance || 0));
+      } else if (walletRes?.success && walletRes.data) {
+        setWithdrawable(Math.floor(Number(walletRes.data.balance || 0) * 0.9));
+      }
+
+      if (historyRes?.success && Array.isArray(historyRes.data)) {
+        setRequests(historyRes.data);
+      }
+    } catch (_) {
+    } finally {
+      setPageLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
+
     const val = parseFloat(amount);
-    if (!amount || isNaN(val) || val <= 0) { setError('Please enter a valid amount.'); return; }
-    if (val < 500)   { setError('Minimum withdrawal amount is ৳500.'); return; }
-    if (val > withdrawable) { setError(`You can only withdraw up to ৳${formatCurrency(withdrawable)}.`); return; }
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSuccess(`Withdrawal of ৳${formatCurrency(val)} requested successfully! Processing in 24–48 hours.`);
-      setAmount('');
-    }, 1000);
+    if (!amount || isNaN(val) || val <= 0) {
+      setError('Please enter a valid withdrawal amount.');
+      return;
+    }
+    if (val < 500) {
+      setError('Minimum withdrawal amount is ৳500.');
+      return;
+    }
+    if (withdrawable > 0 && val > withdrawable) {
+      setError(`Requested amount exceeds withdrawable balance of ৳${formatCurrency(withdrawable)}.`);
+      return;
+    }
+    if (!accountNumber.trim()) {
+      setError('Please provide your Mobile / Bank account number.');
+      return;
+    }
+
+    try {
+      setSubmitLoading(true);
+      const payload = {
+        amount: val,
+        paymentMethod: method === 'bkash' ? 'bKash' : method === 'nagad' ? 'Nagad' : 'Bank',
+        accountNumber: accountNumber.trim(),
+        accountName: accountName.trim() || undefined,
+        bankName: method === 'bank' ? bankName.trim() || 'Bank Transfer' : undefined,
+        note: note.trim() || undefined,
+      };
+
+      const res = await fetchApi<any>('/seller/withdrawals', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      if (res.success) {
+        setSuccess(`Withdrawal request of ৳${formatCurrency(val)} submitted successfully! Super Admin will process it within 24 hours.`);
+        setAmount('');
+        setNote('');
+        await loadData();
+      } else {
+        setError(res.message || 'Failed to submit withdrawal request.');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Error submitting request. Please try again.');
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 select-none">
 
       {/* Header */}
-      <div>
-        <p className="text-xs text-slate-500 mb-0.5">Finance / Withdraw</p>
-        <h1 className="font-black text-white text-xl flex items-center gap-2">
-          <ArrowUpRight className="w-5 h-5 text-indigo-400" /> Withdraw Funds
-        </h1>
-        <p className="text-xs text-slate-400 mt-0.5">Transfer your store earnings to your bank or mobile wallet</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <p className="text-xs text-slate-400 mb-0.5">Finance / Withdraw</p>
+          <h1 className="font-black text-white text-xl flex items-center gap-2">
+            <ArrowUpRight className="w-5 h-5 text-indigo-400" /> Request Withdrawal
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">Transfer your store earnings directly to your mobile wallet or bank account</p>
+        </div>
+        <button
+          onClick={loadData}
+          disabled={pageLoading}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${pageLoading ? 'animate-spin' : ''}`} />
+          <span>Refresh</span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {pageLoading ? (
+        <div className="p-16 text-center rounded-3xl bg-[#1f2136] border border-white/10 text-slate-400 space-y-3">
+          <Loader2 className="w-8 h-8 text-indigo-400 animate-spin mx-auto" />
+          <p className="text-xs font-bold text-white">Loading wallet balance and payout requests...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Withdraw Form */}
-        <div className="lg:col-span-2 space-y-5">
+          {/* Form Section */}
+          <div className="lg:col-span-2 space-y-5">
 
-          {/* Withdraw Balance */}
-          <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-indigo-200 font-medium">Available to Withdraw</p>
-              <p className="font-black text-white text-3xl mt-1">৳{formatCurrency(withdrawable)}</p>
+            {/* Available Balance Header */}
+            <div className="rounded-3xl bg-gradient-to-br from-indigo-600 to-purple-700 p-6 flex items-center justify-between shadow-2xl">
+              <div>
+                <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider">Available to Withdraw</p>
+                <p className="font-black text-white text-3xl font-mono mt-1">৳{formatCurrency(withdrawable)}</p>
+                <p className="text-[11px] text-indigo-200/80 mt-1">Minimum payout request is ৳500</p>
+              </div>
+              <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                <Wallet className="w-7 h-7" />
+              </div>
             </div>
-            <Wallet className="w-12 h-12 text-white/30" />
-          </div>
 
-          {success && (
-            <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm">
-              <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />
-              <p>{success}</p>
-            </div>
-          )}
+            {success && (
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium animate-in fade-in duration-200">
+                <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
+                <p>{success}</p>
+              </div>
+            )}
 
-          {error && (
-            <div className="flex items-start gap-3 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm">
-              <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-              <p>{error}</p>
-            </div>
-          )}
+            {error && (
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-medium animate-in fade-in duration-200">
+                <AlertCircle className="w-5 h-5 shrink-0 text-rose-400" />
+                <p>{error}</p>
+              </div>
+            )}
 
-          <form onSubmit={handleSubmit} className="rounded-2xl bg-[#1e1f32] border border-white/10 p-5 space-y-5">
-            {/* Method selection */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-2">Payout Method</label>
-              <div className="space-y-2">
-                {METHODS.map((m) => (
-                  <label key={m.id}
-                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${method === m.id ? 'border-indigo-500 bg-indigo-500/10' : 'border-white/10 hover:border-white/20 bg-white/5'}`}>
-                    <div className="flex items-center gap-3">
-                      <input type="radio" name="method" value={m.id} checked={method === m.id} onChange={() => setMethod(m.id)} className="accent-indigo-500" />
-                      <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                        <m.icon className="w-4 h-4 text-indigo-400" />
+            <form onSubmit={handleSubmit} className="rounded-3xl bg-[#1f2136] border border-white/10 p-6 space-y-5 shadow-2xl">
+              
+              {/* Method Selection */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-2">Select Payout Method *</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {METHODS.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMethod(m.id)}
+                      className={`p-3.5 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
+                        method === m.id
+                          ? 'border-indigo-500 bg-indigo-500/15 shadow-md shadow-indigo-500/20'
+                          : 'border-white/10 bg-slate-900/60 hover:bg-white/5 text-slate-400'
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0">
+                        <m.icon className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-white">{m.label}</p>
-                        <p className="text-[11px] text-slate-400">{m.account}</p>
+                        <p className="font-bold text-white text-xs">{m.label}</p>
+                        <p className="text-[10px] text-slate-400">Fee: {m.fee}</p>
                       </div>
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-400">Fee: {m.fee}</span>
-                  </label>
-                ))}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Amount */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-2">Amount (৳)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">৳</span>
+              {/* Account Number */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  {method === 'bank' ? 'Bank Account Number *' : 'Mobile Wallet Number (bKash / Nagad) *'}
+                </label>
                 <input
-                  type="number" min="500" max={withdrawable} step="100"
-                  value={amount} onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Enter amount (min ৳500)"
-                  className="w-full pl-8 pr-4 py-3 rounded-xl bg-[#12131f] border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                  type="text"
+                  required
+                  placeholder={method === 'bank' ? 'e.g. 148110XXXXXX' : 'e.g. 01711XXXXXX'}
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-2xl bg-slate-900/90 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors text-xs font-mono font-bold"
                 />
               </div>
-              <div className="flex gap-2 mt-2">
-                {[5000, 10000, 15000, 20000].map((amt) => (
-                  <button key={amt} type="button" onClick={() => setAmount(String(amt))}
-                    className="text-[10px] px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 transition-colors">
-                    ৳{formatCurrency(amt)}
-                  </button>
-                ))}
-                <button type="button" onClick={() => setAmount(String(withdrawable))}
-                  className="text-[10px] px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors font-semibold">
-                  Max
-                </button>
-              </div>
-            </div>
 
-            {/* Note */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-2">Note (Optional)</label>
-              <input type="text" value={note} onChange={(e) => setNote(e.target.value)}
-                placeholder="e.g., Monthly profit withdrawal"
-                className="w-full px-4 py-3 rounded-xl bg-[#12131f] border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors"
-              />
-            </div>
-
-            <button type="submit" disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition-all disabled:opacity-60">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpRight className="w-4 h-4" />}
-              {loading ? 'Processing…' : 'Request Withdrawal'}
-            </button>
-          </form>
-        </div>
-
-        {/* Right Panel */}
-        <div className="space-y-4">
-          {/* Rules */}
-          <div className="rounded-2xl bg-[#1e1f32] border border-white/10 p-5 space-y-3">
-            <h2 className="font-bold text-white text-sm flex items-center gap-2">
-              <Info className="w-4 h-4 text-indigo-400" /> Withdrawal Rules
-            </h2>
-            {[
-              'Minimum withdrawal: ৳500',
-              'Processing time: 24–48 business hours',
-              'bKash / Nagad: 1.5% processing fee',
-              'Bank transfer: Free',
-              'Maximum single withdrawal: ৳100,000',
-            ].map((r) => (
-              <div key={r} className="flex items-start gap-2 text-xs text-slate-400">
-                <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-500" />
-                {r}
-              </div>
-            ))}
-          </div>
-
-          {/* Recent Requests */}
-          <div className="rounded-2xl bg-[#1e1f32] border border-white/10 overflow-hidden">
-            <div className="p-4 border-b border-white/10">
-              <h2 className="font-bold text-white text-sm flex items-center gap-2">
-                <Clock className="w-4 h-4 text-indigo-400" /> Recent Requests
-              </h2>
-            </div>
-            <div className="divide-y divide-white/5">
-              {PENDING_REQUESTS.map((r) => (
-                <div key={r.id} className="px-4 py-3">
-                  <div className="flex justify-between items-center">
-                    <p className="text-xs font-semibold text-white">৳{formatCurrency(r.amount)}</p>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                      {r.status}
-                    </span>
+              {/* Bank Name if Bank */}
+              {method === 'bank' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">Bank Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. DBBL, Islami Bank, City Bank"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-900/90 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors text-xs font-bold"
+                    />
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">{r.method} · {r.requestedAt}</p>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">Account Holder Name</label>
+                    <input
+                      type="text"
+                      placeholder="Name on bank account"
+                      value={accountName}
+                      onChange={(e) => setAccountName(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-900/90 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors text-xs"
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
+
+              {/* Amount */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Withdrawal Amount (৳) *</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">৳</span>
+                  <input
+                    type="number"
+                    min="500"
+                    required
+                    placeholder="Enter amount (min ৳500)"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="w-full pl-8 pr-4 py-2.5 rounded-2xl bg-slate-900/90 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors text-xs font-mono font-extrabold"
+                  />
+                </div>
+              </div>
+
+              {/* Note */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Note / Reference (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. July sales payout request"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-2xl bg-slate-900/90 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors text-xs"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={submitLoading}
+                className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {submitLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpRight className="w-4 h-4" />}
+                <span>Submit Withdrawal Request</span>
+              </button>
+            </form>
           </div>
 
-          {/* Security */}
-          <div className="flex items-start gap-3 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs">
-            <ShieldCheck className="w-5 h-5 mt-0.5 shrink-0 text-indigo-400" />
-            <p>All withdrawal requests are reviewed and encrypted. You'll receive confirmation via email.</p>
+          {/* History Sidebar */}
+          <div className="space-y-4">
+            <h3 className="font-bold text-white text-sm flex items-center gap-2">
+              <Clock className="w-4 h-4 text-indigo-400" /> Payout Request History
+            </h3>
+
+            {requests.length === 0 ? (
+              <div className="p-8 text-center rounded-3xl bg-[#1f2136] border border-white/10 text-slate-400 space-y-1">
+                <Info className="w-8 h-8 text-slate-600 mx-auto" />
+                <p className="text-xs font-bold text-white">No withdrawal requests</p>
+                <p className="text-[11px] text-slate-500">Your submitted payout requests will appear here with live approval status.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {requests.map((r) => {
+                  const reqDate = r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recently';
+                  const isPaid = r.status === 'PAID' || r.status === 'APPROVED' || r.status === 'COMPLETED';
+                  const isPending = r.status === 'PENDING';
+                  return (
+                    <div key={r.id} className="p-4 rounded-3xl bg-[#1f2136] border border-white/10 shadow-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                          isPaid
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                            : isPending
+                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse'
+                            : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                        }`}>
+                          {r.status}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">{reqDate}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-extrabold text-white text-sm font-mono">৳{formatCurrency(Number(r.amount))}</p>
+                          <p className="text-[11px] text-slate-400">{r.paymentMethod} · {r.accountNumber}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -17,6 +17,8 @@ router.put('/store-profile', sellerController.updateStoreProfile);
 router.patch('/auto-accept', sellerController.toggleAutoAccept);
 router.get('/riders',        sellerController.getRidersFleet);
 router.delete('/riders/:id', sellerController.deleteRider);
+router.post('/withdrawals',  sellerController.requestWithdrawal);
+router.get('/withdrawals',   sellerController.getWithdrawalHistory);
 
 export default router;
 

@@ -69,3 +69,21 @@ export const deleteRider = async (req: AuthRequest, res: Response, next: NextFun
   }
 };
 
+export const requestWithdrawal = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const result = await sellerService.requestSellerWithdrawal(req.user!.id, req.body);
+    res.json({ success: true, message: 'Withdrawal request submitted successfully.', data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getWithdrawalHistory = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const data = await sellerService.getSellerWithdrawalHistory(req.user!.id);
+    res.json({ success: true, message: 'Withdrawal history fetched.', data });
+  } catch (err) {
+    next(err);
+  }
+};
+

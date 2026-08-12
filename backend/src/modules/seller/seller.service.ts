@@ -416,3 +416,47 @@ export const deleteRiderAccount = async (riderId: string) => {
   }
 };
 
+export const requestSellerWithdrawal = async (sellerId: string, payload: {
+  amount: number;
+  paymentMethod: string;
+  accountNumber: string;
+  accountName?: string;
+  bankName?: string;
+  branchName?: string;
+  note?: string;
+}) => {
+  if (!payload.amount || payload.amount < 500) {
+    throw new AppError('Minimum withdrawal amount is ৳500', 400);
+  }
+
+  const wallet = await prisma.wallet.findUnique({ where: { userId: sellerId } });
+  const balance = wallet?.balance ?? 0;
+  const withdrawableBalance = Math.floor(balance * 0.9);
+
+  if (payload.amount > withdrawableBalance && balance > 0) {
+    throw new AppError(`Requested amount exceeds withdrawable balance of ৳${withdrawableBalance}`, 400);
+  }
+
+  return prisma.withdrawalRequest.create({
+    data: {
+      userId: sellerId,
+      userRole: 'SELLER',
+      amount: payload.amount,
+      paymentMethod: payload.paymentMethod || 'bKash',
+      accountNumber: payload.accountNumber || 'N/A',
+      accountName: payload.accountName,
+      bankName: payload.bankName,
+      branchName: payload.branchName,
+      note: payload.note,
+      status: 'PENDING',
+    },
+  });
+};
+
+export const getSellerWithdrawalHistory = async (sellerId: string) => {
+  return prisma.withdrawalRequest.findMany({
+    where: { userId: sellerId },
+    orderBy: { requestedAt: 'desc' },
+  });
+};
+
