@@ -125,10 +125,70 @@ export async function fetchApi<T>(
   }
 }
 
+/**
+ * Compresses an image on the client side before uploading to prevent Nginx 413 Payload Too Large / Failed to fetch errors.
+ */
+async function compressImageClientSide(file: File): Promise<File> {
+  if (typeof window === 'undefined' || !file || file.size <= 400 * 1024 || !file.type.startsWith('image/')) {
+    return file;
+  }
+  if (file.type.includes('svg') || file.type.includes('gif')) {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      const MAX_DIM = 1600;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX_DIM || height > MAX_DIM) {
+        if (width > height) {
+          height = Math.round((height * MAX_DIM) / width);
+          width = MAX_DIM;
+        } else {
+          width = Math.round((width * MAX_DIM) / height);
+          height = MAX_DIM;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(file);
+
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return resolve(file);
+          const name = file.name.replace(/\.[^/.]+$/, '.jpg');
+          const compressedFile = new File([blob], name, {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+          resolve(compressedFile);
+        },
+        'image/jpeg',
+        0.85
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+    img.src = url;
+  });
+}
+
 export async function uploadSingleImageApi(file: File): Promise<string> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const compressedFile = await compressImageClientSide(file);
   const formData = new FormData();
-  formData.append('image', file);
+  formData.append('image', compressedFile);
 
   const headers: HeadersInit = {
     ...(token && { Authorization: `Bearer ${token}` }),
@@ -150,8 +210,11 @@ export async function uploadSingleImageApi(file: File): Promise<string> {
 
 export async function uploadMultipleImagesApi(files: FileList | File[]): Promise<string[]> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const fileArray = Array.from(files);
+  const compressedFiles = await Promise.all(fileArray.map((f) => compressImageClientSide(f)));
+
   const formData = new FormData();
-  Array.from(files).forEach((file) => formData.append('images', file));
+  compressedFiles.forEach((file) => formData.append('images', file));
 
   const headers: HeadersInit = {
     ...(token && { Authorization: `Bearer ${token}` }),
