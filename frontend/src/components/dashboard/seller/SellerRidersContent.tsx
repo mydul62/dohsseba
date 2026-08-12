@@ -6,7 +6,7 @@ import { formatCurrency } from '@/utils/cn';
 import {
   Users, Bike, Phone, Search, RefreshCw, CheckCircle2,
   XCircle, Star, ShieldCheck, DollarSign, TrendingUp,
-  Package, AlertTriangle, Loader2, ArrowUpRight,
+  Package, AlertTriangle, Loader2, ArrowUpRight, Trash2,
 } from 'lucide-react';
 
 export default function SellerRidersContent() {
@@ -14,6 +14,8 @@ export default function SellerRidersContent() {
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ONLINE' | 'OFFLINE'>('ALL');
+  const [deletingRider, setDeletingRider] = useState<any | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
 
   const fetchRiders = async () => {
     setLoading(true);
@@ -34,6 +36,24 @@ export default function SellerRidersContent() {
   useEffect(() => {
     fetchRiders();
   }, []);
+
+  const handleDeleteRider = async () => {
+    if (!deletingRider) return;
+    try {
+      setDeleteLoading(true);
+      const res = await fetchApi<any>(`/seller/riders/${deletingRider.id}`, {
+        method: 'DELETE',
+      });
+      if (res.success) {
+        setDeletingRider(null);
+        await fetchRiders();
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to delete rider account');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   // Filter logic
   const filteredRiders = riders.filter((r) => {
@@ -122,40 +142,40 @@ export default function SellerRidersContent() {
           <div className="text-xl font-black text-blue-400 font-mono">{formatCurrency(totalFleetDeliveredValue)}</div>
         </div>
 
-        {/* Card 4: Total Rider Earnings */}
+        {/* Card 4: Total Fleet Earnings */}
         <div className="p-4 rounded-3xl bg-[#1f2136] border border-white/10 shadow-xl flex flex-col justify-between h-28">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Riders Income</span>
-            <div className="w-7 h-7 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Riders Share</span>
+            <div className="w-7 h-7 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl font-black text-emerald-400 font-mono">{formatCurrency(totalFleetEarnings)}</div>
+          <div className="text-xl font-black text-amber-400 font-mono">{formatCurrency(totalFleetEarnings)}</div>
         </div>
       </div>
 
       {/* ── Search & Filter Controls ── */}
-      <div className="p-4 rounded-3xl bg-[#1f2136] border border-white/10 shadow-xl flex items-center justify-between gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      <div className="p-4 rounded-3xl bg-[#1f2136] border border-white/10 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            placeholder="Search by rider name, phone or vehicle no..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by rider name, phone or vehicle no…"
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[#181928] border border-white/10 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+            className="w-full pl-10 pr-4 py-2 rounded-2xl bg-slate-900/80 border border-white/10 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-900/80 border border-white/10 w-full sm:w-auto">
           {(['ALL', 'ONLINE', 'OFFLINE'] as const).map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex-1 sm:flex-initial cursor-pointer ${
                 statusFilter === st
-                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg'
-                  : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               {st === 'ALL' ? 'All Riders' : st === 'ONLINE' ? '🟢 On Duty' : '🔴 Off Duty'}
@@ -164,17 +184,17 @@ export default function SellerRidersContent() {
         </div>
       </div>
 
-      {/* ── Riders Table ── */}
-      <div className="rounded-3xl bg-[#1f2136] border border-white/10 shadow-xl overflow-hidden">
+      {/* ── Riders Fleet Table ── */}
+      <div className="rounded-3xl bg-[#1f2136] border border-white/10 shadow-2xl overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center p-12 text-slate-400 gap-2 text-xs font-medium">
-            <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
-            <span>Loading riders fleet performance…</span>
+          <div className="p-12 text-center text-slate-400 space-y-3">
+            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin mx-auto" />
+            <p className="text-xs font-bold">Loading fleet riders data...</p>
           </div>
         ) : filteredRiders.length === 0 ? (
-          <div className="text-center p-12 space-y-3">
-            <Bike className="w-10 h-10 text-slate-600 mx-auto" />
-            <p className="text-slate-400 font-bold text-sm">No riders found.</p>
+          <div className="p-12 text-center text-slate-400 space-y-2">
+            <Users className="w-10 h-10 text-slate-600 mx-auto" />
+            <p className="text-sm font-bold text-white">No riders found</p>
             <p className="text-slate-500 text-xs">Try clearing search filters or add riders to fleet.</p>
           </div>
         ) : (
@@ -189,7 +209,7 @@ export default function SellerRidersContent() {
                   <th className="p-4 text-right">Rider Earnings</th>
                   <th className="p-4 text-center">Delivered Orders</th>
                   <th className="p-4 text-center">Cancelled Orders</th>
-                  <th className="p-4 text-center">Contact</th>
+                  <th className="p-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-slate-200">
@@ -267,19 +287,27 @@ export default function SellerRidersContent() {
                       </span>
                     </td>
 
-                    {/* Contact Call Button */}
+                    {/* Actions: Call & Delete */}
                     <td className="p-4 text-center">
-                      {r.phone ? (
-                        <a
-                          href={`tel:${r.phone}`}
-                          className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all mx-auto"
-                          title={`Call ${r.name}`}
+                      <div className="flex items-center justify-center gap-2">
+                        {r.phone && (
+                          <a
+                            href={`tel:${r.phone}`}
+                            className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                            title={`Call ${r.name}`}
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setDeletingRider(r)}
+                          className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-600 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                          title={`Permanently Delete ${r.name}`}
                         >
-                          <Phone className="w-3.5 h-3.5" />
-                        </a>
-                      ) : (
-                        <span className="text-slate-600">-</span>
-                      )}
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -288,6 +316,55 @@ export default function SellerRidersContent() {
           </div>
         )}
       </div>
+
+      {/* ── Delete Confirmation Modal ── */}
+      {deletingRider && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-[#1e1f32] border border-rose-500/40 p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h3 className="font-bold text-rose-400 text-sm flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-rose-500" /> Delete Rider Account
+              </h3>
+              <button onClick={() => setDeletingRider(null)} className="text-slate-400 hover:text-white p-1">
+                <XCircle className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-300">
+              <p>
+                Are you sure you want to permanently delete rider account <strong className="text-white font-bold">{deletingRider.name}</strong>?
+              </p>
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] space-y-1.5">
+                <p className="font-bold text-rose-200">⚠️ Important Consequences:</p>
+                <ul className="list-disc list-inside space-y-1 text-rose-200/80">
+                  <li>Rider profile and stats will be permanently removed.</li>
+                  <li>The email <code className="font-mono text-white bg-black/40 px-1 py-0.5 rounded">{deletingRider.email}</code> will be completely freed up.</li>
+                  <li>Future registrations with this email will start as a brand new account with 0 deliveries.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setDeletingRider(null)}
+                className="px-4 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/15 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteRider}
+                disabled={deleteLoading}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-500 transition-all flex items-center gap-2 shadow-lg shadow-rose-600/30 disabled:opacity-50 cursor-pointer"
+              >
+                {deleteLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Permanently Delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

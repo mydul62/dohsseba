@@ -16,6 +16,7 @@ router.get('/store-profile', sellerController.getStoreProfile);
 router.put('/store-profile', sellerController.updateStoreProfile);
 router.patch('/auto-accept', sellerController.toggleAutoAccept);
 router.get('/riders',        sellerController.getRidersFleet);
+router.delete('/riders/:id', sellerController.deleteRider);
 
 export default router;
 

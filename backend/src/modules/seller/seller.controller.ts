@@ -59,3 +59,13 @@ export const getRidersFleet = async (req: AuthRequest, res: Response, next: Next
   }
 };
 
+export const deleteRider = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const riderId = req.params.id as string;
+    await sellerService.deleteRiderAccount(riderId);
+    res.json({ success: true, message: 'Rider account deleted successfully.' });
+  } catch (err) {
+    next(err);
+  }
+};
+

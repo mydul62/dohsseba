@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma';
+import { AppError } from '../../middlewares/error.middleware';
 
 // ─── Seller Dashboard Stats ───────────────────────────────────────────────────
 
@@ -323,5 +324,74 @@ export const getRidersFleetStats = async () => {
   );
 
   return ridersWithMetrics;
+};
+
+export const deleteRiderAccount = async (riderId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: riderId },
+    include: { riderProfile: true },
+  });
+
+  if (!user) {
+    throw new AppError('Rider user account not found.', 404);
+  }
+
+  const profileId = user.riderProfile?.id;
+
+  // 1. Unlink Order references so past sales history remains valid
+  const riderMatches: any[] = [
+    { riderId: user.id },
+    { assignedRiderId: user.id },
+  ];
+  if (profileId) {
+    riderMatches.push({ riderId: profileId });
+    riderMatches.push({ assignedRiderId: profileId });
+  }
+
+  await prisma.order.updateMany({
+    where: { OR: riderMatches },
+    data: {
+      riderId: null,
+      assignedRiderId: null,
+    },
+  }).catch(() => null);
+
+  // 2. Delete related records explicitly
+  await prisma.riderAssignment.deleteMany({
+    where: {
+      OR: [
+        { riderId: user.id },
+        ...(profileId ? [{ riderId: profileId }] : []),
+      ],
+    },
+  }).catch(() => null);
+
+  await prisma.riderLocation.deleteMany({
+    where: {
+      OR: [
+        { riderId: user.id },
+        ...(profileId ? [{ riderId: profileId }] : []),
+      ],
+    },
+  }).catch(() => null);
+
+  await prisma.withdrawalRequest.deleteMany({
+    where: { userId: user.id },
+  }).catch(() => null);
+
+  await prisma.refreshToken.deleteMany({
+    where: { userId: user.id },
+  }).catch(() => null);
+
+  if (profileId) {
+    await prisma.riderProfile.delete({
+      where: { id: profileId },
+    }).catch(() => null);
+  }
+
+  // 3. Delete User record (frees up email and phone)
+  return prisma.user.delete({
+    where: { id: user.id },
+  });
 };
 
