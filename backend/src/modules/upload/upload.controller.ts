@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { v2 as cloudinary } from 'cloudinary';
+import sharp from 'sharp';
 import { sendResponse } from '../../utils/response.util';
 import { AppError } from '../../middlewares/error.middleware';
 import fs from 'fs';
@@ -51,17 +52,60 @@ const getPublicFileUrl = (req: Request, filename: string): string => {
   return `${protocol}://${host}/uploads/${filename}`;
 };
 
+/**
+ * Automatically compresses and converts image buffer to optimized WebP format.
+ * Includes safe try-catch fallback to return original buffer if conversion fails.
+ */
+const optimizeImageBuffer = async (
+  buffer: Buffer,
+  originalMimetype: string
+): Promise<{ buffer: Buffer; mimetype: string; extension: string }> => {
+  try {
+    // If image is GIF or SVG, retain original format
+    if (originalMimetype.includes('gif') || originalMimetype.includes('svg')) {
+      const ext = originalMimetype.split('/')[1] || 'jpg';
+      return { buffer, mimetype: originalMimetype, extension: ext };
+    }
+
+    const compressedBuffer = await sharp(buffer)
+      .resize({
+        width: 1400,
+        height: 1400,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    return {
+      buffer: compressedBuffer,
+      mimetype: 'image/webp',
+      extension: 'webp',
+    };
+  } catch (err) {
+    console.warn('⚠️ Sharp image compression skipped, using original buffer:', err);
+    const ext = originalMimetype.split('/')[1] || 'jpg';
+    return { buffer, mimetype: originalMimetype, extension: ext };
+  }
+};
+
 export const uploadSingleImage = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.file) {
       return next(new AppError('No image file provided.', 400));
     }
 
+    // Process & compress image to WebP format
+    const { buffer: processedBuffer, mimetype, extension } = await optimizeImageBuffer(
+      req.file.buffer,
+      req.file.mimetype
+    );
+
     // 1. If Cloudinary is configured, upload to Cloudinary
     if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_CLOUD_NAME !== 'your-cloud-name') {
       try {
-        const b64 = Buffer.from(req.file.buffer).toString('base64');
-        const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+        const b64 = processedBuffer.toString('base64');
+        const dataURI = `data:${mimetype};base64,${b64}`;
         const result = await cloudinary.uploader.upload(dataURI, {
           folder: 'dohssheba',
         });
@@ -76,10 +120,9 @@ export const uploadSingleImage = async (req: Request, res: Response, next: NextF
 
     // 2. Try Disk Storage
     try {
-      const ext = req.file.mimetype.split('/')[1] || 'jpg';
-      const filename = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+      const filename = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
       const filepath = path.join(uploadsDir, filename);
-      fs.writeFileSync(filepath, req.file.buffer);
+      fs.writeFileSync(filepath, processedBuffer);
 
       const fileUrl = getPublicFileUrl(req, filename);
       return sendResponse(res, 200, 'Image processed successfully', {
@@ -87,8 +130,8 @@ export const uploadSingleImage = async (req: Request, res: Response, next: NextF
       });
     } catch (diskErr) {
       console.warn('⚠️ Local disk write failed, returning Data URI fallback:', diskErr);
-      const b64 = Buffer.from(req.file.buffer).toString('base64');
-      const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+      const b64 = processedBuffer.toString('base64');
+      const dataURI = `data:${mimetype};base64,${b64}`;
       return sendResponse(res, 200, 'Image processed successfully', {
         url: dataURI,
       });
@@ -109,10 +152,15 @@ export const uploadMultipleImages = async (req: Request, res: Response, next: Ne
 
     for (const file of files) {
       let uploadedUrl = '';
+      const { buffer: processedBuffer, mimetype, extension } = await optimizeImageBuffer(
+        file.buffer,
+        file.mimetype
+      );
+
       if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_CLOUD_NAME !== 'your-cloud-name') {
         try {
-          const b64 = Buffer.from(file.buffer).toString('base64');
-          const dataURI = `data:${file.mimetype};base64,${b64}`;
+          const b64 = processedBuffer.toString('base64');
+          const dataURI = `data:${mimetype};base64,${b64}`;
           const result = await cloudinary.uploader.upload(dataURI, {
             folder: 'dohssheba',
           });
@@ -122,14 +170,13 @@ export const uploadMultipleImages = async (req: Request, res: Response, next: Ne
 
       if (!uploadedUrl) {
         try {
-          const ext = file.mimetype.split('/')[1] || 'jpg';
-          const filename = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+          const filename = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
           const filepath = path.join(uploadsDir, filename);
-          fs.writeFileSync(filepath, file.buffer);
+          fs.writeFileSync(filepath, processedBuffer);
           uploadedUrl = getPublicFileUrl(req, filename);
         } catch (_) {
-          const b64 = Buffer.from(file.buffer).toString('base64');
-          uploadedUrl = `data:${file.mimetype};base64,${b64}`;
+          const b64 = processedBuffer.toString('base64');
+          uploadedUrl = `data:${mimetype};base64,${b64}`;
         }
       }
 
