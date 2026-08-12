@@ -329,7 +329,7 @@ export const getRidersFleetStats = async () => {
 export const deleteRiderAccount = async (riderId: string) => {
   const user = await prisma.user.findUnique({
     where: { id: riderId },
-    include: { riderProfile: true },
+    include: { riderProfile: true, wallet: true },
   });
 
   if (!user) {
@@ -337,8 +337,9 @@ export const deleteRiderAccount = async (riderId: string) => {
   }
 
   const profileId = user.riderProfile?.id;
+  const walletId = user.wallet?.id;
 
-  // 1. Unlink Order references so past sales history remains valid
+  // 1. Unlink Order references so past sales history remains intact
   const riderMatches: any[] = [
     { riderId: user.id },
     { assignedRiderId: user.id },
@@ -356,7 +357,7 @@ export const deleteRiderAccount = async (riderId: string) => {
     },
   }).catch(() => null);
 
-  // 2. Delete related records explicitly
+  // 2. Delete related Rider records explicitly
   await prisma.riderAssignment.deleteMany({
     where: {
       OR: [
@@ -375,23 +376,43 @@ export const deleteRiderAccount = async (riderId: string) => {
     },
   }).catch(() => null);
 
-  await prisma.withdrawalRequest.deleteMany({
-    where: { userId: user.id },
-  }).catch(() => null);
+  // 3. Delete user tokens, withdrawal requests, notifications, reviews, addresses & cart/wishlist
+  await prisma.withdrawalRequest.deleteMany({ where: { userId: user.id } }).catch(() => null);
+  await prisma.refreshToken.deleteMany({ where: { userId: user.id } }).catch(() => null);
+  await prisma.notification.deleteMany({ where: { userId: user.id } }).catch(() => null);
+  await prisma.review.deleteMany({ where: { userId: user.id } }).catch(() => null);
+  await prisma.address.deleteMany({ where: { userId: user.id } }).catch(() => null);
+  await prisma.cart.deleteMany({ where: { userId: user.id } }).catch(() => null);
+  await prisma.wishlist.deleteMany({ where: { userId: user.id } }).catch(() => null);
 
-  await prisma.refreshToken.deleteMany({
-    where: { userId: user.id },
-  }).catch(() => null);
-
-  if (profileId) {
-    await prisma.riderProfile.delete({
-      where: { id: profileId },
-    }).catch(() => null);
+  // 4. Delete Wallet Transactions & Wallet
+  if (walletId) {
+    await prisma.transaction.deleteMany({ where: { walletId } }).catch(() => null);
+    await prisma.wallet.delete({ where: { id: walletId } }).catch(() => null);
   }
 
-  // 3. Delete User record (frees up email and phone)
-  return prisma.user.delete({
-    where: { id: user.id },
-  });
+  // 5. Delete RiderProfile
+  if (profileId) {
+    await prisma.riderProfile.delete({ where: { id: profileId } }).catch(() => null);
+  }
+
+  // 6. Try hard deleting User record; if any DB constraint blocks hard deletion, fallback to anonymization
+  try {
+    return await prisma.user.delete({
+      where: { id: user.id },
+    });
+  } catch (err) {
+    console.warn('⚠️ Hard delete user notice, running anonymization fallback:', err);
+    const timestamp = Date.now();
+    return await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        email: `deleted_rider_${timestamp}_${user.id.substring(0, 5)}@deleted.invalid`,
+        phone: user.phone ? `del_${timestamp}_${user.phone}` : null,
+        isActive: false,
+        name: `Deleted Rider (${user.name})`,
+      },
+    });
+  }
 };
 
