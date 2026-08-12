@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Tag, Plus, Search, Edit2, Trash2, Package, Loader2, FolderTree, AlertTriangle, X, Image as ImageIcon, Sparkles, Upload, ChevronRight, Layers, Lock } from 'lucide-react';
+import { Tag, Plus, Search, Edit2, Trash2, Package, Loader2, FolderTree, AlertTriangle, X, Image as ImageIcon, Sparkles, Upload, ChevronRight, Layers, Lock, RefreshCw } from 'lucide-react';
 import { fetchApi, uploadSingleImageApi } from '@/lib/api-client';
+import { generateCategorySlug, cleanSlugInput, isValidSlug } from '@/utils/slug.util';
 
 const SUGGESTED_IMAGES = [
   { label: 'Vegetables & Fruits', url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&auto=format&fit=crop&q=80' },
@@ -24,6 +25,8 @@ export default function CategoriesPage() {
   const [adding, setAdding] = useState(false);
   const [categoryType, setCategoryType] = useState<'PARENT' | 'SUB'>('PARENT');
   const [newName, setNewName] = useState('');
+  const [newSlug, setNewSlug] = useState('');
+  const [isNewSlugTouched, setIsNewSlugTouched] = useState(false);
   const [newImage, setNewImage] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [parentId, setParentId] = useState('');
@@ -32,6 +35,8 @@ export default function CategoriesPage() {
   // Edit modal state
   const [editingCat, setEditingCat] = useState<any | null>(null);
   const [editName, setEditName] = useState('');
+  const [editSlug, setEditSlug] = useState('');
+  const [isEditSlugTouched, setIsEditSlugTouched] = useState(true);
   const [editImage, setEditImage] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editParentId, setEditParentId] = useState('');
@@ -95,15 +100,54 @@ export default function CategoriesPage() {
       setParentId('');
     }
     setNewName('');
+    setNewSlug('');
+    setIsNewSlugTouched(false);
     setNewImage('');
     setNewDesc('');
     setAdding(true);
   };
 
+  const handleNewNameChange = (val: string) => {
+    setNewName(val);
+    if (!isNewSlugTouched) {
+      setNewSlug(generateCategorySlug(val));
+    }
+  };
+
+  const handleNewSlugChange = (val: string) => {
+    const cleaned = val.replace(/^\/+/, '');
+    setNewSlug(cleaned);
+    setIsNewSlugTouched(true);
+  };
+
+  const handleResetNewSlug = () => {
+    setNewSlug(generateCategorySlug(newName));
+    setIsNewSlugTouched(false);
+  };
+
   const addCat = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim()) {
+      alert('Please enter category name.');
+      return;
+    }
     if (categoryType === 'SUB' && !parentId) {
       alert('Please select a Parent Category for this subcategory.');
+      return;
+    }
+
+    const finalSlug = cleanSlugInput(newSlug || generateCategorySlug(newName));
+    if (!finalSlug) {
+      alert('Category slug cannot be empty.');
+      return;
+    }
+    if (!isValidSlug(finalSlug)) {
+      alert('Invalid slug format. Slug can only contain lowercase letters, numbers, and hyphens (e.g. rice-dal-flour).');
+      return;
+    }
+
+    const duplicate = cats.find((c) => c.slug?.toLowerCase() === finalSlug.toLowerCase());
+    if (duplicate) {
+      alert(`⚠️ Duplicate Slug Error!\n\nThe slug "${finalSlug}" is already assigned to category "${duplicate.name}". Please enter a unique slug.`);
       return;
     }
 
@@ -113,6 +157,7 @@ export default function CategoriesPage() {
         method: 'POST',
         body: JSON.stringify({
           name: newName.trim(),
+          slug: finalSlug,
           image: newImage.trim() || undefined,
           description: newDesc.trim() || undefined,
           parentId: categoryType === 'SUB' ? parentId : undefined,
@@ -120,6 +165,8 @@ export default function CategoriesPage() {
       });
       if (res.success) {
         setNewName('');
+        setNewSlug('');
+        setIsNewSlugTouched(false);
         setNewImage('');
         setNewDesc('');
         setParentId('');
@@ -136,19 +183,59 @@ export default function CategoriesPage() {
   const handleEditClick = (cat: any) => {
     setEditingCat(cat);
     setEditName(cat.name || '');
+    setEditSlug(cat.slug || '');
+    setIsEditSlugTouched(true);
     setEditImage(cat.image || '');
     setEditDesc(cat.description || '');
     setEditParentId(cat.parentId || '');
   };
 
+  const handleEditNameChange = (val: string) => {
+    setEditName(val);
+    if (!isEditSlugTouched) {
+      setEditSlug(generateCategorySlug(val));
+    }
+  };
+
+  const handleEditSlugChange = (val: string) => {
+    const cleaned = val.replace(/^\/+/, '');
+    setEditSlug(cleaned);
+    setIsEditSlugTouched(true);
+  };
+
+  const handleResetEditSlug = () => {
+    setEditSlug(generateCategorySlug(editName));
+    setIsEditSlugTouched(false);
+  };
+
   const updateCat = async () => {
     if (!editingCat || !editName.trim()) return;
+
+    const finalSlug = cleanSlugInput(editSlug || generateCategorySlug(editName));
+    if (!finalSlug) {
+      alert('Category slug cannot be empty.');
+      return;
+    }
+    if (!isValidSlug(finalSlug)) {
+      alert('Invalid slug format. Slug can only contain lowercase letters, numbers, and hyphens.');
+      return;
+    }
+
+    const duplicate = cats.find(
+      (c) => c.id !== editingCat.id && c.slug?.toLowerCase() === finalSlug.toLowerCase()
+    );
+    if (duplicate) {
+      alert(`⚠️ Duplicate Slug Error!\n\nThe slug "${finalSlug}" is already assigned to category "${duplicate.name}". Please enter a unique slug.`);
+      return;
+    }
+
     try {
       setEditSubmitting(true);
       const res = await fetchApi<any>(`/product-categories/${editingCat.id}`, {
         method: 'PUT',
         body: JSON.stringify({
           name: editName.trim(),
+          slug: finalSlug,
           image: editImage.trim() || null,
           description: editDesc.trim() || null,
           parentId: editParentId || null,
@@ -320,10 +407,49 @@ export default function CategoriesPage() {
                 <input
                   autoFocus
                   value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
+                  onChange={(e) => handleNewNameChange(e.target.value)}
                   placeholder={categoryType === 'PARENT' ? 'e.g. Meat & Poultry, Beverages...' : 'e.g. Broiler Chicken, Soft Drinks...'}
                   className="w-full px-4 py-2.5 rounded-xl bg-[#12131f] border border-white/10 text-white text-sm focus:outline-none focus:border-indigo-500"
                 />
+              </div>
+
+              {/* Slug Input Field */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                    Slug *
+                  </label>
+                  {isNewSlugTouched ? (
+                    <span className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
+                      <span>✎ Manually edited</span>
+                      <button
+                        type="button"
+                        onClick={handleResetNewSlug}
+                        className="ml-1.5 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 text-[9px] font-mono transition-colors"
+                        title="Reset auto-generated slug from title"
+                      >
+                        Reset Auto
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-emerald-400 font-semibold">
+                      ⚡ Auto-generated
+                    </span>
+                  )}
+                </div>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3.5 text-slate-400 font-mono text-xs select-none">/</span>
+                  <input
+                    value={newSlug}
+                    onChange={(e) => handleNewSlugChange(e.target.value)}
+                    placeholder="e.g. cal-dal-moyda"
+                    className="w-full pl-7 pr-4 py-2.5 rounded-xl bg-[#12131f] border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                  <span>URL Identifier: <code className="text-indigo-300 font-mono">/{newSlug || '...'}</code></span>
+                  <span className="text-slate-500 text-[9px]">Lowercase, numbers & hyphens</span>
+                </p>
               </div>
 
               {/* Direct Upload Button & URL input */}
@@ -462,10 +588,49 @@ export default function CategoriesPage() {
                 <input
                   autoFocus
                   value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
+                  onChange={(e) => handleEditNameChange(e.target.value)}
                   placeholder="Category name…"
                   className="w-full px-4 py-2.5 rounded-xl bg-[#12131f] border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500"
                 />
+              </div>
+
+              {/* Slug Input Field */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                    Slug *
+                  </label>
+                  {isEditSlugTouched ? (
+                    <span className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
+                      <span>✎ Custom Slug</span>
+                      <button
+                        type="button"
+                        onClick={handleResetEditSlug}
+                        className="ml-1.5 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 text-[9px] font-mono transition-colors"
+                        title="Reset auto-generated slug from title"
+                      >
+                        Reset Auto
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-emerald-400 font-semibold">
+                      ⚡ Auto-generated
+                    </span>
+                  )}
+                </div>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3.5 text-slate-400 font-mono text-xs select-none">/</span>
+                  <input
+                    value={editSlug}
+                    onChange={(e) => handleEditSlugChange(e.target.value)}
+                    placeholder="e.g. cal-dal-moyda"
+                    className="w-full pl-7 pr-4 py-2.5 rounded-xl bg-[#12131f] border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                  <span>URL Identifier: <code className="text-amber-300 font-mono">/{editSlug || '...'}</code></span>
+                  <span className="text-slate-500 text-[9px]">Lowercase, numbers & hyphens</span>
+                </p>
               </div>
 
               <div>

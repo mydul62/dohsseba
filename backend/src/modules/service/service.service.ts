@@ -183,14 +183,49 @@ export const createServiceCategory = async (data: {
   description?: string;
   icon?: string;
   image?: string;
+  slug?: string;
 }) => {
-  const slug = generateSlug(data.name);
+  const rawSlug = data.slug && data.slug.trim() !== '' ? data.slug.trim() : data.name;
+  let slug = generateSlug(rawSlug);
+  if (!slug) {
+    slug = `scat-${Date.now()}`;
+  }
+
+  const existing = await prisma.serviceCategory.findFirst({
+    where: { slug: { equals: slug, mode: 'insensitive' } },
+  });
+  if (existing) {
+    throw new AppError(`Category slug "${slug}" is already in use. Please enter a unique slug.`, 400);
+  }
+
   return prisma.serviceCategory.create({ data: { ...data, slug } });
 };
 
-export const updateServiceCategory = async (id: string, data: object) => {
+export const updateServiceCategory = async (id: string, data: any) => {
   const existing = await prisma.serviceCategory.findUnique({ where: { id } });
   if (!existing) throw new AppError('Category not found.', 404);
+
+  if (data.slug !== undefined && data.slug !== null) {
+    const rawSlug = String(data.slug).trim();
+    if (!rawSlug) {
+      throw new AppError('Category slug cannot be empty.', 400);
+    }
+    const cleanSlug = generateSlug(rawSlug);
+    if (!cleanSlug) {
+      throw new AppError('Invalid category slug format.', 400);
+    }
+    const duplicate = await prisma.serviceCategory.findFirst({
+      where: {
+        slug: { equals: cleanSlug, mode: 'insensitive' },
+        id: { not: id },
+      },
+    });
+    if (duplicate) {
+      throw new AppError(`Category slug "${cleanSlug}" is already in use by another category.`, 400);
+    }
+    data.slug = cleanSlug;
+  }
+
   return prisma.serviceCategory.update({ where: { id }, data });
 };
 

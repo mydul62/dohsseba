@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchApi } from '@/lib/api-client';
 import { formatCurrency } from '@/utils/cn';
 import { useLanguageStore } from '@/store/useLanguageStore';
+import { generateCategorySlug, cleanSlugInput, isValidSlug } from '@/utils/slug.util';
 import {
   Wrench, ShieldCheck, Check, X, Plus, Search, Filter,
   Trash2, Edit, Edit2, Clock, CheckCircle2, UserCheck, Users, UserPlus, Phone, Loader2, Upload, Image as ImageIcon, Sparkles, Layers, Tag
@@ -47,6 +48,8 @@ export default function AdminServicesPage() {
   const [showAddCatModal, setShowAddCatModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any | null>(null);
   const [catName, setCatName] = useState('');
+  const [catSlug, setCatSlug] = useState('');
+  const [isCatSlugTouched, setIsCatSlugTouched] = useState(false);
   const [catDesc, setCatDesc] = useState('');
   const [catImage, setCatImage] = useState('https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&q=80');
   const [addingCat, setAddingCat] = useState(false);
@@ -168,6 +171,8 @@ export default function AdminServicesPage() {
   const handleOpenCreateCatModal = () => {
     setEditingCategory(null);
     setCatName('');
+    setCatSlug('');
+    setIsCatSlugTouched(false);
     setCatDesc('');
     setCatImage('https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&q=80');
     setShowAddCatModal(true);
@@ -176,6 +181,8 @@ export default function AdminServicesPage() {
   const handleOpenEditCatModal = (cat: any) => {
     setEditingCategory(cat);
     setCatName(cat.name || '');
+    setCatSlug(cat.slug || '');
+    setIsCatSlugTouched(true);
     setCatDesc(cat.description || '');
     setCatImage(cat.image || 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&q=80');
     setShowAddCatModal(true);
@@ -184,6 +191,17 @@ export default function AdminServicesPage() {
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!catName) return;
+
+    const finalSlug = cleanSlugInput(catSlug || generateCategorySlug(catName));
+    if (!finalSlug) {
+      alert('Category slug cannot be empty.');
+      return;
+    }
+    if (!isValidSlug(finalSlug)) {
+      alert('Invalid slug format. Lowercase letters, numbers, and hyphens only.');
+      return;
+    }
+
     setAddingCat(true);
     try {
       if (editingCategory) {
@@ -191,6 +209,7 @@ export default function AdminServicesPage() {
           method: 'PATCH',
           body: JSON.stringify({
             name: catName,
+            slug: finalSlug,
             description: catDesc,
             image: catImage,
           }),
@@ -201,6 +220,7 @@ export default function AdminServicesPage() {
           method: 'POST',
           body: JSON.stringify({
             name: catName,
+            slug: finalSlug,
             description: catDesc,
             image: catImage,
           }),
@@ -211,6 +231,8 @@ export default function AdminServicesPage() {
       setShowAddCatModal(false);
       setEditingCategory(null);
       setCatName('');
+      setCatSlug('');
+      setIsCatSlugTouched(false);
       setCatDesc('');
       setTimeout(() => setActionMsg(''), 4000);
       loadData();
@@ -723,15 +745,57 @@ export default function AdminServicesPage() {
 
             <form onSubmit={handleAddCategory} className="space-y-4 text-xs font-semibold">
               <div>
-                <label className="block text-slate-600 mb-1 font-bold">Category Name</label>
+                <label className="block text-slate-600 mb-1 font-bold">Category Name *</label>
                 <input
                   type="text"
                   placeholder="e.g. CCTV Security & Automation"
                   value={catName}
-                  onChange={(e) => setCatName(e.target.value)}
+                  onChange={(e) => {
+                    setCatName(e.target.value);
+                    if (!isCatSlugTouched) {
+                      setCatSlug(generateCategorySlug(e.target.value));
+                    }
+                  }}
                   className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white"
                   required
                 />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-600 font-bold">Slug *</label>
+                  {isCatSlugTouched ? (
+                    <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
+                      <span>✎ Custom Slug</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCatSlug(generateCategorySlug(catName));
+                          setIsCatSlugTouched(false);
+                        }}
+                        className="ml-1 px-1.5 py-0.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 text-[9px] font-mono transition-colors"
+                      >
+                        Reset Auto
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-emerald-600 font-semibold">⚡ Auto-generated</span>
+                  )}
+                </div>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3.5 text-slate-400 font-mono text-xs select-none">/</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. cctv-security"
+                    value={catSlug}
+                    onChange={(e) => {
+                      setCatSlug(e.target.value.replace(/^\/+/, ''));
+                      setIsCatSlugTouched(true);
+                    }}
+                    className="w-full h-11 pl-7 pr-3.5 rounded-xl border border-slate-300 bg-white font-mono text-xs"
+                    required
+                  />
+                </div>
               </div>
 
               <div>
