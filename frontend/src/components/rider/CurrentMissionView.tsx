@@ -21,7 +21,9 @@ import {
   Truck,
   Check,
   X,
+  Printer,
 } from 'lucide-react';
+import { PosReceiptPrinter } from '@/components/common/PosReceiptPrinter';
 
 interface CurrentMissionViewProps {
   mission: any;
@@ -241,7 +243,7 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
           </div>
         </div>
 
-        {/* Action Buttons: Phone Call & Eye Details Icon */}
+        {/* Action Buttons: Phone Call, POS Print & Eye Details Icon */}
         <div className="flex items-center gap-2">
           <a
             href={`tel:${customerPhone}`}
@@ -250,6 +252,11 @@ export function CurrentMissionView({ mission: initialMission, onMissionUpdate, o
           >
             <Phone className="w-4 h-4" />
           </a>
+          <PosReceiptPrinter
+            order={mission}
+            buttonText="🖨️"
+            buttonClassName="w-9 h-9 rounded-2xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/80 flex items-center justify-center transition-all active:scale-95"
+          />
           <button
             type="button"
             onClick={() => onOpenDetails?.(mission)}
