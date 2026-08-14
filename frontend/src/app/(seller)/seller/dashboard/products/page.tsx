@@ -129,28 +129,74 @@ export default function ProductsPage() {
 
   // ─── Filters ────────────────────────────────────────────────────────────────
 
-  // Merge DB categories with product categories (so seller's product categories always appear)
-  const categories = useMemo(() => {
-    const fromProducts = products.map((p) => p.category?.name).filter(Boolean) as string[];
-    return [...new Set([...allCategories, ...fromProducts])];
+  // Merge DB categories with product categories with counts
+  const categoriesWithCount = useMemo(() => {
+    const map = new Map<string, number>();
+    products.forEach((p) => {
+      const cName = p.category?.name || (typeof p.category === 'string' ? p.category : '') || 'Uncategorized';
+      if (cName) {
+        map.set(cName, (map.get(cName) || 0) + 1);
+      }
+    });
+
+    // Also include DB categories
+    allCategories.forEach((cName) => {
+      if (!map.has(cName)) {
+        map.set(cName, 0);
+      }
+    });
+
+    return Array.from(map.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   }, [products, allCategories]);
 
   const filtered = useMemo(() => {
     let list = [...products];
-    if (search)  list = list.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()));
-    if (catFilter)  list = list.filter((p) => p.category?.name === catFilter);
-    if (statusFilter === 'active')      list = list.filter((p) => p.isActive && p.stock > 0);
-    if (statusFilter === 'archived')    list = list.filter((p) => !p.isActive);
-    if (statusFilter === 'out_of_stock') list = list.filter((p) => p.stock === 0);
-    if (statusFilter === 'low_stock')   list = list.filter((p) => p.stock > 0 && p.stock <= 10);
-    if (statusFilter === 'featured')    list = list.filter((p) => p.isFeatured);
+
+    // Search Filter (matches name, SKU, category, unit, description)
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter((p) => {
+        const name = (p.name || '').toLowerCase();
+        const sku = (p.sku || '').toLowerCase();
+        const cat = (p.category?.name || (typeof p.category === 'string' ? p.category : '')).toLowerCase();
+        const unit = (p.unit || '').toLowerCase();
+        const desc = (p.description || '').toLowerCase();
+        return name.includes(q) || sku.includes(q) || cat.includes(q) || unit.includes(q) || desc.includes(q);
+      });
+    }
+
+    // Category Filter (case-insensitive name and slug match)
+    if (catFilter) {
+      const targetCat = catFilter.trim().toLowerCase();
+      list = list.filter((p) => {
+        const cName = (p.category?.name || (typeof p.category === 'string' ? p.category : '')).toLowerCase();
+        const cSlug = (p.category?.slug || '').toLowerCase();
+        return cName === targetCat || cSlug === targetCat;
+      });
+    }
+
+    // Status Filter
+    if (statusFilter === 'active')        list = list.filter((p) => p.isActive && p.stock > 0);
+    if (statusFilter === 'archived')      list = list.filter((p) => !p.isActive);
+    if (statusFilter === 'out_of_stock')   list = list.filter((p) => p.stock === 0);
+    if (statusFilter === 'low_stock')     list = list.filter((p) => p.stock > 0 && p.stock <= 10);
+    if (statusFilter === 'discounted')    list = list.filter((p) => Number(p.discount || 0) > 0);
+    if (statusFilter === 'featured')      list = list.filter((p) => p.isFeatured);
+
+    // Sorting
+    if (sortKey === 'newest')       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (sortKey === 'oldest')       list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     if (sortKey === 'name_asc')     list.sort((a, b) => a.name.localeCompare(b.name));
+    if (sortKey === 'name_desc')    list.sort((a, b) => b.name.localeCompare(a.name));
     if (sortKey === 'price_asc')    list.sort((a, b) => a.price - b.price);
     if (sortKey === 'price_desc')   list.sort((a, b) => b.price - a.price);
     if (sortKey === 'stock_asc')    list.sort((a, b) => a.stock - b.stock);
-    if (sortKey === 'rating_desc')  list.sort((a, b) => b.rating - a.rating);
-    if (sortKey === 'sales_desc')   list.sort((a, b) => b._count.orderItems - a._count.orderItems);
-    if (sortKey === 'newest')       list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    if (sortKey === 'stock_desc')   list.sort((a, b) => b.stock - a.stock);
+    if (sortKey === 'rating_desc')  list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    if (sortKey === 'sales_desc')   list.sort((a, b) => (b._count?.orderItems || 0) - (a._count?.orderItems || 0));
+
     return list;
   }, [products, search, catFilter, statusFilter, sortKey]);
 
@@ -342,84 +388,150 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* ── Stats ── */}
+      {/* ── Stats (Clickable Quick Filters) ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Products', value: products.length, icon: <Package className="w-5 h-5 text-indigo-400" />, bg: 'bg-indigo-500/10' },
-          { label: 'Active',          value: totalActive,    icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />, bg: 'bg-emerald-500/10' },
-          { label: 'Out of Stock',    value: totalOutOfStock, icon: <X className="w-5 h-5 text-red-400" />, bg: 'bg-red-500/10' },
-          { label: 'Low Stock',       value: totalLowStock,  icon: <AlertTriangle className="w-5 h-5 text-amber-400" />, bg: 'bg-amber-500/10' },
-        ].map((s) => (
-          <div key={s.label} className="p-4 rounded-2xl bg-[#1f2136] border border-white/10 flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.bg}`}>{s.icon}</div>
-            <div>
-              <p className="text-[11px] text-slate-400 font-semibold">{s.label}</p>
-              <p className="text-xl font-black text-white">{s.value}</p>
-            </div>
-          </div>
-        ))}
+          { key: '', label: 'Total Products', value: products.length, icon: <Package className="w-5 h-5 text-indigo-400" />, bg: 'bg-indigo-500/10' },
+          { key: 'active', label: 'Active', value: totalActive, icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />, bg: 'bg-emerald-500/10' },
+          { key: 'out_of_stock', label: 'Out of Stock', value: totalOutOfStock, icon: <X className="w-5 h-5 text-red-400" />, bg: 'bg-red-500/10' },
+          { key: 'low_stock', label: 'Low Stock', value: totalLowStock, icon: <AlertTriangle className="w-5 h-5 text-amber-400" />, bg: 'bg-amber-500/10' },
+        ].map((s) => {
+          const isSelected = statusFilter === s.key;
+          return (
+            <button
+              key={s.label}
+              onClick={() => { setStatusFilter(s.key); setPage(1); }}
+              className={`p-4 rounded-2xl bg-[#1f2136] border text-left flex items-center gap-3 transition-all cursor-pointer ${
+                isSelected
+                  ? 'border-indigo-500 ring-2 ring-indigo-500/30 shadow-lg'
+                  : 'border-white/10 hover:border-white/20'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.bg}`}>{s.icon}</div>
+              <div>
+                <p className="text-[11px] text-slate-400 font-semibold">{s.label}</p>
+                <p className="text-xl font-black text-white">{s.value}</p>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       {/* ── Filter Bar ── */}
-      <div className="p-4 rounded-3xl bg-[#1f2136] border border-white/10 shadow-xl">
+      <div className="p-4 rounded-3xl bg-[#1f2136] border border-white/10 shadow-xl space-y-3">
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          {/* Search Input with inline Clear icon */}
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              placeholder="Search by name or SKU..."
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              placeholder="Search by product name, SKU, category..."
+              className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
             />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          {/* Category */}
-          <select
-            value={catFilter}
-            onChange={(e) => { setCatFilter(e.target.value); setPage(1); }}
-            className="px-3 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-slate-300 text-xs focus:outline-none focus:border-indigo-500 appearance-none transition-colors"
-          >
-            <option value="">All Categories</option>
-            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          {/* Category Dropdown with Counts */}
+          <div className="relative min-w-[170px]">
+            <select
+              value={catFilter}
+              onChange={(e) => { setCatFilter(e.target.value); setPage(1); }}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-slate-200 text-xs focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+            >
+              <option value="">All Categories ({products.length})</option>
+              {categoriesWithCount.map((c) => (
+                <option key={c.name} value={c.name}>
+                  {c.name} ({c.count})
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {/* Status */}
-          <select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            className="px-3 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-slate-300 text-xs focus:outline-none focus:border-indigo-500 appearance-none transition-colors"
-          >
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="out_of_stock">Out of Stock</option>
-            <option value="low_stock">Low Stock</option>
-            <option value="archived">Archived</option>
-            <option value="featured">Featured</option>
-          </select>
+          {/* Status Dropdown */}
+          <div className="relative min-w-[140px]">
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-slate-200 text-xs focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+            >
+              <option value="">All Status</option>
+              <option value="active">Active ({totalActive})</option>
+              <option value="out_of_stock">Out of Stock ({totalOutOfStock})</option>
+              <option value="low_stock">Low Stock ({totalLowStock})</option>
+              <option value="archived">Archived ({totalDrafts})</option>
+              <option value="featured">Featured</option>
+              <option value="discounted">Discounted</option>
+            </select>
+          </div>
 
-          {/* Sort */}
-          <select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value)}
-            className="px-3 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-slate-300 text-xs focus:outline-none focus:border-indigo-500 appearance-none transition-colors"
-          >
-            <option value="newest">Newest First</option>
-            <option value="name_asc">Name A–Z</option>
-            <option value="price_asc">Price Low–High</option>
-            <option value="price_desc">Price High–Low</option>
-            <option value="stock_asc">Stock Low–High</option>
-            <option value="rating_desc">Top Rated</option>
-            <option value="sales_desc">Best Selling</option>
-          </select>
+          {/* Sort Dropdown */}
+          <div className="relative min-w-[150px]">
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-slate-200 text-xs focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="name_asc">Name A–Z</option>
+              <option value="name_desc">Name Z–A</option>
+              <option value="price_asc">Price Low–High</option>
+              <option value="price_desc">Price High–Low</option>
+              <option value="stock_asc">Stock Low–High</option>
+              <option value="stock_desc">Stock High–Low</option>
+              <option value="rating_desc">Top Rated</option>
+              <option value="sales_desc">Best Selling</option>
+            </select>
+          </div>
 
-          {/* Clear filters */}
+          {/* Clear All Filters */}
           {(search || catFilter || statusFilter) && (
-            <button onClick={() => { setSearch(''); setCatFilter(''); setStatusFilter(''); setPage(1); }} className="flex items-center gap-1 px-3 py-2.5 rounded-xl text-xs text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-all font-bold">
-              <X className="w-3.5 h-3.5" /> Clear
+            <button
+              onClick={() => { setSearch(''); setCatFilter(''); setStatusFilter(''); setPage(1); }}
+              className="flex items-center gap-1 px-3.5 py-2.5 rounded-xl text-xs text-red-400 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 transition-all font-bold cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" /> Clear Filters
             </button>
           )}
         </div>
+
+        {/* Filter Summary Status Bar */}
+        {(search || catFilter || statusFilter) && (
+          <div className="flex items-center gap-2 pt-2 border-t border-white/5 flex-wrap text-xs">
+            <span className="text-slate-400">
+              Showing <strong className="text-white">{filtered.length}</strong> of {products.length} products
+            </span>
+            <div className="flex items-center gap-1.5 flex-wrap ml-auto">
+              {search && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[11px]">
+                  Search: "{search}"
+                  <button onClick={() => setSearch('')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {catFilter && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[11px]">
+                  Category: {catFilter}
+                  <button onClick={() => setCatFilter('')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {statusFilter && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[11px]">
+                  Status: {statusFilter.replace('_', ' ')}
+                  <button onClick={() => setStatusFilter('')} className="hover:text-white"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Bulk Action Bar ── */}
