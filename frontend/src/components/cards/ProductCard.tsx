@@ -51,13 +51,13 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="group rounded-2xl border border-border/80 bg-card overflow-hidden shadow-card hover:shadow-xl hover:border-emerald-500/40 transition-all duration-300 flex flex-col justify-between p-3">
       {/* Image & Wishlist Container */}
-      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-[#F5F5F3] mb-3 flex items-center justify-center p-2">
-        <Link href={`/services/shopping/product/${product.slug}`} onClick={handleProductClick} className="relative w-[80%] h-[80%] flex items-center justify-center">
+      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-[#F5F5F3] mb-3 flex items-center justify-center p-1">
+        <Link href={`/services/shopping/product/${product.slug}`} onClick={handleProductClick} className="relative w-full h-full flex items-center justify-center">
           <Image
             src={product.image}
             alt={product.title}
             fill
-            className="object-contain group-hover:scale-105 transition-transform duration-200 ease-out [filter:drop-shadow(0_6px_10px_rgba(0,0,0,0.12))]"
+            className="object-contain p-1 group-hover:scale-105 transition-transform duration-200 ease-out [filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.1))]"
           />
         </Link>
 

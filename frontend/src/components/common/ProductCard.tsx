@@ -159,12 +159,12 @@ export function ProductCard({
       {/* ── Center Product Image: 1:1 Aspect Ratio with #F5F5F3 background & floating drop-shadow ── */}
       <Link
         href={`/services/shopping/product/${slug}`}
-        className="relative w-full aspect-square bg-[#F5F5F3] rounded-xl flex items-center justify-center p-2 my-1 cursor-pointer overflow-hidden group/img shrink-0"
+        className="relative w-full aspect-square bg-[#F5F5F3] rounded-xl flex items-center justify-center p-1 my-1 cursor-pointer overflow-hidden group/img shrink-0"
       >
         <img
           src={image}
           alt={title}
-          className="w-[80%] h-[80%] object-contain group-hover:scale-105 transition-transform duration-200 ease-out [filter:drop-shadow(0_6px_10px_rgba(0,0,0,0.12))]"
+          className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-200 ease-out [filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.1))]"
         />
       </Link>
 
