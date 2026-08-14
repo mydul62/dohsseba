@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Heart, Plus, Minus, Check, Star, Loader2 } from 'lucide-react';
+import { Heart, Plus, Minus, Check, ShoppingBag, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useToast } from '@/components/ui/Toast';
@@ -114,180 +114,140 @@ export function ProductCard({
   };
 
   return (
-    <div className="group relative h-[310px] sm:h-[330px] w-full bg-white rounded-2xl p-3 sm:p-4 border border-slate-100/90 shadow-xs hover:shadow-sm hover:border-slate-200 transition-all duration-300 flex flex-col justify-between overflow-hidden font-sans select-none">
+    <div className="group relative w-full bg-[#1c1c1e] rounded-[22px] border border-slate-800/80 shadow-md hover:shadow-xl hover:border-slate-700 transition-all duration-300 flex flex-col overflow-hidden font-sans select-none">
       
-      {/* ── Top Row: Badge & Wishlist ── */}
-      <div className="flex items-center justify-between z-10 w-full shrink-0">
-        <div>
-          {isHot || badge?.toLowerCase() === 'hot' ? (
-            <span className="bg-[#e53935] text-white font-extrabold text-[12px] uppercase tracking-wider px-3 py-1 rounded-full shadow-2xs">
-              HOT
-            </span>
-          ) : badge ? (
-            <span className="bg-[#7eb343] text-white font-extrabold text-[12px] uppercase tracking-wider px-3 py-1 rounded-full shadow-2xs">
-              {badge}
-            </span>
-          ) : null}
+      {/* ── Top Image Container (Light Cream/Off-White Background) ── */}
+      <div className="relative w-full aspect-square bg-[#F5F4EF] flex items-center justify-center p-2 overflow-hidden">
+        
+        {/* Top Badges & Wishlist Overlay */}
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10 pointer-events-none">
+          <div className="pointer-events-auto">
+            {isHot || badge?.toLowerCase() === 'hot' ? (
+              <span className="bg-[#1b4317] text-[#22c55e] font-extrabold text-xs px-3 py-1 rounded-full shadow-xs tracking-tight">
+                HOT
+              </span>
+            ) : badge ? (
+              <span className="bg-[#1b4317] text-[#22c55e] font-extrabold text-xs px-3 py-1 rounded-full shadow-xs tracking-tight">
+                {badge}
+              </span>
+            ) : null}
+          </div>
+
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWishlist({
+                id,
+                title,
+                slug,
+                categorySlug: categorySlug as any,
+                categoryName,
+                shopName: 'DOHS Market',
+                price,
+                unit,
+                rating,
+                reviewCount: 15,
+                image,
+                stock: 50,
+              });
+            }}
+            className="w-8 h-8 rounded-full bg-[#242426]/90 hover:bg-black text-white flex items-center justify-center transition-colors cursor-pointer shadow-md pointer-events-auto"
+            title="Wishlist"
+          >
+            <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-500 text-rose-500' : 'text-white'}`} />
+          </button>
         </div>
 
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleWishlist({
-              id,
-              title,
-              slug,
-              categorySlug: categorySlug as any,
-              categoryName,
-              shopName: 'DOHS Market',
-              price,
-              unit,
-              rating,
-              reviewCount: 15,
-              image,
-              stock: 50,
-            });
-          }}
-          className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-          title="Wishlist"
+        {/* Product Image */}
+        <Link
+          href={`/services/shopping/product/${slug}`}
+          className="w-full h-full flex items-center justify-center cursor-pointer"
         >
-          <Heart className={`w-5 h-5 stroke-[1.5] ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
-        </button>
+          <img
+            src={image}
+            alt={title}
+            className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300 ease-out"
+          />
+        </Link>
       </div>
 
-      {/* ── Center Product Image: 1:1 Aspect Ratio with #F5F5F3 background & floating drop-shadow ── */}
-      <Link
-        href={`/services/shopping/product/${slug}`}
-        className="relative w-full aspect-square bg-[#F5F5F3] rounded-xl flex items-center justify-center p-1 my-1 cursor-pointer overflow-hidden group/img shrink-0"
-      >
-        <img
-          src={image}
-          alt={title}
-          className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-200 ease-out [filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.1))]"
-        />
-      </Link>
-
-      {/* ── Bottom Section: Smooth Animated Transition Container ── */}
-      <div className="shrink-0 space-y-1 mt-auto pt-1 relative min-h-[64px] flex flex-col justify-end">
+      {/* ── Bottom Content Section (Sleek Dark Panel) ── */}
+      <div className="p-3.5 bg-[#1c1c1e] text-white flex flex-col justify-between flex-1 space-y-2.5">
         
-        {/* Title & (GF) Badge */}
-        <div className="flex items-center justify-between gap-1 mb-0.5">
+        {/* Title & Unit */}
+        <div>
           <Link
             href={`/services/shopping/product/${slug}`}
-            className="font-bold text-xs sm:text-sm text-slate-800 hover:text-[#7eb343] transition-colors line-clamp-1 flex-1 min-w-0"
+            className="font-bold text-sm sm:text-base text-white hover:text-emerald-400 transition-colors line-clamp-1 block leading-tight"
           >
             {title}
           </Link>
-          
-          <div className="flex items-center gap-1 shrink-0 text-[9px] font-black text-slate-700">
-            <span className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center scale-90">GF</span>
-          </div>
+          <p className="text-xs text-slate-400 font-medium mt-1">
+            {displayUnit}
+          </p>
         </div>
 
-        {/* ── Desktop Normal State: Fades Out & Slides Up Smoothly on Hover ── */}
-        <div className="hidden sm:flex items-center justify-between pt-0.5 transition-all duration-300 ease-out transform group-hover:opacity-0 group-hover:-translate-y-2 group-hover:pointer-events-none">
-          <div className="flex items-baseline gap-1">
-            <span className="font-extrabold text-sm sm:text-base text-[#7eb343]">
-              ৳{price.toFixed(2)}
+        {/* Price Row */}
+        <div className="flex items-baseline gap-2">
+          <span className="font-extrabold text-base sm:text-lg text-[#22c55e]">
+            ৳{price.toFixed(2)}
+          </span>
+          {originalPrice && (
+            <span className="line-through text-slate-500 text-xs">
+              ৳{originalPrice.toFixed(2)}
             </span>
-            <span className="text-slate-400 text-xs font-normal">
-              / {displayUnit}
-            </span>
-            {originalPrice && (
-              <span className="line-through text-slate-400 text-[11px] ml-1">
-                ৳{originalPrice.toFixed(2)}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1 text-[11px] font-bold text-slate-700 shrink-0">
-            {rating > 0 || (totalReviews ?? reviewCount ?? 0) > 0 ? (
-              <>
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                <span>{rating.toFixed(1)}</span>
-                <span className="text-[10px] text-slate-400 font-normal">({totalReviews ?? reviewCount ?? 0})</span>
-              </>
-            ) : (
-              <span className="text-[10px] text-slate-400 font-normal">No ratings yet</span>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* ── Action Controller Row: Always visible on Mobile, Smooth Ease-Out Fade & Slide-Up on Desktop ── */}
-        <div className="flex sm:absolute sm:inset-x-0 sm:bottom-0 flex-col gap-1.5 pt-0.5 bg-white transition-all duration-300 ease-out transform opacity-100 sm:opacity-0 sm:translate-y-3 sm:pointer-events-none sm:group-hover:opacity-100 sm:group-hover:translate-y-0 sm:group-hover:pointer-events-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-baseline gap-1">
-              <span className="font-extrabold text-xs sm:text-sm text-[#7eb343]">
-                ৳{price.toFixed(2)}
-              </span>
-              <span className="text-slate-400 text-[10px] font-normal">
-                / {displayUnit}
-              </span>
-              {originalPrice && (
-                <span className="line-through text-slate-400 text-[10px] ml-1">
-                  ৳{originalPrice.toFixed(2)}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-0.5 text-[10px] font-bold text-slate-600 sm:hidden">
-              {rating > 0 || (totalReviews ?? reviewCount ?? 0) > 0 ? (
-                <>
-                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                  <span>{rating.toFixed(1)} ({totalReviews ?? reviewCount ?? 0})</span>
-                </>
-              ) : (
-                <span className="text-[9px] text-slate-400 font-normal">No ratings</span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Stepper [- 1 +] */}
-            <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden h-8 bg-white text-xs font-bold shrink-0">
-              <button
-                type="button"
-                onClick={decrementQty}
-                className="w-5 sm:w-7 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer active:scale-95"
-              >
-                <Minus className="w-3 h-3" />
-              </button>
-              <span className="w-5 sm:w-7 h-full flex items-center justify-center text-slate-800 font-bold border-x border-slate-200 text-[11px] sm:text-xs">
-                {quantity}
-              </span>
-              <button
-                type="button"
-                onClick={incrementQty}
-                className="w-5 sm:w-7 h-full flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer active:scale-95"
-              >
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-
-            {/* Add To Cart Button */}
+        {/* Action Controller Row (Stepper + Add to Cart) */}
+        <div className="flex items-center gap-2 pt-0.5">
+          {/* Stepper [- 1 +] */}
+          <div className="flex items-center justify-between bg-[#28282b] border border-slate-700/60 rounded-xl h-10 px-2 text-white font-bold text-xs shrink-0 w-20 sm:w-24">
             <button
               type="button"
-              onClick={handleAddToCart}
-              disabled={isAdding}
-              className={`flex-1 h-8 rounded-lg text-white font-bold text-xs flex items-center justify-center shadow-2xs transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed ${
-                addedAnimation
-                  ? 'bg-emerald-600'
-                  : 'bg-[#7eb343] hover:bg-[#6c9c36]'
-              }`}
+              onClick={decrementQty}
+              className="w-6 h-full flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer active:scale-95"
             >
-              {isAdding && !addedAnimation ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : addedAnimation ? (
-                <span className="flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span className="text-[11px] sm:text-xs">Added</span>
-                </span>
-              ) : (
-                <span className="text-[11px] sm:text-xs">Add To Cart</span>
-              )}
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-white font-bold text-xs sm:text-sm">
+              {quantity}
+            </span>
+            <button
+              type="button"
+              onClick={incrementQty}
+              className="w-6 h-full flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer active:scale-95"
+            >
+              <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
+
+          {/* Add To Cart Button */}
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={isAdding}
+            className={`flex-1 h-10 rounded-xl text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed ${
+              addedAnimation
+                ? 'bg-emerald-700'
+                : 'bg-[#16a34a] hover:bg-[#15803d]'
+            }`}
+          >
+            {isAdding && !addedAnimation ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : addedAnimation ? (
+              <span className="flex items-center gap-1.5">
+                <Check className="w-4 h-4 stroke-[2.5]" />
+                <span>Added</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <ShoppingBag className="w-4 h-4" />
+                <span>Add to cart</span>
+              </span>
+            )}
+          </button>
         </div>
 
       </div>
