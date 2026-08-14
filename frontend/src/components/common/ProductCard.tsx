@@ -159,12 +159,12 @@ export function ProductCard({
       {/* ── Product Image ── */}
       <Link
         href={`/services/shopping/product/${slug}`}
-        className="relative w-full aspect-square bg-white rounded-xl flex items-center justify-center my-1 cursor-pointer overflow-hidden group/img shrink-0"
+        className="relative w-full aspect-square bg-white rounded-xl flex items-center justify-center m-0 p-0 cursor-pointer overflow-hidden group/img shrink-0"
       >
         <img
           src={image}
           alt={title}
-          className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300 ease-out"
+          className="w-full h-full object-contain p-0 group-hover:scale-105 transition-transform duration-300 ease-out"
         />
       </Link>
 

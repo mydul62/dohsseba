@@ -76,12 +76,12 @@ export function ProductCard({ product }: ProductCardProps) {
       </div>
 
       {/* Product Image */}
-      <Link href={`/services/shopping/product/${product.slug}`} onClick={handleProductClick} className="relative w-full aspect-square bg-white rounded-xl flex items-center justify-center my-1 cursor-pointer overflow-hidden group/img shrink-0">
+      <Link href={`/services/shopping/product/${product.slug}`} onClick={handleProductClick} className="relative w-full aspect-square bg-white rounded-xl flex items-center justify-center m-0 p-0 cursor-pointer overflow-hidden group/img shrink-0">
         <Image
           src={product.image}
           alt={product.title}
           fill
-          className="object-contain p-1 group-hover:scale-105 transition-transform duration-300 ease-out"
+          className="object-contain p-0 group-hover:scale-105 transition-transform duration-300 ease-out"
         />
       </Link>
 

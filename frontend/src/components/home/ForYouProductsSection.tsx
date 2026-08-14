@@ -111,7 +111,7 @@ export function ForYouProductsSection() {
         {/* Product Cards Grid */}
         {loading ? (
           // Skeleton
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">
             {Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="rounded-2xl bg-slate-100 animate-pulse overflow-hidden">
                 <div className="w-full aspect-square bg-slate-200" />
@@ -128,7 +128,7 @@ export function ForYouProductsSection() {
             <p className="text-sm font-semibold">No products available yet.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">
             {products.map((prod) => (
               <ProductCard
                 key={prod.id}
