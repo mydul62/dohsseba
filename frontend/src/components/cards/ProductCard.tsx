@@ -8,7 +8,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useToast } from '@/components/ui/Toast';
 import { formatCurrency } from '@/utils/cn';
-import { Check, Heart, ShoppingBag } from 'lucide-react';
+import { Plus, Check, Heart } from 'lucide-react';
 
 function toBnDigit(num: number): string {
   const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -54,97 +54,95 @@ export function ProductCard({ product }: ProductCardProps) {
     : product.unit;
 
   return (
-    <div className="group rounded-[22px] border border-slate-800/80 bg-[#1c1c1e] overflow-hidden shadow-md hover:shadow-xl hover:border-slate-700 transition-all duration-300 flex flex-col justify-between select-none">
+    <div className="group rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col justify-between p-3.5 text-center font-sans select-none">
       
-      {/* Top Image Container (Light Cream/Off-White Background) */}
-      <div className="relative aspect-square w-full bg-[#F5F4EF] flex items-center justify-center p-2 overflow-hidden">
-        
-        {/* Badges & Wishlist Overlay */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10 pointer-events-none">
-          <div className="pointer-events-auto">
-            {product.badge ? (
-              <span className="bg-[#1b4317] text-[#22c55e] font-extrabold text-xs px-3 py-1 rounded-full shadow-xs tracking-tight">
-                {product.badge}
-              </span>
-            ) : null}
-          </div>
-
-          <button
-            onClick={() => toggleWishlist(product)}
-            className="w-8 h-8 rounded-full bg-[#242426]/90 hover:bg-black text-white flex items-center justify-center transition-colors shadow-md cursor-pointer pointer-events-auto"
-            title={isFavorite ? 'Remove from Wishlist' : 'Add to Wishlist'}
-          >
-            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-white'}`} />
-          </button>
+      {/* Top Row: Badges & Wishlist */}
+      <div className="flex items-center justify-between z-10 w-full shrink-0 mb-1">
+        <div>
+          {product.badge ? (
+            <span className="bg-[#E50000] text-white font-extrabold text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-2xs">
+              {product.badge}
+            </span>
+          ) : null}
         </div>
 
-        {/* Product Image */}
-        <Link href={`/services/shopping/product/${product.slug}`} onClick={handleProductClick} className="relative w-full h-full flex items-center justify-center">
-          <Image
-            src={product.image}
-            alt={product.title}
-            fill
-            className="object-contain p-1 group-hover:scale-105 transition-transform duration-300 ease-out"
-          />
-        </Link>
+        <button
+          onClick={() => toggleWishlist(product)}
+          className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+          title={isFavorite ? 'Remove from Wishlist' : 'Add to Wishlist'}
+        >
+          <Heart className={`w-5 h-5 stroke-[1.5] ${isFavorite ? 'fill-rose-500 text-rose-500' : ''}`} />
+        </button>
       </div>
 
-      {/* Product Information (Dark Bottom Panel) */}
-      <div className="p-3.5 bg-[#1c1c1e] text-white flex flex-col justify-between flex-1 space-y-2.5">
-        <div>
-          <Link href={`/services/shopping/product/${product.slug}`} onClick={handleProductClick}>
-            <h3 className="font-bold text-sm sm:text-base text-white hover:text-emerald-400 transition-colors line-clamp-1 block leading-tight">
-              {product.title}
-            </h3>
-          </Link>
-          <p className="text-xs text-slate-400 font-medium mt-1">{displayUnit}</p>
-        </div>
+      {/* Product Image */}
+      <Link href={`/services/shopping/product/${product.slug}`} onClick={handleProductClick} className="relative w-full aspect-square bg-white rounded-xl flex items-center justify-center my-1 cursor-pointer overflow-hidden group/img shrink-0">
+        <Image
+          src={product.image}
+          alt={product.title}
+          fill
+          className="object-contain p-1 group-hover:scale-105 transition-transform duration-300 ease-out"
+        />
+      </Link>
 
-        {/* Price & Add to Cart */}
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-baseline gap-2">
-            <span className="font-extrabold text-base sm:text-lg text-[#22c55e]">
-              {formatCurrency(product.price)}
+      {/* Product Information */}
+      <div className="flex flex-col justify-between flex-1 space-y-2 mt-1">
+        <p className="text-[11px] italic font-medium text-slate-500 text-center">
+          Delivery 1-2 hours
+        </p>
+
+        <Link href={`/services/shopping/product/${product.slug}`} onClick={handleProductClick}>
+          <h3 className="font-bold text-xs sm:text-sm text-slate-900 hover:text-[#E50000] transition-colors line-clamp-2 leading-snug text-center block min-h-[36px]">
+            {product.title}
+          </h3>
+        </Link>
+
+        {/* Price & Cart Control */}
+        <div className="flex items-baseline justify-center gap-1.5 my-1">
+          <span className="font-extrabold text-base sm:text-lg text-[#E50000]">
+            {formatCurrency(product.price)}
+          </span>
+          <span className="text-slate-500 text-xs font-normal">
+            Per {displayUnit}
+          </span>
+          {product.originalPrice && (
+            <span className="line-through text-slate-400 text-xs ml-1">
+              {formatCurrency(product.originalPrice)}
             </span>
-            {product.originalPrice && (
-              <span className="text-xs text-slate-500 line-through">
-                {formatCurrency(product.originalPrice)}
-              </span>
-            )}
-          </div>
-
-          <button
-            onClick={() => {
-              if (typeof window !== 'undefined' && 'navigator' in window && navigator.vibrate) {
-                try { navigator.vibrate(10); } catch (_) {}
-              }
-              addItem(product, 1, false);
-              const totalCount = items.reduce((sum: number, item: any) => sum + item.quantity, 0) + 1;
-              const bnCount = toBnDigit(totalCount);
-              toastSuccess(
-                'পণ্যটি কার্টে যোগ করা হয়েছে',
-                `বর্তমানে আপনার কার্টে মোট ${bnCount} টি পণ্য রয়েছে`
-              );
-            }}
-            className={`h-10 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 text-xs font-bold active:scale-95 ${
-              inCart
-                ? 'bg-emerald-700 text-white'
-                : 'bg-[#16a34a] hover:bg-[#15803d] text-white'
-            }`}
-          >
-            {inCart ? (
-              <>
-                <Check className="w-4 h-4" />
-                <span>{inCart.quantity} in Cart</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag className="w-4 h-4" />
-                <span>Add to cart</span>
-              </>
-            )}
-          </button>
+          )}
         </div>
+
+        <button
+          onClick={() => {
+            if (typeof window !== 'undefined' && 'navigator' in window && navigator.vibrate) {
+              try { navigator.vibrate(10); } catch (_) {}
+            }
+            addItem(product, 1, false);
+            const totalCount = items.reduce((sum: number, item: any) => sum + item.quantity, 0) + 1;
+            const bnCount = toBnDigit(totalCount);
+            toastSuccess(
+              'পণ্যটি কার্টে যোগ করা হয়েছে',
+              `বর্তমানে আপনার কার্টে মোট ${bnCount} টি পণ্য রয়েছে`
+            );
+          }}
+          className={`w-full h-9 rounded-full transition-all shadow-sm flex items-center justify-center gap-1.5 text-xs font-bold active:scale-95 ${
+            inCart
+              ? 'bg-emerald-600 text-white'
+              : 'bg-[#E50000] hover:bg-[#CC0000] text-white'
+          }`}
+        >
+          {inCart ? (
+            <>
+              <Check className="w-4 h-4" />
+              <span>{inCart.quantity} in Bag</span>
+            </>
+          ) : (
+            <>
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Add to Bag</span>
+            </>
+          )}
+        </button>
       </div>
 
     </div>
