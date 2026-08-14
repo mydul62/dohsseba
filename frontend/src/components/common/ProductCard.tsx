@@ -120,11 +120,11 @@ export function ProductCard({
       <div className="flex items-center justify-between z-10 w-full shrink-0">
         <div>
           {isHot || badge?.toLowerCase() === 'hot' ? (
-            <span className="bg-[#e53935] text-white font-black text-[10px] uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-2xs">
+            <span className="bg-[#e53935] text-white font-extrabold text-[12px] uppercase tracking-wider px-3 py-1 rounded-full shadow-2xs">
               HOT
             </span>
           ) : badge ? (
-            <span className="bg-[#7eb343] text-white font-black text-[10px] uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-2xs">
+            <span className="bg-[#7eb343] text-white font-extrabold text-[12px] uppercase tracking-wider px-3 py-1 rounded-full shadow-2xs">
               {badge}
             </span>
           ) : null}
@@ -156,15 +156,15 @@ export function ProductCard({
         </button>
       </div>
 
-      {/* ── Center Product Image ── */}
+      {/* ── Center Product Image: 1:1 Aspect Ratio with #F5F5F3 background & floating drop-shadow ── */}
       <Link
         href={`/services/shopping/product/${slug}`}
-        className="relative flex-1 w-full flex items-center justify-center my-1 cursor-pointer overflow-hidden"
+        className="relative w-full aspect-square bg-[#F5F5F3] rounded-xl flex items-center justify-center p-2 my-1 cursor-pointer overflow-hidden group/img shrink-0"
       >
         <img
           src={image}
           alt={title}
-          className="w-full h-28 sm:h-36 object-contain group-hover:scale-105 transition-all duration-300"
+          className="w-[80%] h-[80%] object-contain group-hover:scale-105 transition-transform duration-200 ease-out [filter:drop-shadow(0_6px_10px_rgba(0,0,0,0.12))]"
         />
       </Link>
 
@@ -195,7 +195,7 @@ export function ProductCard({
               / {displayUnit}
             </span>
             {originalPrice && (
-              <span className="line-through text-slate-300 text-[11px] ml-1">
+              <span className="line-through text-slate-400 text-[11px] ml-1">
                 ৳{originalPrice.toFixed(2)}
               </span>
             )}
@@ -225,7 +225,7 @@ export function ProductCard({
                 / {displayUnit}
               </span>
               {originalPrice && (
-                <span className="line-through text-slate-300 text-[10px] ml-1">
+                <span className="line-through text-slate-400 text-[10px] ml-1">
                   ৳{originalPrice.toFixed(2)}
                 </span>
               )}

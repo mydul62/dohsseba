@@ -51,19 +51,19 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="group rounded-2xl border border-border/80 bg-card overflow-hidden shadow-card hover:shadow-xl hover:border-emerald-500/40 transition-all duration-300 flex flex-col justify-between p-3">
       {/* Image & Wishlist Container */}
-      <div className="relative h-44 w-full rounded-xl overflow-hidden bg-secondary mb-3">
-        <Link href={`/services/shopping/product/${product.slug}`} onClick={handleProductClick}>
+      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-[#F5F5F3] mb-3 flex items-center justify-center p-2">
+        <Link href={`/services/shopping/product/${product.slug}`} onClick={handleProductClick} className="relative w-[80%] h-[80%] flex items-center justify-center">
           <Image
             src={product.image}
             alt={product.title}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className="object-contain group-hover:scale-105 transition-transform duration-200 ease-out [filter:drop-shadow(0_6px_10px_rgba(0,0,0,0.12))]"
           />
         </Link>
 
         {/* Badges */}
         {product.badge && (
-          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-600 text-white shadow-sm">
+          <span className="absolute top-2 left-2 px-3 py-1 rounded-full text-[12px] font-extrabold bg-[#7eb343] text-white shadow-2xs">
             {product.badge}
           </span>
         )}
@@ -124,11 +124,11 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Price & Cart Control */}
         <div className="pt-2 border-t border-border/60 flex items-center justify-between">
           <div>
-            <div className="font-extrabold text-sm text-foreground">
+            <div className="font-extrabold text-sm text-[#7eb343]">
               {formatCurrency(product.price)}
             </div>
             {product.originalPrice && (
-              <span className="text-[10px] text-muted-foreground line-through">
+              <span className="text-[11px] text-slate-400 line-through">
                 {formatCurrency(product.originalPrice)}
               </span>
             )}
