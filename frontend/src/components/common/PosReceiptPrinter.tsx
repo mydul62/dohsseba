@@ -19,6 +19,7 @@ export function PosReceiptPrinter({
   const [isPrinting, setIsPrinting] = useState(false);
   const [bluetoothStatus, setBluetoothStatus] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
+  const [showVirtualPreview, setShowVirtualPreview] = useState(false);
 
   if (!order) return null;
 
@@ -239,7 +240,7 @@ export function PosReceiptPrinter({
                       Standard Thermal Print (58mm / 80mm)
                     </div>
                     <div className="text-[10px] text-slate-500">
-                      Print via USB printer or system print dialog
+                      Print via USB printer or PDF save
                     </div>
                   </div>
                 </div>
@@ -266,7 +267,74 @@ export function PosReceiptPrinter({
                 </div>
                 <span className="text-emerald-600 font-bold text-sm">➔</span>
               </button>
+
+              {/* Option 3: Virtual On-Screen Demo Preview */}
+              <button
+                type="button"
+                onClick={() => setShowVirtualPreview(!showVirtualPreview)}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all group text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">👁️</span>
+                  <div>
+                    <div className="font-bold text-xs text-amber-900 group-hover:text-amber-950">
+                      Virtual Demo Preview (On-Screen)
+                    </div>
+                    <div className="text-[10px] text-amber-700">
+                      {showVirtualPreview ? 'Hide 58mm Thermal Memo' : 'Test receipt layout without physical printer'}
+                    </div>
+                  </div>
+                </div>
+                <span className="text-amber-700 font-bold text-xs">{showVirtualPreview ? '▲ Hide' : '▼ Show'}</span>
+              </button>
             </div>
+
+            {/* Virtual On-Screen 58mm Thermal Paper Receipt Simulation */}
+            {showVirtualPreview && (
+              <div className="mt-4 p-3 bg-amber-900/5 rounded-xl border border-amber-200 max-h-72 overflow-y-auto">
+                <div className="text-[10px] font-bold text-amber-800 mb-2 flex items-center justify-between">
+                  <span>📜 58mm Thermal Slip Simulator</span>
+                  <span className="bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded text-[9px]">DEMO MODE</span>
+                </div>
+                <div className="bg-amber-50/80 p-3 rounded shadow-inner font-mono text-[11px] leading-tight text-black border-t-2 border-b-2 border-dashed border-amber-300">
+                  <div className="text-center font-bold text-[13px]">DOHS SHEBA BAZAAR</div>
+                  <div className="text-center text-[10px]">Express Grocery & Services</div>
+                  <div className="my-1 text-center">================================</div>
+                  <div>Code  : #{displayCode}</div>
+                  <div>Date  : {orderDate}</div>
+                  <div>Cust  : {customerName}</div>
+                  <div>Phone : {customerPhone}</div>
+                  <div>Addr  : {deliveryAddress}</div>
+                  <div className="my-1 text-center">--------------------------------</div>
+                  <div className="font-bold border-b border-black pb-1 mb-1 flex justify-between text-[10px]">
+                    <span>ITEM</span>
+                    <span>QTY x PRICE</span>
+                  </div>
+                  {items.map((i: any, index: number) => {
+                    const name = (i.product?.name || i.name || 'Item').slice(0, 14);
+                    const qty = i.quantity || 1;
+                    const price = (i.price || 0) * qty;
+                    return (
+                      <div key={index} className="flex justify-between my-0.5 text-[10px]">
+                        <span>{name}</span>
+                        <span>x{qty} ৳{formatCurrency(price)}</span>
+                      </div>
+                    );
+                  })}
+                  <div className="my-1 text-center">--------------------------------</div>
+                  <div className="text-right text-[10px]">
+                    <div>Subtotal: ৳{formatCurrency(subtotal)}</div>
+                    <div>Del Fee : ৳{formatCurrency(deliveryFee)}</div>
+                    {discount > 0 && <div>Discount: -৳{formatCurrency(discount)}</div>}
+                    <div className="font-bold text-[11px] mt-1">TOTAL DUE: ৳{formatCurrency(total)}</div>
+                    <div className="text-[9px] mt-0.5">Payment: {paymentMethod}</div>
+                  </div>
+                  <div className="my-1 text-center">================================</div>
+                  <div className="text-center text-[9px] mt-1">Thank you for using DOHS Sheba!</div>
+                  <div className="text-center text-[8px]">www.dohssheba.com</div>
+                </div>
+              </div>
+            )}
 
             {/* Footer Notice */}
             <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
