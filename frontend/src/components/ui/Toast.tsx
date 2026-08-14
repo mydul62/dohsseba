@@ -213,11 +213,11 @@ function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id
   return (
     <div
       aria-label="Notifications"
-      className="fixed top-5 right-4 sm:right-6 z-[9999] flex flex-col gap-2.5 items-end w-[calc(100vw-2rem)] sm:w-auto pointer-events-none"
+      className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2.5 items-center w-[calc(100vw-2rem)] max-w-sm pointer-events-none px-2"
     >
       <AnimatePresence mode="popLayout" initial={false}>
         {toasts.map((t) => (
-          <div key={t.id} className="pointer-events-auto w-full sm:w-80">
+          <div key={t.id} className="pointer-events-auto w-full">
             <ToastItem toast={t} onDismiss={onDismiss} />
           </div>
         ))}
