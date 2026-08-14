@@ -47,7 +47,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toast = useCallback(
-    ({ type, title, description, duration = 4500 }: Omit<Toast, 'id'>): string => {
+    ({ type, title, description, duration = 2000 }: Omit<Toast, 'id'>): string => {
       const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       setToasts((prev) => {
         // Keep max 5 toasts
@@ -65,19 +65,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 
   const success = useCallback(
-    (title: string, description?: string) => toast({ type: 'success', title, description }),
+    (title: string, description?: string) => toast({ type: 'success', title, description, duration: 2000 }),
     [toast]
   );
   const error = useCallback(
-    (title: string, description?: string) => toast({ type: 'error', title, description, duration: 6000 }),
+    (title: string, description?: string) => toast({ type: 'error', title, description, duration: 4000 }),
     [toast]
   );
   const warning = useCallback(
-    (title: string, description?: string) => toast({ type: 'warning', title, description }),
+    (title: string, description?: string) => toast({ type: 'warning', title, description, duration: 2500 }),
     [toast]
   );
   const info = useCallback(
-    (title: string, description?: string) => toast({ type: 'info', title, description }),
+    (title: string, description?: string) => toast({ type: 'info', title, description, duration: 2000 }),
     [toast]
   );
   const dismissAll = useCallback(() => {
@@ -149,16 +149,16 @@ const TOAST_CONFIG: Record<
 
 function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) {
   const cfg = TOAST_CONFIG[t.type];
-  const duration = t.duration ?? 4500;
+  const duration = t.duration ?? 2000;
   const [paused, setPaused] = React.useState(false);
 
   return (
     <motion.div
       layout
       key={t.id}
-      initial={{ opacity: 0, y: 40, scale: 0.92 }}
+      initial={{ opacity: 0, y: -40, scale: 0.92 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+      exit={{ opacity: 0, y: -20, scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 380, damping: 28 }}
       role="alert"
       aria-live="polite"
@@ -213,7 +213,7 @@ function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id
   return (
     <div
       aria-label="Notifications"
-      className="fixed bottom-6 right-4 sm:right-6 z-[9999] flex flex-col gap-2.5 items-end w-[calc(100vw-2rem)] sm:w-auto pointer-events-none"
+      className="fixed top-5 right-4 sm:right-6 z-[9999] flex flex-col gap-2.5 items-end w-[calc(100vw-2rem)] sm:w-auto pointer-events-none"
     >
       <AnimatePresence mode="popLayout" initial={false}>
         {toasts.map((t) => (
