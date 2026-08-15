@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🚀 Restoring ALL products & categories (Rice, Atta, Moida, Frozen, Fish, Chilli, Meat)...');
+  console.log('🚀 Restoring ALL products & categories safely (Rice, Atta, Moida, Frozen, Fish, Chilli, Meat)...');
 
   // 1. Get or create seller user
   let seller = await prisma.user.findFirst({
@@ -26,7 +26,7 @@ async function main() {
     });
   }
 
-  // 2. Main Categories
+  // 2. Main Categories Definitions
   const categoriesList = [
     { name: 'Bakery & Sweets', slug: 'bakery-sweets', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&auto=format&fit=crop&q=80' },
     { name: 'Electronics', slug: 'electronics', image: 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=500&auto=format&fit=crop&q=80' },
@@ -45,27 +45,37 @@ async function main() {
   const catIdMap: Record<string, string> = {};
 
   for (const c of categoriesList) {
-    let exist = await prisma.productCategory.findFirst({
-      where: { OR: [{ name: c.name }, { slug: c.slug }] }
-    });
-    if (exist) {
-      exist = await prisma.productCategory.update({
-        where: { id: exist.id },
-        data: { name: c.name, slug: c.slug, image: c.image }
+    try {
+      let exist = await prisma.productCategory.findFirst({
+        where: { OR: [{ slug: c.slug }, { name: c.name }] }
       });
-    } else {
-      exist = await prisma.productCategory.create({
-        data: { name: c.name, slug: c.slug, image: c.image }
+      if (exist) {
+        exist = await prisma.productCategory.update({
+          where: { id: exist.id },
+          data: { image: c.image }
+        });
+      } else {
+        exist = await prisma.productCategory.create({
+          data: { name: c.name, slug: c.slug, image: c.image }
+        });
+      }
+      catIdMap[c.slug] = exist.id;
+      catIdMap[c.name] = exist.id;
+    } catch (_) {
+      const fallback = await prisma.productCategory.findFirst({
+        where: { OR: [{ slug: c.slug }, { name: c.name }] }
       });
+      if (fallback) {
+        catIdMap[c.slug] = fallback.id;
+        catIdMap[c.name] = fallback.id;
+      }
     }
-    catIdMap[c.slug] = exist.id;
-    catIdMap[c.name] = exist.id;
   }
 
-  // 3. Subcategories
-  const cookingId = catIdMap['cooking-grocery'];
-  const frozenId = catIdMap['frozen-items'];
-  const liveFoodId = catIdMap['live-food'];
+  // 3. Subcategories Definitions
+  const cookingId = catIdMap['cooking-grocery'] || catIdMap['রান্না ও মুদিখানা'];
+  const frozenId = catIdMap['frozen-items'] || catIdMap['ফ্রোজেন আইটেম'];
+  const liveFoodId = catIdMap['live-food'] || catIdMap['Live food'];
 
   const subDefs = [
     { parentId: cookingId, name: 'চাল, আটা ও ময়দা', slug: 'rice-flour-atta', image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500&auto=format&fit=crop&q=80' },
@@ -75,21 +85,31 @@ async function main() {
   ];
 
   for (const sub of subDefs) {
-    let exist = await prisma.productCategory.findFirst({
-      where: { OR: [{ name: sub.name }, { slug: sub.slug }] }
-    });
-    if (exist) {
-      exist = await prisma.productCategory.update({
-        where: { id: exist.id },
-        data: { parentId: sub.parentId, name: sub.name, slug: sub.slug, image: sub.image }
+    try {
+      let exist = await prisma.productCategory.findFirst({
+        where: { OR: [{ slug: sub.slug }, { name: sub.name }] }
       });
-    } else {
-      exist = await prisma.productCategory.create({
-        data: { parentId: sub.parentId, name: sub.name, slug: sub.slug, image: sub.image }
+      if (exist) {
+        exist = await prisma.productCategory.update({
+          where: { id: exist.id },
+          data: { parentId: sub.parentId, image: sub.image }
+        });
+      } else {
+        exist = await prisma.productCategory.create({
+          data: { parentId: sub.parentId, name: sub.name, slug: sub.slug, image: sub.image }
+        });
+      }
+      catIdMap[sub.slug] = exist.id;
+      catIdMap[sub.name] = exist.id;
+    } catch (_) {
+      const fallback = await prisma.productCategory.findFirst({
+        where: { OR: [{ slug: sub.slug }, { name: sub.name }] }
       });
+      if (fallback) {
+        catIdMap[sub.slug] = fallback.id;
+        catIdMap[sub.name] = fallback.id;
+      }
     }
-    catIdMap[sub.slug] = exist.id;
-    catIdMap[sub.name] = exist.id;
   }
 
   // 4. Products Master Data
@@ -132,45 +152,49 @@ async function main() {
   ];
 
   for (const p of productsToUpsert) {
-    const categoryId = catIdMap[p.catSlug] || Object.values(catIdMap)[0];
+    const categoryId = catIdMap[p.catSlug] || catIdMap['cooking-grocery'] || Object.values(catIdMap)[0];
 
-    let prod = await prisma.product.findFirst({
-      where: { OR: [{ name: p.name }, { slug: p.slug }] }
-    });
+    try {
+      let prod = await prisma.product.findFirst({
+        where: { OR: [{ name: p.name }, { slug: p.slug }] }
+      });
 
-    if (prod) {
-      await prisma.product.update({
-        where: { id: prod.id },
-        data: {
-          name: p.name,
-          price: p.price,
-          unit: p.unit,
-          unitAmount: p.amount,
-          images: [p.image],
-          categoryId: categoryId,
-          sellerId: seller.id,
-          isActive: true,
-          isFeatured: true,
-          stock: 100
-        }
-      });
-    } else {
-      await prisma.product.create({
-        data: {
-          name: p.name,
-          slug: p.slug,
-          description: `${p.name} high quality item in DOHS Sheba market.`,
-          price: p.price,
-          unit: p.unit,
-          unitAmount: p.amount,
-          images: [p.image],
-          categoryId: categoryId,
-          sellerId: seller.id,
-          isActive: true,
-          isFeatured: true,
-          stock: 100
-        }
-      });
+      if (prod) {
+        await prisma.product.update({
+          where: { id: prod.id },
+          data: {
+            name: p.name,
+            price: p.price,
+            unit: p.unit,
+            unitAmount: p.amount,
+            images: [p.image],
+            categoryId: categoryId,
+            sellerId: seller.id,
+            isActive: true,
+            isFeatured: true,
+            stock: 100
+          }
+        });
+      } else {
+        await prisma.product.create({
+          data: {
+            name: p.name,
+            slug: p.slug,
+            description: `${p.name} high quality item in DOHS Sheba market.`,
+            price: p.price,
+            unit: p.unit,
+            unitAmount: p.amount,
+            images: [p.image],
+            categoryId: categoryId,
+            sellerId: seller.id,
+            isActive: true,
+            isFeatured: true,
+            stock: 100
+          }
+        });
+      }
+    } catch (err) {
+      console.warn(`Skipped product upsert notice for ${p.name}:`, err);
     }
   }
 
