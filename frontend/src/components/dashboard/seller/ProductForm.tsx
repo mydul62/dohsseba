@@ -125,6 +125,12 @@ export function ProductForm({ mode, productId, initialData }: ProductFormProps) 
 
   const [showAddRelatedModal, setShowAddRelatedModal] = useState(false);
 
+  // 🖼️ Media Picker Modal State
+  const [showMediaPickerModal, setShowMediaPickerModal] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<{ filename: string; url: string; size: number }[]>([]);
+  const [selectedGalleryUrls, setSelectedGalleryUrls] = useState<string[]>([]);
+  const [loadingGallery, setLoadingGallery] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const set = (key: keyof ProductFormData, val: any) => {
@@ -490,23 +496,46 @@ export function ProductForm({ mode, productId, initialData }: ProductFormProps) 
               </div>
             </div>
 
-            {/* Quick URL Input */}
-            <div className="pt-2 border-t border-white/10 flex gap-2">
-              <input
-                type="text"
-                value={form.imageInput}
-                onChange={(e) => set('imageInput', e.target.value)}
-                placeholder="Or paste image URL (https://...)"
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addImageUrl())}
-                className="flex-1 px-3 py-2 rounded-xl bg-[#12131f] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-              />
+            {/* Quick URL Input & Media Picker Launcher */}
+            <div className="pt-3 border-t border-white/10 space-y-2.5">
               <button
                 type="button"
-                onClick={addImageUrl}
-                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all"
+                onClick={() => {
+                  setShowMediaPickerModal(true);
+                  if (galleryImages.length === 0) {
+                    setLoadingGallery(true);
+                    fetchApi<{ total: number; media: any[] }>('/upload/gallery')
+                      .then((res) => {
+                        if (res.success && Array.isArray(res.data?.media)) {
+                          setGalleryImages(res.data.media);
+                        }
+                      })
+                      .finally(() => setLoadingGallery(false));
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 transition-all active:scale-98 border border-white/10"
               >
-                Add
+                <ImageIcon className="w-4 h-4 text-pink-200 animate-pulse" />
+                <span>🖼️ Add from Media Gallery (Select 500+ Images)</span>
               </button>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={form.imageInput}
+                  onChange={(e) => set('imageInput', e.target.value)}
+                  placeholder="Or paste image URL (https://...)"
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addImageUrl())}
+                  className="flex-1 px-3 py-2 rounded-xl bg-[#12131f] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+                <button
+                  type="button"
+                  onClick={addImageUrl}
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all"
+                >
+                  Add
+                </button>
+              </div>
             </div>
           </div>
 
@@ -943,7 +972,7 @@ export function ProductForm({ mode, productId, initialData }: ProductFormProps) 
           <div className="bg-[#1e1f32] border border-indigo-500/30 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="font-bold text-white text-sm">Add Related Item</h3>
-              <button onClick={() => setShowAddRelatedModal(false)} className="text-slate-400 hover:text-white">
+              <button type="button" onClick={() => setShowAddRelatedModal(false)} className="text-slate-400 hover:text-white">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -973,6 +1002,142 @@ export function ProductForm({ mode, productId, initialData }: ProductFormProps) 
           </div>
         </div>
       )}
+
+      {/* 🖼️ Media Picker Modal (Select from 500+ Uploaded Images) */}
+      {showMediaPickerModal && (
+        <div className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-[#1e1f32] border border-pink-500/30 rounded-3xl max-w-4xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#181928]">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-pink-500/20 text-pink-400 rounded-xl border border-pink-500/30">
+                  <ImageIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                    Media Gallery Picker
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                      {galleryImages.length} Files
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">Click to select one or multiple images to attach to this product</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMediaPickerModal(false);
+                  setSelectedGalleryUrls([]);
+                }}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Image Grid */}
+            <div className="flex-1 overflow-y-auto p-5 bg-[#141522]">
+              {loadingGallery ? (
+                <div className="min-h-[250px] flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="w-8 h-8 text-pink-400 animate-spin" />
+                  <p className="text-xs text-slate-400 font-bold">Fetching your 500+ uploaded media files...</p>
+                </div>
+              ) : galleryImages.length === 0 ? (
+                <div className="min-h-[250px] flex flex-col items-center justify-center gap-2 text-center">
+                  <ImageIcon className="w-12 h-12 text-slate-600 mb-1" />
+                  <p className="text-xs font-bold text-slate-300">No media files available</p>
+                  <p className="text-[11px] text-slate-500">Upload product images via the file upload button first.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                  {galleryImages.map((img) => {
+                    const isSelected = selectedGalleryUrls.includes(img.url);
+                    return (
+                      <div
+                        key={img.filename}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedGalleryUrls(selectedGalleryUrls.filter((u) => u !== img.url));
+                          } else {
+                            setSelectedGalleryUrls([...selectedGalleryUrls, img.url]);
+                          }
+                        }}
+                        className={`group relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-2 transition-all duration-200 ${
+                          isSelected
+                            ? 'border-pink-500 shadow-lg shadow-pink-500/30 scale-95'
+                            : 'border-white/10 hover:border-pink-500/50 hover:scale-102 bg-[#1e1f32]'
+                        }`}
+                      >
+                        <img
+                          src={img.url}
+                          alt={img.filename}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        {/* Checkbox Tick Overlay */}
+                        <div
+                          className={`absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-white transition-transform ${
+                            isSelected
+                              ? 'bg-pink-500 scale-100 shadow-md'
+                              : 'bg-black/40 border border-white/30 group-hover:scale-110'
+                          }`}
+                        >
+                          {isSelected ? (
+                            <CheckCircle2 className="w-4 h-4 text-white" />
+                          ) : (
+                            <Plus className="w-3.5 h-3.5 text-white/80" />
+                          )}
+                        </div>
+                        <div className="absolute bottom-0 inset-x-0 p-1 bg-black/70 backdrop-blur-xs truncate text-[9px] text-slate-300 text-center font-mono">
+                          {img.filename}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Bottom Action Bar */}
+            <div className="p-4 border-t border-white/10 bg-[#181928] flex items-center justify-between gap-4">
+              <span className="text-xs font-extrabold text-slate-300">
+                {selectedGalleryUrls.length > 0
+                  ? `Selected ${selectedGalleryUrls.length} image(s)`
+                  : 'Select images to attach'}
+              </span>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMediaPickerModal(false);
+                    setSelectedGalleryUrls([]);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedGalleryUrls.length === 0}
+                  onClick={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      images: [...prev.images, ...selectedGalleryUrls],
+                    }));
+                    setShowMediaPickerModal(false);
+                    setSelectedGalleryUrls([]);
+                  }}
+                  className="px-6 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-extrabold text-xs shadow-lg shadow-pink-500/20 disabled:opacity-50 transition-all active:scale-95"
+                >
+                  Attach ({selectedGalleryUrls.length}) Selected Image(s)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
+
