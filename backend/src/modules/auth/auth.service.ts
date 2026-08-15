@@ -90,7 +90,8 @@ export interface RegisterInput {
 }
 
 export interface LoginInput {
-  email: string;
+  email?: string;
+  phone?: string;
   password: string;
 }
 
@@ -157,8 +158,18 @@ export const registerUser = async (input: RegisterInput) => {
 // ─── Email / Password Login ──────────────────────────────────────────────────
 
 export const loginUser = async (input: LoginInput) => {
-  const user = await prisma.user.findUnique({
-    where: { email: input.email },
+  const identifier = (input.email || input.phone || '').trim();
+  if (!identifier) {
+    throw new AppError('Email or phone is required.', 400);
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: identifier },
+        { phone: identifier },
+      ],
+    },
     include: {
       sellerProfile: true,
       riderProfile: true,
