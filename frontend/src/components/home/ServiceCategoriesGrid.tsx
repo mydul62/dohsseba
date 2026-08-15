@@ -28,7 +28,8 @@ interface ServiceCategory {
 
 export function ServiceCategoriesGrid() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [services, setServices] = useState<ServiceCategory[]>(FALLBACK_SERVICES);
+  const [services, setServices] = useState<ServiceCategory[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);
@@ -48,6 +49,7 @@ const CATEGORY_IMAGE_MAP: Record<string, string> = {
 
 // Fetch data
   useEffect(() => {
+    setLoading(true);
     fetch(`${getApiBaseUrl()}/service-categories`)
       .then((r) => r.json())
       .then((res) => {
@@ -60,15 +62,16 @@ const CATEGORY_IMAGE_MAP: Record<string, string> = {
               slug: catSlug,
               rating: cat.averageRating ? Number(cat.averageRating).toFixed(2) : '4.80',
               bookings: cat._count?.services ? `${cat._count.services} Services` : cat.bookings || '—',
-              image: cat.image || cat.imageUrl || CATEGORY_IMAGE_MAP[catSlug] || FALLBACK_SERVICES[0].image,
+              image: cat.image || cat.imageUrl || CATEGORY_IMAGE_MAP[catSlug] || 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&q=80',
             };
           });
           setServices(mapped);
         } else {
-          setServices(FALLBACK_SERVICES);
+          setServices([]);
         }
       })
-      .catch(() => setServices(FALLBACK_SERVICES));
+      .catch(() => setServices([]))
+      .finally(() => setLoading(false));
   }, []);
 
   const scrollLeft = useCallback(() => {
@@ -193,7 +196,7 @@ const CATEGORY_IMAGE_MAP: Record<string, string> = {
               isMouseDown ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
-            {services === null
+            {loading
               ? Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="shrink-0 w-36 sm:w-44 p-3.5 rounded-2xl bg-white border border-slate-200/80 animate-pulse">
                     <div className="w-full aspect-4/3 rounded-xl bg-slate-200" />

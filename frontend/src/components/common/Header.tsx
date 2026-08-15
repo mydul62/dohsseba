@@ -56,14 +56,12 @@ export function Header() {
       .catch(() => null);
   }, []);
 
-  const displayCategories = categories.length > 0
-    ? categories.map((cat) => ({
-        id: cat.id || cat.slug,
-        name: cat.name,
-        slug: cat.slug,
-        itemCount: Array.isArray(cat.children) ? cat.children.length : (cat.itemCount ?? 4),
-      }))
-    : SHOPPING_CATEGORIES;
+  const displayCategories = categories.map((cat) => ({
+    id: cat.id || cat.slug,
+    name: cat.name,
+    slug: cat.slug,
+    itemCount: Array.isArray(cat.children) ? cat.children.length : (cat.itemCount ?? 0),
+  }));
 
   const { getTotalCount, openCart } = useCartStore();
   const { user, role, logout } = useAuthStore();

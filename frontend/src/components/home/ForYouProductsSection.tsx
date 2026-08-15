@@ -24,8 +24,8 @@ interface Product {
 }
 
 export function ForYouProductsSection() {
-  const [products, setProducts]   = useState<Product[]>(ALL_PRODUCTS as any[]);
-  const [loading, setLoading]     = useState(false);
+  const [products, setProducts]   = useState<Product[]>([]);
+  const [loading, setLoading]     = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage]           = useState(1);
   const [hasMore, setHasMore]     = useState(true);
@@ -61,7 +61,7 @@ export function ForYouProductsSection() {
         });
 
         if (mapped.length === 0 && !append && pageNum === 1) {
-          setProducts(ALL_PRODUCTS as any[]);
+          setProducts([]);
           setHasMore(false);
         } else {
           setProducts((prev) => append ? [...prev, ...mapped] : mapped);
@@ -73,11 +73,11 @@ export function ForYouProductsSection() {
           }
         }
       } else {
-        if (!append && pageNum === 1) setProducts(ALL_PRODUCTS as any[]);
+        if (!append && pageNum === 1) setProducts([]);
         setHasMore(false);
       }
     } catch {
-      if (!append && pageNum === 1) setProducts(ALL_PRODUCTS as any[]);
+      if (!append && pageNum === 1) setProducts([]);
       setHasMore(false);
     }
   };

@@ -26,11 +26,16 @@ interface FeaturedProduct {
 
 export function FeaturedProductsSection({ initialProducts }: { initialProducts?: any[] }) {
   const [products, setProducts] = useState<FeaturedProduct[]>(
-    initialProducts && initialProducts.length > 0 ? initialProducts : (ALL_PRODUCTS as any[])
+    initialProducts && initialProducts.length > 0 ? initialProducts : []
   );
+  const [loading, setLoading] = useState(!initialProducts || initialProducts.length === 0);
 
   useEffect(() => {
-    if (initialProducts && initialProducts.length > 0) return;
+    if (initialProducts && initialProducts.length > 0) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     const API = getApiBaseUrl();
     fetch(`${API}/products?featured=true&limit=10`)
       .then((r) => r.json())
@@ -55,15 +60,20 @@ export function FeaturedProductsSection({ initialProducts }: { initialProducts?:
                 setProducts([]);
               }
             })
-            .catch(() => setProducts([]));
+            .catch(() => setProducts([]))
+            .finally(() => setLoading(false));
         } else {
           setProducts(list);
+          setLoading(false);
         }
       })
-      .catch(() => setProducts([]));
+      .catch(() => {
+        setProducts([]);
+        setLoading(false);
+      });
   }, [initialProducts]);
 
-  if (products !== null && products.length === 0) return null;
+  if (!loading && products.length === 0) return null;
 
   return (
     <section className="py-8 px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 bg-gradient-to-b from-amber-500/5 via-slate-50 to-white font-sans text-slate-800 border-y border-amber-200/40">
@@ -99,7 +109,7 @@ export function FeaturedProductsSection({ initialProducts }: { initialProducts?:
         </div>
 
         {/* Product Cards Grid */}
-        {products === null ? (
+        {loading ? (
           <ProductGridSkeleton count={5} />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">

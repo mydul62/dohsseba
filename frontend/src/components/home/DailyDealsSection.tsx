@@ -45,7 +45,8 @@ const TABS = [
 
 export function DailyDealsSection() {
   const [activeTab, setActiveTab] = useState('all');
-  const [products, setProducts]   = useState<DealProduct[]>(ALL_PRODUCTS as any[]);
+  const [products, setProducts]   = useState<DealProduct[]>([]);
+  const [loading, setLoading]     = useState(true);
 
   // Initialize to zeros to avoid SSR/client mismatch — real value set after mount
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
@@ -60,6 +61,7 @@ export function DailyDealsSection() {
 
   // Fetch discounted / hot deal products from DB
   useEffect(() => {
+    setLoading(true);
     const API = getApiBaseUrl();
     const mapProduct = (p: any): DealProduct => ({
       id:           p.id,
@@ -90,28 +92,33 @@ export function DailyDealsSection() {
 
         if (list.length > 0) {
           setProducts(list.map(mapProduct));
+          setLoading(false);
         } else {
           // Fallback to top discounted / popular products
-            fetch(`${API}/products?limit=12`)
-              .then((r2) => r2.json())
-              .then((res2) => {
-                let list2: any[] = [];
-                if (res2?.success && Array.isArray(res2.data)) {
-                  list2 = res2.data;
-                } else if (res2?.success && Array.isArray(res2.data?.products)) {
-                  list2 = res2.data.products;
-                }
+          fetch(`${API}/products?limit=12`)
+            .then((r2) => r2.json())
+            .then((res2) => {
+              let list2: any[] = [];
+              if (res2?.success && Array.isArray(res2.data)) {
+                list2 = res2.data;
+              } else if (res2?.success && Array.isArray(res2.data?.products)) {
+                list2 = res2.data.products;
+              }
 
-                if (list2.length > 0) {
-                  setProducts(list2.map(mapProduct));
-                } else {
-                  setProducts(ALL_PRODUCTS as any[]);
-                }
-              })
-              .catch(() => setProducts(ALL_PRODUCTS as any[]));
+              if (list2.length > 0) {
+                setProducts(list2.map(mapProduct));
+              } else {
+                setProducts([]);
+              }
+            })
+            .catch(() => setProducts([]))
+            .finally(() => setLoading(false));
         }
       })
-      .catch(() => setProducts([]));
+      .catch(() => {
+        setProducts([]);
+        setLoading(false);
+      });
   }, []);
 
   // Client-side tab filtering by category name keywords
@@ -164,7 +171,7 @@ export function DailyDealsSection() {
         </div>
 
         {/* Product Cards Grid */}
-        {products === null ? (
+        {loading ? (
           // Skeleton loading
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">
             {Array.from({ length: 8 }).map((_, i) => (

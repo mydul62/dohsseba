@@ -13,7 +13,7 @@ export default async function AllCategoriesPage() {
     categories = parents.length > 0 ? parents : res.data;
   }
 
-  const displayList = categories.length > 0 ? categories : SHOPPING_CATEGORIES;
+  const displayList = categories;
 
   return (
     <div className="py-6 px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 w-full max-w-[1720px] mx-auto space-y-6 font-sans text-slate-800">

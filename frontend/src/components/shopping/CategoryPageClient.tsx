@@ -22,15 +22,8 @@ export function CategoryPageClient({
   const [category] = useState<any>(initialCategory);
   
   const fallbackList = useMemo(() => {
-    if (initialProducts && initialProducts.length > 0) return initialProducts;
-    const lower = categorySlug.toLowerCase();
-    const matched = ALL_PRODUCTS.filter((p: any) =>
-      p.categorySlug?.toLowerCase().includes(lower) ||
-      p.categoryName?.toLowerCase().includes(lower) ||
-      lower.includes(p.categorySlug?.toLowerCase() || 'xyz')
-    );
-    return matched.length > 0 ? matched : ALL_PRODUCTS.slice(0, 12);
-  }, [initialProducts, categorySlug]);
+    return initialProducts && Array.isArray(initialProducts) ? initialProducts : [];
+  }, [initialProducts]);
 
   const [products] = useState<any[]>(fallbackList);
 

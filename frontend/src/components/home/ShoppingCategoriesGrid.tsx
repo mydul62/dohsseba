@@ -43,14 +43,14 @@ export function ShoppingCategoriesGrid() {
             id: cat.id,
             name: cat.name,
             slug: cat.slug || cat.name.toLowerCase().replace(/\s+/g, '-').replace(/[&]/g, 'and'),
-            image: cat.image || cat.imageUrl || FALLBACK_CATEGORIES[0].image,
+            image: cat.image || cat.imageUrl || 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=300',
           }));
           setCategories(mapped);
         } else {
-          setCategories(FALLBACK_CATEGORIES);
+          setCategories([]);
         }
       })
-      .catch(() => setCategories(FALLBACK_CATEGORIES));
+      .catch(() => setCategories([]));
   }, []);
 
   const scrollLeft = useCallback(() => {

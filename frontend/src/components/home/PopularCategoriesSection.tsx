@@ -21,8 +21,8 @@ interface CategoryNode {
 import { SHOPPING_CATEGORIES } from '@/constants/products';
 
 export function PopularCategoriesSection() {
-  const [categories, setCategories] = useState<CategoryNode[]>(SHOPPING_CATEGORIES as any[]);
-  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<CategoryNode[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const API = getApiBaseUrl();
@@ -39,7 +39,7 @@ export function PopularCategoriesSection() {
       .finally(() => setLoading(false));
   }, []);
 
-  const displayList = categories.length > 0 ? categories : (SHOPPING_CATEGORIES as any[]);
+  const displayList = categories;
 
   return (
     <section className="py-6 px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 bg-white font-sans text-slate-800">
