@@ -11,8 +11,11 @@
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "ts-node prisma/seed.ts",
-    "seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "npx tsx prisma/seed.ts",
+    "seed": "npx tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   },
   "keywords": [
     "dohssheba",
