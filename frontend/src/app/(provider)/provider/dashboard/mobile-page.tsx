@@ -23,6 +23,7 @@ import {
   Loader2,
   MessageCircle,
   Trash2,
+  LogOut,
 } from 'lucide-react';
 import {
   fetchProviderSlots,
@@ -778,14 +779,29 @@ export default function MobileProviderDashboard() {
           </div>
         </div>
 
-        <button
-          onClick={() => { load(); loadSlots(); }}
-          disabled={loading}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-          style={{ background: PANEL_ALT, border: `1px solid ${BORDER}` }}
-        >
-          <RefreshCw className={`w-4 h-4 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { load(); loadSlots(); }}
+            disabled={loading}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={{ background: PANEL_ALT, border: `1px solid ${BORDER}` }}
+            title="Refresh"
+          >
+            <RefreshCw className={`w-4 h-4 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              const { logout } = useAuthStore.getState();
+              await logout();
+              window.location.href = '/login';
+            }}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all bg-rose-500/10 text-rose-400 border border-rose-500/30"
+            title="Sign Out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </header>
 
       {/* ΓöÇΓöÇ Scrollable Content ΓöÇΓöÇ */}

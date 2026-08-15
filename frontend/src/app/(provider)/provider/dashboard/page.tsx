@@ -32,6 +32,7 @@ import {
   Activity,
   Zap,
   TrendingUp,
+  LogOut,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -538,14 +539,29 @@ export default function ServiceOperationsDashboard() {
               </div>
             </div>
 
-            <button
-              onClick={() => { loadDashboardData(); loadSlots(); }}
-              disabled={loading || slotsLoading}
-              className="px-4 py-2.5 rounded-xl bg-[#171829] hover:bg-[#1e1f36] text-white font-bold text-xs border border-[#242539] transition-all flex items-center gap-2 cursor-pointer shrink-0"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-[#7c6ff0] ${loading || slotsLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => { loadDashboardData(); loadSlots(); }}
+                disabled={loading || slotsLoading}
+                className="px-4 py-2.5 rounded-xl bg-[#171829] hover:bg-[#1e1f36] text-white font-bold text-xs border border-[#242539] transition-all flex items-center gap-2 cursor-pointer shrink-0"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-[#7c6ff0] ${loading || slotsLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const { logout } = useAuthStore.getState();
+                  await logout();
+                  window.location.href = '/login';
+                }}
+                className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-white font-extrabold text-xs border border-rose-500/25 transition-all flex items-center gap-2 cursor-pointer shadow shrink-0"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                <span>Sign Out</span>
+              </button>
+            </div>
           </div>
 
           {/* Main Nav Tabs */}

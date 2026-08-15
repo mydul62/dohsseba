@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { fetchApi } from '@/lib/api-client';
+import { fetchApi, uploadMultipleImagesApi } from '@/lib/api-client';
 import { 
   Image as ImageIcon, 
   Copy, 
@@ -13,7 +13,8 @@ import {
   Search, 
   Loader2, 
   RefreshCw,
-  Sparkles
+  UploadCloud,
+  CheckCircle2
 } from 'lucide-react';
 
 interface MediaItem {
@@ -29,6 +30,10 @@ export default function SellerMediaGalleryPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMedia = async () => {
     setLoading(true);
@@ -47,6 +52,27 @@ export default function SellerMediaGalleryPage() {
   useEffect(() => {
     fetchMedia();
   }, []);
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      setUploading(true);
+      setUploadProgress(`Uploading ${files.length} images from PC... Please wait.`);
+
+      await uploadMultipleImagesApi(files);
+      setUploadProgress(`🎉 Successfully uploaded ${files.length} images to Media Gallery!`);
+      setTimeout(() => setUploadProgress(''), 4000);
+      fetchMedia();
+    } catch (err: any) {
+      alert(err?.message || 'Failed to upload images');
+      setUploadProgress('');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleCopyUrl = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -68,6 +94,16 @@ export default function SellerMediaGalleryPage() {
 
   return (
     <div className="space-y-6">
+      {/* Hidden File Input for Multiple Uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={handleBulkUpload}
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#1e1f32] p-6 rounded-2xl border border-white/10 shadow-xl">
         <div>
@@ -83,21 +119,35 @@ export default function SellerMediaGalleryPage() {
                 </span>
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Browse and reuse all your uploaded product images from your server
+                Browse, search and import 20+ images at once directly from your PC
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center flex-wrap gap-3">
           <button
             onClick={fetchMedia}
-            disabled={loading}
+            disabled={loading || uploading}
             className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-200 rounded-xl border border-white/10 text-xs font-semibold transition-all disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-pink-500/20 transition-all disabled:opacity-50 active:scale-95 border border-white/10"
+          >
+            {uploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <UploadCloud className="w-4 h-4" />
+            )}
+            <span>{uploading ? 'Uploading...' : '📤 Import 20+ Images from PC'}</span>
+          </button>
+
           <Link
             href="/seller/dashboard/products/add"
             className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all"
@@ -107,6 +157,18 @@ export default function SellerMediaGalleryPage() {
           </Link>
         </div>
       </div>
+
+      {/* Upload Banner */}
+      {uploadProgress && (
+        <div className="p-4 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 text-xs font-bold flex items-center gap-3 shadow-xl animate-in fade-in">
+          {uploading ? (
+            <Loader2 className="w-5 h-5 text-indigo-400 animate-spin shrink-0" />
+          ) : (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          )}
+          <span>{uploadProgress}</span>
+        </div>
+      )}
 
       {/* Search Bar */}
       <div className="relative">
@@ -133,6 +195,13 @@ export default function SellerMediaGalleryPage() {
           <p className="text-xs text-slate-500 max-w-sm">
             {searchTerm ? 'No images match your search filter.' : 'You have not uploaded any product images yet.'}
           </p>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-2 px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+          >
+            <UploadCloud className="w-4 h-4" />
+            Import Images Now
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">

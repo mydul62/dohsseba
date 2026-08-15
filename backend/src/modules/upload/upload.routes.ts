@@ -22,6 +22,6 @@ router.use(protect);
 
 router.get('/gallery', uploadController.getMediaGallery);
 router.post('/single', upload.single('image'), uploadController.uploadSingleImage);
-router.post('/multiple', upload.array('images', 5), uploadController.uploadMultipleImages);
+router.post('/multiple', upload.array('images', 100), uploadController.uploadMultipleImages);
 
 export default router;
