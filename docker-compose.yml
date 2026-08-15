@@ -1,0 +1,40 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dohssheba-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:123456@host.docker.internal:5432/dohssheba?schema=public
+    networks:
+      - dohssheba-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dohssheba-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
+      - INTERNAL_API_URL=http://backend:5000/api/v1
+    depends_on:
+      - backend
+    networks:
+      - dohssheba-network
+
+networks:
+  dohssheba-network:
+    driver: bridge

@@ -1,4 +1,4 @@
-name: 🚀 Auto Deploy to VPS
+name: 🚀 Auto Deploy to VPS (Docker)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to VPS Server
+    name: Deploy to VPS via Docker Compose
     runs-on: ubuntu-latest
 
     steps:
@@ -22,9 +22,9 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           timeout: 60s
-          command_timeout: 10m
+          command_timeout: 15m
           script: |
-            echo "🚀 Auto-deploying dohsheba to VPS..."
+            echo "🚀 Auto-deploying dohsSheba to VPS using Docker..."
 
             # 1. Pull Latest Code
             cd /var/www/dohsheba || cd /var/www/html/dohsheba || exit 1
@@ -32,26 +32,16 @@ jobs:
             git reset --hard origin/main
             git pull origin main
 
-            # 2. Update Backend & Restart PM2
-            echo "📦 Building Backend..."
-            cd backend
-            npm install
-            npx prisma db execute --file prisma/migrations/20260811134714_make_slot_date_optional/migration.sql --schema prisma/schema.prisma || true
-            npx prisma db push --accept-data-loss --skip-generate || npx prisma db push --skip-generate || true
-            npx prisma generate
-            npm run build
-            fuser -k 5000/tcp || true
-            pm2 restart project3-api --update-env || pm2 restart dohsheba-api --update-env || pm2 start dist/server.js --name "project3-api"
+            # 2. Run Database Migration if needed
+            if [ -d "backend" ]; then
+              cd backend
+              npx prisma db push --skip-generate || true
+              cd ..
+            fi
 
-            # 3. Update Frontend & Restart PM2
-            echo "📦 Building Frontend..."
-            cd ../frontend
-            npm install
-            npm run build
-            fuser -k 3000/tcp || true
-            fuser -k 3002/tcp || true
-            pm2 restart project3-web --update-env || pm2 restart dohsheba-web --update-env || pm2 start npm --name "project3-web" -- start -- -p 3002
-            pm2 restart project-web --update-env || true
+            # 3. Build & Run Docker Containers
+            echo "🐳 Building & Starting Docker Containers..."
+            docker compose down || docker-compose down || true
+            docker compose up -d --build || docker-compose up -d --build
 
-            pm2 save
-            echo "🎉 Auto-deployment finished successfully!"
+            echo "🎉 Docker Auto-deployment finished successfully!"

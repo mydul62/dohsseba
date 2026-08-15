@@ -1,6 +1,9 @@
 import { useAuthStore } from '@/store/useAuthStore';
 
 export const getApiBaseUrl = (): string => {
+  if (typeof window === 'undefined' && process.env.INTERNAL_API_URL) {
+    return process.env.INTERNAL_API_URL;
+  }
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
