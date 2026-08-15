@@ -188,3 +188,33 @@ export const uploadMultipleImages = async (req: Request, res: Response, next: Ne
     next(error);
   }
 };
+
+export const getMediaGallery = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!fs.existsSync(uploadsDir)) {
+      return sendResponse(res, 200, 'Media gallery fetched', { total: 0, media: [] });
+    }
+
+    const files = fs.readdirSync(uploadsDir);
+    const mediaList = files
+      .filter((file) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file))
+      .map((filename) => {
+        const filepath = path.join(uploadsDir, filename);
+        const stats = fs.statSync(filepath);
+        return {
+          filename,
+          url: getPublicFileUrl(req, filename),
+          size: stats.size,
+          mtime: stats.mtime,
+        };
+      })
+      .sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+
+    return sendResponse(res, 200, 'Media gallery fetched successfully', {
+      total: mediaList.length,
+      media: mediaList,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

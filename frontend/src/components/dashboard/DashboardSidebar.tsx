@@ -316,11 +316,17 @@ export function DashboardSidebar({
               subItems: [
                 { label: 'All Products', href: '/seller/dashboard/products' },
                 { label: 'Add Product', href: '/seller/dashboard/products/add' },
+                { label: 'Media Gallery 🖼️', href: '/seller/dashboard/media' },
                 { label: 'Categories', href: '/seller/dashboard/products/categories' },
                 { label: 'Brands', href: '/seller/dashboard/products/brands' },
                 { label: 'Attributes', href: '/seller/dashboard/products/attributes' },
                 { label: 'Variants', href: '/seller/dashboard/products/variants' },
               ],
+            },
+            {
+              label: 'Media Gallery 🖼️',
+              href: '/seller/dashboard/media',
+              icon: <ImageIcon className="w-4 h-4 text-pink-400" />,
             },
             {
               label: 'Inventory',

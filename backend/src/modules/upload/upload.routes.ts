@@ -20,6 +20,7 @@ const upload = multer({
 
 router.use(protect);
 
+router.get('/gallery', uploadController.getMediaGallery);
 router.post('/single', upload.single('image'), uploadController.uploadSingleImage);
 router.post('/multiple', upload.array('images', 5), uploadController.uploadMultipleImages);
 
