@@ -61,7 +61,7 @@ export function ForYouProductsSection() {
         });
 
         if (mapped.length === 0 && !append && pageNum === 1) {
-          setProducts([]);
+          setProducts(ALL_PRODUCTS.slice(0, 12) as any);
           setHasMore(false);
         } else {
           setProducts((prev) => append ? [...prev, ...mapped] : mapped);
@@ -73,11 +73,11 @@ export function ForYouProductsSection() {
           }
         }
       } else {
-        if (!append && pageNum === 1) setProducts([]);
+        if (!append && pageNum === 1) setProducts(ALL_PRODUCTS.slice(0, 12) as any);
         setHasMore(false);
       }
     } catch {
-      if (!append && pageNum === 1) setProducts([]);
+      if (!append && pageNum === 1) setProducts(ALL_PRODUCTS.slice(0, 12) as any);
       setHasMore(false);
     }
   };

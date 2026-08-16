@@ -20,7 +20,7 @@ export const getAllProductCategories = async () => {
         children: {
           where: { isActive: true },
           include: { _count: { select: { products: true } } },
-          orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
+          orderBy: [{ displayOrder: 'asc' } as any, { name: 'asc' }],
         },
         _count: {
           select: {
@@ -29,7 +29,7 @@ export const getAllProductCategories = async () => {
           },
         },
       },
-      orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
+      orderBy: [{ displayOrder: 'asc' } as any, { name: 'asc' }],
     });
 
     return (cats || []).map((cat: any) => {

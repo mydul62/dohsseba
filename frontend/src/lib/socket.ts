@@ -9,12 +9,12 @@ export const getSocket = (token?: string): Socket => {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-      SOCKET_URL = `${protocol}//${hostname}:5000`;
+      SOCKET_URL = `${protocol}//${hostname}`;
     }
   }
 
   if (!SOCKET_URL) {
-    SOCKET_URL = 'http://localhost:5000';
+    SOCKET_URL = 'http://localhost:5008';
   }
 
   if (!socket) {

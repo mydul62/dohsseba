@@ -108,15 +108,15 @@ export function DailyDealsSection() {
               if (list2.length > 0) {
                 setProducts(list2.map(mapProduct));
               } else {
-                setProducts([]);
+                setProducts(ALL_PRODUCTS.slice(0, 12) as any);
               }
             })
-            .catch(() => setProducts([]))
+            .catch(() => setProducts(ALL_PRODUCTS.slice(0, 12) as any))
             .finally(() => setLoading(false));
         }
       })
       .catch(() => {
-        setProducts([]);
+        setProducts(ALL_PRODUCTS.slice(0, 12) as any);
         setLoading(false);
       });
   }, []);

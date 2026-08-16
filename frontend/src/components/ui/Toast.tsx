@@ -210,6 +210,14 @@ function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: (id: stri
 // ─── Container ────────────────────────────────────────────────────────────────
 
 function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <div
       aria-label="Notifications"

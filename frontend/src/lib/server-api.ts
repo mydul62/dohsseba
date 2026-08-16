@@ -1,5 +1,5 @@
 export const getServerApiBaseUrl = (): string => {
-  const url = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api/v1';
+  const url = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5008/api/v1';
   return url.replace('localhost', '127.0.0.1');
 };
 

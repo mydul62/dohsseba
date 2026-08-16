@@ -101,7 +101,13 @@ export const uploadSingleImage = async (req: Request, res: Response, next: NextF
       req.file.mimetype
     );
 
-    // 1. If Cloudinary is configured, upload to Cloudinary
+    // 1. Always save to Local Disk Storage (so Media Gallery reads it)
+    const filename = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+    const filepath = path.join(uploadsDir, filename);
+    fs.writeFileSync(filepath, processedBuffer);
+    let finalUrl = getPublicFileUrl(req, filename);
+
+    // 2. If Cloudinary is configured, also upload to Cloudinary
     if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_CLOUD_NAME !== 'your-cloud-name') {
       try {
         const b64 = processedBuffer.toString('base64');
@@ -109,33 +115,18 @@ export const uploadSingleImage = async (req: Request, res: Response, next: NextF
         const result = await cloudinary.uploader.upload(dataURI, {
           folder: 'dohssheba',
         });
-        return sendResponse(res, 200, 'Image uploaded successfully', {
-          url: result.secure_url,
-          publicId: result.public_id,
-        });
+        if (result.secure_url) {
+          finalUrl = result.secure_url;
+        }
       } catch (cloudErr) {
-        console.warn('⚠️ Cloudinary upload failed, falling back to disk/dataURI:', cloudErr);
+        console.warn('⚠️ Cloudinary upload failed, using local disk URL:', cloudErr);
       }
     }
 
-    // 2. Try Disk Storage
-    try {
-      const filename = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
-      const filepath = path.join(uploadsDir, filename);
-      fs.writeFileSync(filepath, processedBuffer);
-
-      const fileUrl = getPublicFileUrl(req, filename);
-      return sendResponse(res, 200, 'Image processed successfully', {
-        url: fileUrl,
-      });
-    } catch (diskErr) {
-      console.warn('⚠️ Local disk write failed, returning Data URI fallback:', diskErr);
-      const b64 = processedBuffer.toString('base64');
-      const dataURI = `data:${mimetype};base64,${b64}`;
-      return sendResponse(res, 200, 'Image processed successfully', {
-        url: dataURI,
-      });
-    }
+    return sendResponse(res, 200, 'Image processed successfully', {
+      url: finalUrl,
+      filename,
+    });
   } catch (error) {
     next(error);
   }
@@ -151,11 +142,16 @@ export const uploadMultipleImages = async (req: Request, res: Response, next: Ne
     const urls: string[] = [];
 
     for (const file of files) {
-      let uploadedUrl = '';
       const { buffer: processedBuffer, mimetype, extension } = await optimizeImageBuffer(
         file.buffer,
         file.mimetype
       );
+
+      // Always save to disk so it appears in Media Gallery
+      const filename = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
+      const filepath = path.join(uploadsDir, filename);
+      fs.writeFileSync(filepath, processedBuffer);
+      let fileUrl = getPublicFileUrl(req, filename);
 
       if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_CLOUD_NAME !== 'your-cloud-name') {
         try {
@@ -164,23 +160,13 @@ export const uploadMultipleImages = async (req: Request, res: Response, next: Ne
           const result = await cloudinary.uploader.upload(dataURI, {
             folder: 'dohssheba',
           });
-          uploadedUrl = result.secure_url;
+          if (result.secure_url) {
+            fileUrl = result.secure_url;
+          }
         } catch (_) {}
       }
 
-      if (!uploadedUrl) {
-        try {
-          const filename = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`;
-          const filepath = path.join(uploadsDir, filename);
-          fs.writeFileSync(filepath, processedBuffer);
-          uploadedUrl = getPublicFileUrl(req, filename);
-        } catch (_) {
-          const b64 = processedBuffer.toString('base64');
-          uploadedUrl = `data:${mimetype};base64,${b64}`;
-        }
-      }
-
-      urls.push(uploadedUrl);
+      urls.push(fileUrl);
     }
 
     return sendResponse(res, 200, 'Images uploaded successfully', { urls });
@@ -221,7 +207,7 @@ export const getMediaGallery = async (req: Request, res: Response, next: NextFun
 
 export const deleteMediaFile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const rawFilename = req.params.filename || req.query.filename as string;
+    const rawFilename = String(req.params.filename || req.query.filename || '');
     if (!rawFilename) {
       return next(new AppError('Filename is required.', 400));
     }
