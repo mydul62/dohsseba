@@ -37,6 +37,7 @@ jobs:
             for TARGET_DIR in "${FOUND_DIRS[@]}"; do
               echo "📂 Deploying in directory: $TARGET_DIR"
               cd "$TARGET_DIR" || continue
+              git remote set-url origin https://github.com/mydul62/dohsseba.git || true
               git fetch --all || true
               git reset --hard origin/main || true
               git pull origin main || true
