@@ -14,6 +14,7 @@ categoryRouter.get('/seed-dairy-now', productController.seedDairyNow);
 categoryRouter.get('/seed-meat-fish-now', productController.seedMeatFishNow);
 categoryRouter.get('/',     productController.getCategories);
 categoryRouter.get('/slug/:slug', productController.getCategoryBySlug);
+categoryRouter.patch('/reorder', protect, authorize('SELLER', 'ADMIN'), productController.reorderCategories);
 categoryRouter.post('/',    protect, authorize('SELLER', 'ADMIN'), productCategoryValidator, validate, productController.createCategory);
 categoryRouter.put('/:id',  protect, authorize('SELLER', 'ADMIN'), productController.updateCategory);
 categoryRouter.delete('/:id', protect, authorize('SELLER', 'ADMIN'), productController.deleteCategory);

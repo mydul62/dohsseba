@@ -12,13 +12,13 @@ interface CategoryNode {
   slug: string;
   image?: string;
   parentId?: string;
+  isPopular?: boolean;
+  displayOrder?: number;
   _count?: {
     products?: number;
     children?: number;
   };
 }
-
-import { SHOPPING_CATEGORIES } from '@/constants/products';
 
 export function PopularCategoriesSection() {
   const [categories, setCategories] = useState<CategoryNode[]>([]);
@@ -30,9 +30,25 @@ export function PopularCategoriesSection() {
       .then((r) => r.json())
       .then((res) => {
         if (res?.success && Array.isArray(res.data)) {
-          // Filter to top-level parent categories
-          const parents = res.data.filter((c: any) => !c.parentId);
-          setCategories(parents.length > 0 ? parents : res.data);
+          // Flatten all categories + subcategories that are marked popular
+          const allCats: CategoryNode[] = [];
+          res.data.forEach((parent: any) => {
+            if (parent.isPopular !== false) {
+              allCats.push(parent);
+            }
+            if (Array.isArray(parent.children)) {
+              parent.children.forEach((child: any) => {
+                if (child.isPopular !== false) {
+                  allCats.push(child);
+                }
+              });
+            }
+          });
+
+          // Sort by displayOrder ascending
+          allCats.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+          setCategories(allCats.length > 0 ? allCats : res.data);
         }
       })
       .catch(() => {})
@@ -44,7 +60,7 @@ export function PopularCategoriesSection() {
   return (
     <section className="py-6 px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 bg-white font-sans text-slate-800">
       <div className="w-full max-w-[1720px] mx-auto space-y-4">
-        {/* Section Header (Matches Chaldal Screenshot 1) */}
+        {/* Section Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
@@ -60,7 +76,7 @@ export function PopularCategoriesSection() {
           </Link>
         </div>
 
-        {/* Categories Grid (Clean White Cards) */}
+        {/* Categories Grid */}
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -69,7 +85,7 @@ export function PopularCategoriesSection() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4">
-            {displayList.slice(0, 12).map((cat) => (
+            {displayList.slice(0, 18).map((cat) => (
               <CategoryCard key={cat.id || cat.slug} category={cat} basePath="/category" />
             ))}
           </div>

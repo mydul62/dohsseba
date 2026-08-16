@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Tag, Plus, Search, Edit2, Trash2, Package, Loader2, FolderTree, AlertTriangle, X, Image as ImageIcon, Sparkles, Upload, ChevronRight, Layers, Lock, RefreshCw } from 'lucide-react';
+import { Tag, Plus, Search, Edit2, Trash2, Package, Loader2, FolderTree, AlertTriangle, X, Image as ImageIcon, Sparkles, Upload, ChevronRight, Layers, Lock, RefreshCw, ArrowUp, ArrowDown, Star } from 'lucide-react';
 import { fetchApi, uploadSingleImageApi } from '@/lib/api-client';
 import { generateCategorySlug, cleanSlugInput, isValidSlug } from '@/utils/slug.util';
 
@@ -65,6 +65,43 @@ export default function CategoriesPage() {
       console.error('Failed to load categories:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const moveCategory = async (cat: any, direction: 'up' | 'down', list: any[]) => {
+    const currentIndex = list.findIndex((c) => c.id === cat.id);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+
+    const targetCat = list[targetIndex];
+    const itemsToUpdate = [
+      { id: cat.id, displayOrder: targetIndex },
+      { id: targetCat.id, displayOrder: currentIndex },
+    ];
+
+    try {
+      await fetchApi('/product-categories/reorder', {
+        method: 'PATCH',
+        body: JSON.stringify({ items: itemsToUpdate }),
+      });
+      await loadCategories();
+    } catch (err: any) {
+      alert(err?.message || 'Failed to reorder categories');
+    }
+  };
+
+  const togglePopular = async (cat: any) => {
+    try {
+      await fetchApi('/product-categories/reorder', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          items: [{ id: cat.id, isPopular: cat.isPopular === false ? true : false }],
+        }),
+      });
+      await loadCategories();
+    } catch (err: any) {
+      alert(err?.message || 'Failed to update popular status');
     }
   };
 
@@ -819,13 +856,48 @@ export default function CategoriesPage() {
                     </div>
                   </div>
 
-                  {/* Actions & Add Subcategory button */}
-                  <div className="flex items-center gap-2 shrink-0">
+                  {/* Actions & Add Subcategory button & Reorder / Popular */}
+                  <div className="flex items-center gap-2 flex-wrap shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => togglePopular(parent)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 border transition-all ${
+                        parent.isPopular !== false
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-md shadow-amber-500/10'
+                          : 'bg-white/5 text-slate-400 border-white/10 hover:text-white'
+                      }`}
+                      title="Toggle Popular status on homepage"
+                    >
+                      <Star className={`w-3.5 h-3.5 ${parent.isPopular !== false ? 'fill-amber-400 text-amber-400' : ''}`} />
+                      <span>{parent.isPopular !== false ? 'Popular ★' : 'Standard'}</span>
+                    </button>
+
+                    <div className="flex items-center rounded-xl bg-white/5 border border-white/10 p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => moveCategory(parent, 'up', filteredParents)}
+                        disabled={filteredParents.indexOf(parent) === 0}
+                        className="p-1.5 hover:bg-white/10 text-slate-300 hover:text-white disabled:opacity-30 rounded-lg transition-colors"
+                        title="Move Up in homepage order"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveCategory(parent, 'down', filteredParents)}
+                        disabled={filteredParents.indexOf(parent) === filteredParents.length - 1}
+                        className="p-1.5 hover:bg-white/10 text-slate-300 hover:text-white disabled:opacity-30 rounded-lg transition-colors"
+                        title="Move Down in homepage order"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
                     <button
                       onClick={() => openAddForParent(parent)}
-                      className="px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-xs font-bold transition-all flex items-center gap-1.5 shadow"
+                      className="px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-xs font-bold transition-all flex items-center gap-1 shadow"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Add Subcategory
+                      <Plus className="w-3.5 h-3.5" /> Add Sub
                     </button>
                     <button
                       onClick={() => handleEditClick(parent)}
@@ -898,13 +970,42 @@ export default function CategoriesPage() {
                             </div>
 
                             <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[11px] text-slate-400">
-                              <span className="flex items-center gap-1 font-medium">
-                                <Package className="w-3 h-3 text-purple-400" /> {subProdCount} products
-                              </span>
-                              <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => togglePopular(sub)}
+                                className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold flex items-center gap-1 border transition-all ${
+                                  sub.isPopular !== false
+                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                    : 'bg-white/5 text-slate-500 border-white/5'
+                                }`}
+                                title="Toggle Popular status"
+                              >
+                                <Star className={`w-3 h-3 ${sub.isPopular !== false ? 'fill-amber-400 text-amber-400' : ''}`} />
+                                <span>{sub.isPopular !== false ? 'Popular' : 'Normal'}</span>
+                              </button>
+
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => moveCategory(sub, 'up', children)}
+                                  disabled={children.indexOf(sub) === 0}
+                                  className="p-1 hover:bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 rounded transition-colors"
+                                  title="Move Up"
+                                >
+                                  <ArrowUp className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveCategory(sub, 'down', children)}
+                                  disabled={children.indexOf(sub) === children.length - 1}
+                                  className="p-1 hover:bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 rounded transition-colors"
+                                  title="Move Down"
+                                >
+                                  <ArrowDown className="w-3 h-3" />
+                                </button>
                                 <button
                                   onClick={() => handleEditClick(sub)}
-                                  className="font-bold text-amber-400 hover:underline"
+                                  className="font-bold text-amber-400 hover:underline ml-1"
                                 >
                                   Edit
                                 </button>

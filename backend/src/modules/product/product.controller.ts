@@ -64,6 +64,14 @@ export const updateCategory = async (req: Request, res: Response, next: NextFunc
   } catch (error) { next(error); }
 };
 
+export const reorderCategories = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const items = Array.isArray(req.body.items) ? req.body.items : (Array.isArray(req.body) ? req.body : []);
+    const result = await productService.reorderCategories(items);
+    return sendResponse(res, 200, 'Categories reordered successfully', result);
+  } catch (error) { next(error); }
+};
+
 export const deleteCategory = async (req: Request, res: Response, next: NextFunction) => {
   try {
     await productService.deleteProductCategory(req.params.id as string);

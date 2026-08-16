@@ -20,6 +20,7 @@ export const getAllProductCategories = async () => {
         children: {
           where: { isActive: true },
           include: { _count: { select: { products: { where: { isActive: true } } } } },
+          orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
         },
         _count: {
           select: {
@@ -28,7 +29,7 @@ export const getAllProductCategories = async () => {
           },
         },
       },
-      orderBy: { name: 'asc' },
+      orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
     });
 
     return (cats || []).map((cat: any) => {
@@ -90,6 +91,22 @@ export const createProductCategory = async (data: {
   }
 
   return prisma.productCategory.create({ data: { ...data, slug } });
+};
+
+export const reorderCategories = async (items: { id: string; displayOrder?: number; isPopular?: boolean }[]) => {
+  for (const item of items) {
+    const updateData: any = {};
+    if (typeof item.displayOrder === 'number') updateData.displayOrder = item.displayOrder;
+    if (typeof item.isPopular === 'boolean') updateData.isPopular = item.isPopular;
+
+    if (Object.keys(updateData).length > 0) {
+      await prisma.productCategory.update({
+        where: { id: item.id },
+        data: updateData,
+      }).catch((e) => console.warn('Category reorder notice:', e));
+    }
+  }
+  return { success: true };
 };
 
 export const updateProductCategory = async (id: string, data: any) => {
