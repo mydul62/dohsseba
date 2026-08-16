@@ -1198,45 +1198,59 @@ export default function CategoriesPage() {
                             </div>
 
                             <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[11px] text-slate-400">
-                              <button
-                                type="button"
-                                onClick={() => togglePopular(sub)}
-                                className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold flex items-center gap-1 border transition-all ${
-                                  sub.isPopular !== false
-                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                                    : 'bg-white/5 text-slate-500 border-white/5'
-                                }`}
-                                title="Toggle Popular status"
-                              >
-                                <Star className={`w-3 h-3 ${sub.isPopular !== false ? 'fill-amber-400 text-amber-400' : ''}`} />
-                                <span>{sub.isPopular !== false ? 'Popular' : 'Normal'}</span>
-                              </button>
+                              <span className="flex items-center gap-1 font-bold text-[11px] text-purple-300">
+                                <Package className="w-3.5 h-3.5 text-purple-400" /> {subProdCount} items
+                              </span>
 
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center rounded-lg bg-white/5 border border-white/10 p-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => moveCategory(sub, 'up', children)}
+                                    disabled={children.indexOf(sub) === 0}
+                                    className="p-1 hover:bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 rounded transition-colors"
+                                    title="Move Up"
+                                  >
+                                    <ArrowUp className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveCategory(sub, 'down', children)}
+                                    disabled={children.indexOf(sub) === children.length - 1}
+                                    className="p-1 hover:bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 rounded transition-colors"
+                                    title="Move Down"
+                                  >
+                                    <ArrowDown className="w-3 h-3" />
+                                  </button>
+                                </div>
+
                                 <button
                                   type="button"
-                                  onClick={() => moveCategory(sub, 'up', children)}
-                                  disabled={children.indexOf(sub) === 0}
-                                  className="p-1 hover:bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 rounded transition-colors"
-                                  title="Move Up"
-                                >
-                                  <ArrowUp className="w-3 h-3" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => moveCategory(sub, 'down', children)}
-                                  disabled={children.indexOf(sub) === children.length - 1}
-                                  className="p-1 hover:bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 rounded transition-colors"
-                                  title="Move Down"
-                                >
-                                  <ArrowDown className="w-3 h-3" />
-                                </button>
-                                <button
                                   onClick={() => handleEditClick(sub)}
-                                  className="font-bold text-amber-400 hover:underline ml-1"
+                                  className="font-bold text-amber-400 hover:text-amber-300 hover:underline text-[11px]"
                                 >
                                   Edit
                                 </button>
+
+                                {subProdCount > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => alert(`⚠️ Deletion Blocked!\n\n"${sub.name}" is currently assigned to ${subProdCount} active product(s). It cannot be deleted until those products are reassigned or deleted.`)}
+                                    className="font-bold text-slate-500 flex items-center gap-1 cursor-not-allowed text-[11px]"
+                                    title="Cannot delete: Subcategory in use by products"
+                                  >
+                                    <Lock className="w-3 h-3 text-slate-500" /> Locked
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeletingCat(sub)}
+                                    className="font-bold text-rose-400 hover:text-rose-300 hover:underline transition-colors flex items-center gap-1 text-[11px]"
+                                    title="Delete Subcategory"
+                                  >
+                                    <Trash2 className="w-3 h-3" /> Delete
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>
