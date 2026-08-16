@@ -22,13 +22,49 @@ import {
   Tag,
   X,
   Loader2,
-  Check,
-  Lock,
   ArrowRight,
 } from 'lucide-react';
-import { LoadingButton } from '@/components/ui/LoadingButton';
-import { useToast } from '@/components/ui/Toast';
-import { DohsShebaLoader } from '@/components/ui/DohsShebaLoader';
+
+const getValidProductImage = (itemProduct: any): string => {
+  const title = itemProduct?.title || itemProduct?.name || '';
+  const decoded = title.toLowerCase();
+  
+  const rawImg = itemProduct?.image || (Array.isArray(itemProduct?.images) && itemProduct.images[0]) || '';
+  
+  if (rawImg && typeof rawImg === 'string' && rawImg.trim() && !rawImg.includes('undefined')) {
+    const clean = rawImg.trim();
+    if (clean.includes('unsplash.com') || clean.includes('cloudinary.com') || clean.startsWith('data:')) {
+      return clean;
+    }
+  }
+
+  if (decoded.includes('mori') || decoded.includes('chilli') || decoded.includes('chili') || decoded.includes('মরিচ')) {
+    return 'https://images.unsplash.com/photo-1588879460618-924446702a60?w=300&auto=format&fit=crop&q=80';
+  }
+  if (decoded.includes('vim') || decoded.includes('liquid') || decoded.includes('soap') || decoded.includes('clean') || decoded.includes('লিকুইড')) {
+    return 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300&auto=format&fit=crop&q=80';
+  }
+  if (decoded.includes('oil') || decoded.includes('tel') || decoded.includes('তেল')) {
+    return 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=300&auto=format&fit=crop&q=80';
+  }
+  if (decoded.includes('rice') || decoded.includes('chal') || decoded.includes('চাল') || decoded.includes('ময়দা') || decoded.includes('flour')) {
+    return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300&auto=format&fit=crop&q=80';
+  }
+  if (decoded.includes('fish') || decoded.includes('mach') || decoded.includes('মাছ')) {
+    return 'https://images.unsplash.com/photo-1534942519507-769d4679447d?w=300&auto=format&fit=crop&q=80';
+  }
+  if (decoded.includes('milk') || decoded.includes('dudh') || decoded.includes('দুধ')) {
+    return 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=80';
+  }
+  if (decoded.includes('egg') || decoded.includes('dima') || decoded.includes('ডিম')) {
+    return 'https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?w=300&auto=format&fit=crop&q=80';
+  }
+  if (decoded.includes('chicken') || decoded.includes('meat') || decoded.includes('মাংস')) {
+    return 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=300&auto=format&fit=crop&q=80';
+  }
+
+  return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300&auto=format&fit=crop&q=80';
+};
 
 export function CheckoutClient() {
   const { items, getSubtotal, clearCart } = useCartStore();
@@ -597,24 +633,16 @@ export function CheckoutClient() {
             {/* Items List */}
             <div className="space-y-3.5 max-h-64 overflow-y-auto pr-1">
               {items.map(({ product, quantity }) => {
-                const rawImg = product.image || (Array.isArray((product as any).images) && (product as any).images[0]) || '';
-                let imgSrc = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&auto=format&fit=crop&q=80';
-                if (rawImg && typeof rawImg === 'string' && rawImg.trim() && !rawImg.includes('undefined')) {
-                  const clean = rawImg.trim();
-                  imgSrc = clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:')
-                    ? clean
-                    : clean.startsWith('/') ? clean : `/${clean}`;
-                }
-
+                const imgSrc = getValidProductImage(product);
                 return (
                   <div key={product.id || Math.random()} className="flex items-center gap-3 text-xs">
                     <div className="relative w-11 h-11 rounded-lg border border-slate-200 overflow-hidden bg-slate-50 shrink-0">
                       <img
                         src={imgSrc}
-                        alt={product.title || product.name || 'Product'}
+                        alt=""
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&auto=format&fit=crop&q=80';
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300&auto=format&fit=crop&q=80';
                         }}
                       />
                     </div>
