@@ -418,10 +418,11 @@ export default function ProductsPage() {
       </div>
 
       {/* ── Stats (Clickable Quick Filters) ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
           { key: '', label: 'Total Products', value: products.length, icon: <Package className="w-5 h-5 text-indigo-400" />, bg: 'bg-indigo-500/10' },
           { key: 'active', label: 'Active', value: totalActive, icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />, bg: 'bg-emerald-500/10' },
+          { key: 'draft', label: 'Drafts', value: totalDrafts, icon: <Archive className="w-5 h-5 text-indigo-400" />, bg: 'bg-indigo-500/10' },
           { key: 'out_of_stock', label: 'Out of Stock', value: totalOutOfStock, icon: <X className="w-5 h-5 text-red-400" />, bg: 'bg-red-500/10' },
           { key: 'low_stock', label: 'Low Stock', value: totalLowStock, icon: <AlertTriangle className="w-5 h-5 text-amber-400" />, bg: 'bg-amber-500/10' },
         ].map((s) => {
