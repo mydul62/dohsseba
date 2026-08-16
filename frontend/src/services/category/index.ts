@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 
 const getApiBaseUrl = () => {
-  const url = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api/v1";
+  const url = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5008/api/v1";
   return url.replace("localhost", "127.0.0.1");
 };
 
@@ -14,7 +14,7 @@ export const GetAllProductCategories = async () => {
         "Content-Type": "application/json",
       },
       next: {
-        revalidate: 60,
+        revalidate: 10,
         tags: ["product-categories"],
       },
     });
@@ -39,7 +39,7 @@ export const GetCategoryBySlug = async (slug: string) => {
         "Content-Type": "application/json",
       },
       next: {
-        revalidate: 60,
+        revalidate: 10,
         tags: ["category", slug],
       },
     });
