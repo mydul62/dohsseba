@@ -596,22 +596,40 @@ export function CheckoutClient() {
 
             {/* Items List */}
             <div className="space-y-3.5 max-h-64 overflow-y-auto pr-1">
-              {items.map(({ product, quantity }) => (
-                <div key={product.id} className="flex items-center gap-3 text-xs">
-                  <div className="relative w-11 h-11 rounded-lg border border-slate-200 overflow-hidden bg-slate-50 shrink-0">
-                    <Image src={product.image} alt={product.title} fill className="object-cover" />
+              {items.map(({ product, quantity }) => {
+                const rawImg = product.image || (Array.isArray((product as any).images) && (product as any).images[0]) || '';
+                let imgSrc = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&auto=format&fit=crop&q=80';
+                if (rawImg && typeof rawImg === 'string' && rawImg.trim() && !rawImg.includes('undefined')) {
+                  const clean = rawImg.trim();
+                  imgSrc = clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:')
+                    ? clean
+                    : clean.startsWith('/') ? clean : `/${clean}`;
+                }
+
+                return (
+                  <div key={product.id || Math.random()} className="flex items-center gap-3 text-xs">
+                    <div className="relative w-11 h-11 rounded-lg border border-slate-200 overflow-hidden bg-slate-50 shrink-0">
+                      <img
+                        src={imgSrc}
+                        alt={product.title || product.name || 'Product'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&auto=format&fit=crop&q=80';
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-slate-800 text-xs line-clamp-1">{product.title || product.name}</h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {quantity} × {formatCurrency(product.price)}
+                      </p>
+                    </div>
+                    <div className="font-black text-slate-800 text-xs ml-auto">
+                      {formatCurrency((product.price || 0) * quantity)}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-800 text-xs line-clamp-1">{product.title}</h4>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      {quantity} × {formatCurrency(product.price)}
-                    </p>
-                  </div>
-                  <div className="font-black text-slate-800 text-xs ml-auto">
-                    {formatCurrency(product.price * quantity)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* ── Promo Code Box ── */}
