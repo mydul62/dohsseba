@@ -33,8 +33,13 @@ const MOCK_PRODUCTS = [
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function getProductStatus(p: typeof MOCK_PRODUCTS[0]) {
-  if (!p.isActive) return { label: 'Archived', cls: 'bg-slate-500/20 text-slate-300 border-slate-500/30' };
+function getProductStatus(p: any) {
+  if (!p.isActive || p.status === 'DRAFT' || p.isDraft) {
+    return { label: 'Draft', cls: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' };
+  }
+  if (p.status === 'ARCHIVED') {
+    return { label: 'Archived', cls: 'bg-slate-500/20 text-slate-300 border-slate-500/30' };
+  }
   if (p.stock === 0) return { label: 'Out of Stock', cls: 'bg-red-500/20 text-red-300 border-red-500/30' };
   if (p.stock <= 10) return { label: 'Low Stock', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/30' };
   return { label: 'Active', cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
@@ -179,9 +184,10 @@ export default function ProductsPage() {
 
     // Status Filter
     if (statusFilter === 'active')        list = list.filter((p) => p.isActive && p.stock > 0);
-    if (statusFilter === 'archived')      list = list.filter((p) => !p.isActive);
-    if (statusFilter === 'out_of_stock')   list = list.filter((p) => p.stock === 0);
-    if (statusFilter === 'low_stock')     list = list.filter((p) => p.stock > 0 && p.stock <= 10);
+    if (statusFilter === 'draft')         list = list.filter((p) => !p.isActive || p.status === 'DRAFT' || p.isDraft);
+    if (statusFilter === 'archived')      list = list.filter((p) => p.status === 'ARCHIVED');
+    if (statusFilter === 'out_of_stock')   list = list.filter((p) => p.isActive && p.stock === 0);
+    if (statusFilter === 'low_stock')     list = list.filter((p) => p.isActive && p.stock > 0 && p.stock <= 10);
     if (statusFilter === 'discounted')    list = list.filter((p) => Number(p.discount || 0) > 0);
     if (statusFilter === 'featured')      list = list.filter((p) => p.isFeatured);
 
@@ -206,9 +212,10 @@ export default function ProductsPage() {
   // ─── Stats ──────────────────────────────────────────────────────────────────
 
   const totalActive     = products.filter((p) => p.isActive && p.stock > 0).length;
-  const totalDrafts     = products.filter((p) => !p.isActive).length;
-  const totalOutOfStock = products.filter((p) => p.stock === 0).length;
-  const totalLowStock   = products.filter((p) => p.stock > 0 && p.stock <= 10).length;
+  const totalDrafts     = products.filter((p) => !p.isActive || p.status === 'DRAFT' || p.isDraft).length;
+  const totalOutOfStock = products.filter((p) => p.isActive && p.stock === 0).length;
+  const totalLowStock   = products.filter((p) => p.isActive && p.stock > 0 && p.stock <= 10).length;
+  const totalArchived   = products.filter((p) => p.status === 'ARCHIVED').length;
 
   // ─── Selection ──────────────────────────────────────────────────────────────
 
@@ -463,11 +470,12 @@ export default function ProductsPage() {
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               className="w-full px-3.5 py-2.5 rounded-xl bg-[#181928] border border-white/10 text-slate-200 text-xs focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
             >
-              <option value="">All Status</option>
+              <option value="">All Status ({products.length})</option>
               <option value="active">Active ({totalActive})</option>
-              <option value="out_of_stock">Out of Stock ({totalOutOfStock})</option>
+              <option value="draft">📝 Drafts ({totalDrafts})</option>
               <option value="low_stock">Low Stock ({totalLowStock})</option>
-              <option value="archived">Archived ({totalDrafts})</option>
+              <option value="out_of_stock">Out of Stock ({totalOutOfStock})</option>
+              <option value="archived">Archived ({totalArchived})</option>
               <option value="featured">Featured</option>
               <option value="discounted">Discounted</option>
             </select>
@@ -551,6 +559,35 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Status Filter Tabs ── */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        {[
+          { id: '', label: 'All Products', count: products.length },
+          { id: 'active', label: 'Active', count: totalActive },
+          { id: 'draft', label: '📝 Drafts', count: totalDrafts },
+          { id: 'low_stock', label: 'Low Stock', count: totalLowStock },
+          { id: 'out_of_stock', label: 'Out of Stock', count: totalOutOfStock },
+          { id: 'archived', label: 'Archived', count: totalArchived },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setStatusFilter(tab.id); setPage(1); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border cursor-pointer flex items-center gap-1.5 ${
+              statusFilter === tab.id
+                ? 'bg-indigo-600 border-indigo-500 text-white shadow-md'
+                : 'bg-[#181928] border-white/10 text-slate-400 hover:text-white hover:border-slate-600'
+            }`}
+          >
+            <span>{tab.label}</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+              statusFilter === tab.id ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-400'
+            }`}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
 
       {/* ── Table ── */}
       <div className="rounded-3xl bg-[#1f2136] border border-white/10 shadow-xl overflow-hidden">
@@ -660,6 +697,28 @@ export default function ProductsPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(p)}
+                          className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${
+                            p.isActive
+                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
+                              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                          }`}
+                          title={p.isActive ? 'Save as Draft (Unpublish)' : 'Publish live on store'}
+                        >
+                          {p.isActive ? (
+                            <>
+                              <EyeOff className="w-3 h-3" />
+                              <span>To Draft</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Publish</span>
+                            </>
+                          )}
+                        </button>
                         <Link
                           href={`/seller/dashboard/products/${p.id}/edit`}
                           className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 flex items-center justify-center transition-all"
