@@ -595,45 +595,91 @@ const getSmartProductImage = (name: string, customImg?: string, categoryName?: s
   }
 
   const t = `${name || ''} ${categoryName || ''}`.toLowerCase();
-  
-  if (t.includes('mori') || t.includes('chilli') || t.includes('chili') || t.includes('মরিচ')) {
-    return 'https://images.unsplash.com/photo-1588879460618-924446702a60?w=600&auto=format&fit=crop&q=80';
+
+  // 1. Spices & Seasoning
+  if (/mori|chilli|chili|মরিচ|halud|হলুদ|jira|জিরা|dhonia|ধনিয়া|masala|মসলা|curry|spice|radhuni|pran|aci/i.test(t)) {
+    return 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('vim') || t.includes('liquid') || t.includes('soap') || t.includes('clean') || t.includes('লিকুইড') || t.includes('ডিশওয়াশ')) {
-    return 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80';
-  }
-  if (t.includes('oil') || t.includes('tel') || t.includes('তেল') || t.includes('সয়াবিন')) {
+
+  // 2. Oil & Ghee
+  if (/oil|tel|তেল|সয়াবিন|সরিষা|ghee|ঘি|mustard|rupchanda|teer|parachute|soyabean|fortune|bashundhara/i.test(t)) {
     return 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('ময়দা') || t.includes('ময়দা') || t.includes('আটা') || t.includes('flour') || t.includes('rice') || t.includes('চাল') || t.includes('রাইস')) {
+
+  // 3. Rice, Flour & Grains
+  if (/ময়দা|ময়দা|আটা|চাল|ধান|সুজি|flour|atta|maida|rice|grain|nazir|miniket|chinigura|basmati|suji|kalizira/i.test(t)) {
     return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('মাছ') || t.includes('fish') || t.includes('ilish') || t.includes('hilsha') || t.includes('রুই')) {
+
+  // 4. Fish & Seafood
+  if (/মাছ|ইলিশ|রুই|কাতলা|চিংড়ি|fish|ilish|hilsha|prawn|shrimp|rui|katla|seafood|catfish|pangash/i.test(t)) {
     return 'https://images.unsplash.com/photo-1534942519507-769d4679447d?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('দুধ') || t.includes('milk') || t.includes('dudh') || t.includes('ডেইরি')) {
-    return 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop&q=80';
-  }
-  if (t.includes('ডিম') || t.includes('egg') || t.includes('dima')) {
-    return 'https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?w=600&auto=format&fit=crop&q=80';
-  }
-  if (t.includes('মাংস') || t.includes('chicken') || t.includes('meat') || t.includes('চিকেন')) {
+
+  // 5. Meat & Poultry
+  if (/মাংস|মুরগি|গরু|খাসি|chicken|meat|beef|mutton|poultry|broiler|cock|layer/i.test(t)) {
     return 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('kid') || t.includes('baby') || t.includes('child') || t.includes('টয়') || t.includes('বাচ্চা')) {
-    return 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=600&auto=format&fit=crop&q=80';
+
+  // 6. Milk, Egg & Dairy
+  if (/দুধ|ডিম|দই|মাখন|পনির|milk|egg|dudh|dima|dairy|butter|cheese|curd|yogurt|aarong|dano|nido|horlicks|diploma|cowhead/i.test(t)) {
+    return 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('care') || t.includes('beauty') || t.includes('lotion') || t.includes('shampoo') || t.includes('শ্যাম্পু')) {
+
+  // 7. Cleaning & Dishwash
+  if (/vim|liquid|soap|clean|wash|harpic|wheel|rin|surf|tik|লিকুইড|ডিশওয়াশ|সাবান|ডিটারজেন্ট|ক্লিনিং/i.test(t)) {
+    return 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80';
+  }
+
+  // 8. Personal Care & Cosmetics
+  if (/shampoo|lotion|paste|cream|perfume|sunsilk|lux|dettol|meril|dove|facewash|pepsodent|closeup|savlon|শ্যাম্পু|লোশন|পেস্ট|ক্রিম|বিউটি|care/i.test(t)) {
     return 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('fruit') || t.includes('apple') || t.includes('mango') || t.includes('banana') || t.includes('ফল')) {
+
+  // 9. Baby Care & Diapers
+  if (/baby|diaper|pampers|molfix|cerelac|child|kid|বাচ্চা|ডায়াপার|টয়|kids|huggies|nappies/i.test(t)) {
+    return 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=600&auto=format&fit=crop&q=80';
+  }
+
+  // 10. Fruits & Vegetables
+  if (/potato|onion|tomato|fruit|apple|mango|banana|veg|potato|chili|cucumber|garlic|ginger|আলু|পেঁয়াজ|টমেটো|ফল|আপেল|আম|কলা|শাক|সবজি|রশুন|আদা/i.test(t)) {
     return 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('snack') || t.includes('biscuit') || t.includes('chanachur') || t.includes('চানাচুর') || t.includes('বিস্কুট')) {
+
+  // 11. Snacks, Biscuits & Noodles
+  if (/biscuit|chanachur|noodle|chip|cake|snack|maggi|cocola|pasta|wafer|toast|bormi|বিস্কুট|চানাচুর|নুডলস|চিপস|কেক|স্ন্যাক্স|টোস্ট/i.test(t)) {
     return 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600&auto=format&fit=crop&q=80';
   }
 
-  return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&auto=format&fit=crop&q=80';
+  // 12. Tea, Coffee & Beverages
+  if (/tea|coffee|juice|drink|beverage|cola|water|mojo|clemon|speed|7up|pepsi|sprite|fanta|tang|চা|কফি|জুস|পানি|পানীয়/i.test(t)) {
+    return 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80';
+  }
+
+  // 13. Household & Electronics
+  if (/light|fan|battery|electric|appliance|hardware|tool|switch|socket|bulb|লাইট|ফ্যান|ব্যাটারি|ইলেকট্রনিক্স/i.test(t)) {
+    return 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=600&auto=format&fit=crop&q=80';
+  }
+
+  // 14. Stationeries & Books
+  if (/pen|paper|notebook|book|stationery|pencil|eraser|khata|কলম|কাগজ|বই|খাতা/i.test(t)) {
+    return 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&auto=format&fit=crop&q=80';
+  }
+
+  // 15. Seed-based dynamic Unsplash fallback images (Ensures distinct images for any unknown product name!)
+  const seed = Array.from(t).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const fallbackImages = [
+    'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=600&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=600&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1506617429158-171e54d45840?w=600&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=600&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=600&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1579113800032-c38bd7725844?w=600&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1588964895597-cfccd6e2dbf9?w=600&auto=format&fit=crop&q=80',
+  ];
+
+  return fallbackImages[seed % fallbackImages.length];
 };
 
 export const bulkImportProducts = async (sellerId: string, items: any[]) => {
