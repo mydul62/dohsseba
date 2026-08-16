@@ -1,17 +1,20 @@
 import { useAuthStore } from '@/store/useAuthStore';
 
 export const getApiBaseUrl = (): string => {
-  if (typeof window === 'undefined' && process.env.INTERNAL_API_URL) {
-    return process.env.INTERNAL_API_URL;
-  }
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
   if (typeof window !== 'undefined') {
     const { hostname, origin } = window.location;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:5008/api/v1';
+    }
     if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
       return `${origin}/api/v1`;
     }
+  }
+  if (process.env.INTERNAL_API_URL) {
+    return process.env.INTERNAL_API_URL;
+  }
+  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('5000')) {
+    return process.env.NEXT_PUBLIC_API_URL;
   }
   return 'http://localhost:5008/api/v1';
 };
