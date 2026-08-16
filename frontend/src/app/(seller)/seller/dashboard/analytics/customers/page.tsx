@@ -110,7 +110,7 @@ export default function CustomerAnalyticsPage() {
           </div>
         </div>
         <div className="flex items-end gap-2 h-36">
-          {MONTHLY_NEW.map((m) => {
+          {monthlyNew.map((m) => {
             const total = m.new + m.returning;
             return (
               <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
