@@ -625,17 +625,25 @@ const getSmartProductImage = (name: string, customImg?: string): string => {
 
 export const bulkImportProducts = async (sellerId: string, items: any[]) => {
   if (!Array.isArray(items) || items.length === 0) {
-    return { count: 0, categoriesCreated: 0 };
+    return { count: 0, categoriesCreated: 0, brandsCreated: 0 };
   }
 
   const categoryCache = new Map<string, string>();
+  const brandCache = new Map<string, { id: string; name: string }>();
   let categoriesCreated = 0;
+  let brandsCreated = 0;
 
-  // Pre-fetch default category or find/create categories dynamically
+  // Pre-fetch categories & brands dynamically
   const categories = await prisma.productCategory.findMany();
   for (const c of categories) {
     categoryCache.set(c.name.toLowerCase(), c.id);
     if (c.slug) categoryCache.set(c.slug.toLowerCase(), c.id);
+  }
+
+  const brands = await prisma.brand.findMany();
+  for (const b of brands) {
+    brandCache.set(b.name.toLowerCase(), { id: b.id, name: b.name });
+    if (b.slug) brandCache.set(b.slug.toLowerCase(), { id: b.id, name: b.name });
   }
 
   let defaultCatId = categoryCache.get('daily essentials') || categoryCache.get('groceries') || Array.from(categoryCache.values())[0];
@@ -658,8 +666,12 @@ export const bulkImportProducts = async (sellerId: string, items: any[]) => {
     if (!rawName) continue;
 
     const rawCat = String(row.category || row.Category || row.categoryName || '').trim();
+    const rawSubCat = String(row.subCategory || row.SubCategory || row.subcategory || '').trim();
+    const rawBrand = String(row.brand || row.Brand || row.brandName || '').trim();
+
     let catId = defaultCatId;
 
+    // 1. Process Main Category
     if (rawCat) {
       const cKey = rawCat.toLowerCase();
       if (categoryCache.has(cKey)) {
@@ -679,6 +691,55 @@ export const bulkImportProducts = async (sellerId: string, items: any[]) => {
       }
     }
 
+    // 2. Process SubCategory (linked to Main Category)
+    if (rawSubCat) {
+      const subKey = `${rawSubCat.toLowerCase()}::${catId}`;
+      if (categoryCache.has(subKey)) {
+        catId = categoryCache.get(subKey)!;
+      } else {
+        const slug = rawSubCat.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        try {
+          const createdSubCat = await prisma.productCategory.create({
+            data: {
+              name: rawSubCat,
+              slug: `${slug}-${Math.floor(Math.random() * 899 + 100)}`,
+              parentId: catId,
+            },
+          });
+          catId = createdSubCat.id;
+          categoryCache.set(subKey, createdSubCat.id);
+          categoriesCreated++;
+        } catch {}
+      }
+    }
+
+    // 3. Process Brand (Auto Create Brand)
+    let brandId: string | undefined = undefined;
+    let brandName: string | undefined = undefined;
+
+    if (rawBrand) {
+      const bKey = rawBrand.toLowerCase();
+      if (brandCache.has(bKey)) {
+        const cached = brandCache.get(bKey)!;
+        brandId = cached.id;
+        brandName = cached.name;
+      } else {
+        const bSlug = rawBrand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        try {
+          const createdBrand = await prisma.brand.create({
+            data: {
+              name: rawBrand,
+              slug: `${bSlug}-${Math.floor(Math.random() * 899 + 100)}`,
+            },
+          });
+          brandId = createdBrand.id;
+          brandName = createdBrand.name;
+          brandCache.set(bKey, { id: createdBrand.id, name: createdBrand.name });
+          brandsCreated++;
+        } catch {}
+      }
+    }
+
     const price = Number(row.price || row.Price || 100);
     const discount = Number(row.discount || row.Discount || 0);
     const stock = Number(row.stock || row.Stock || 50);
@@ -689,10 +750,16 @@ export const bulkImportProducts = async (sellerId: string, items: any[]) => {
     const imgUrl = getSmartProductImage(rawName, customImg);
     const baseSlug = rawName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const uniqueSlug = `${baseSlug || 'prod'}-${Math.floor(Math.random() * 89999 + 10000)}`;
+    const sku = String(row.sku || row.SKU || `DH-${baseSlug.slice(0, 8).toUpperCase()}-${Math.floor(Math.random() * 899 + 100)}`);
+    const barcode = row.barcode || row.Barcode ? String(row.barcode || row.Barcode) : undefined;
 
     newProductsPayload.push({
       sellerId,
       categoryId: catId,
+      brandId: brandId || null,
+      brandName: brandName || (rawBrand || null),
+      sku,
+      barcode,
       name: rawName,
       slug: uniqueSlug,
       description,
@@ -708,7 +775,7 @@ export const bulkImportProducts = async (sellerId: string, items: any[]) => {
   }
 
   if (newProductsPayload.length === 0) {
-    return { count: 0, categoriesCreated: 0 };
+    return { count: 0, categoriesCreated: 0, brandsCreated: 0 };
   }
 
   // Insert in batches of 100 for maximum performance
@@ -723,7 +790,7 @@ export const bulkImportProducts = async (sellerId: string, items: any[]) => {
     totalInserted += created.count;
   }
 
-  return { count: totalInserted, categoriesCreated };
+  return { count: totalInserted, categoriesCreated, brandsCreated };
 };
 
 export const bulkPublishProducts = async (sellerId: string, productIds: string[], role: string) => {
