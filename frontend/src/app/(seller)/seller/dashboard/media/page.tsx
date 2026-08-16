@@ -15,7 +15,14 @@ import {
   UploadCloud,
   CheckCircle2,
   CheckSquare,
-  Square
+  Square,
+  LayoutGrid,
+  Grid2x2,
+  Grid3x3,
+  List,
+  Edit3,
+  X,
+  FileEdit
 } from 'lucide-react';
 
 interface MediaItem {
@@ -33,9 +40,17 @@ export default function SellerMediaGalleryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
+  // Column Grid & View Mode State
+  const [viewMode, setViewMode] = useState<'grid-2' | 'grid-3' | 'grid-4' | 'grid-6' | 'list'>('grid-4');
+
   // Multiple selection state
   const [selectedFilenames, setSelectedFilenames] = useState<string[]>([]);
   const [deletingBulk, setDeletingBulk] = useState(false);
+
+  // Rename Modal State
+  const [renamingItem, setRenamingItem] = useState<MediaItem | null>(null);
+  const [renameInput, setRenameInput] = useState('');
+  const [renamingLoading, setRenamingLoading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -109,6 +124,46 @@ export default function SellerMediaGalleryPage() {
     }
   };
 
+  // ─── Rename Logic ───
+  const openRenameModal = (item: MediaItem) => {
+    setRenamingItem(item);
+    setRenameInput(item.filename);
+  };
+
+  const handleRenameSubmit = async () => {
+    if (!renamingItem || !renameInput.trim()) return;
+
+    try {
+      setRenamingLoading(true);
+      const res = await fetchApi<any>('/upload/gallery/rename', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          oldFilename: renamingItem.filename,
+          newFilename: renameInput.trim(),
+        }),
+      });
+
+      if (res && res.success && res.data) {
+        const { oldFilename, newFilename, url } = res.data;
+        setMediaList((prev) =>
+          prev.map((item) =>
+            item.filename === oldFilename
+              ? { ...item, filename: newFilename, url: url || item.url }
+              : item
+          )
+        );
+        setSelectedFilenames((prev) =>
+          prev.map((name) => (name === oldFilename ? newFilename : name))
+        );
+        setRenamingItem(null);
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to rename image');
+    } finally {
+      setRenamingLoading(false);
+    }
+  };
+
   // ─── Multiple Selection Logic ───
   const filteredMedia = mediaList.filter((item) =>
     !searchTerm || item.filename.toLowerCase().includes(searchTerm.toLowerCase())
@@ -159,8 +214,14 @@ export default function SellerMediaGalleryPage() {
 
   const allSelected = filteredMedia.length > 0 && selectedFilenames.length === filteredMedia.length;
 
+  const gridClass = 
+    viewMode === 'grid-2' ? 'grid-cols-1 sm:grid-cols-2 gap-4' :
+    viewMode === 'grid-3' ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4' :
+    viewMode === 'grid-6' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3' :
+    'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4'; // default grid-4
+
   return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-6 pb-20">
+    <div className="p-6 max-w-[1600px] mx-auto space-y-6 pb-20 font-sans">
       {/* Hidden Bulk Input File Element */}
       <input
         ref={fileInputRef}
@@ -176,13 +237,13 @@ export default function SellerMediaGalleryPage() {
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-bold border border-indigo-500/20">
             <ImageIcon className="w-3.5 h-3.5" />
-            Media Assets & Bulk Selection
+            Media Gallery & Image Manager
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">
             Media Gallery ({mediaList.length} Files Uploaded)
           </h1>
           <p className="text-xs text-slate-400">
-            Upload from PC, select multiple images using checkboxes, copy URLs or bulk delete files.
+            Import images from PC, switch 1-6 grid columns, rename files, copy links, or bulk delete photos.
           </p>
         </div>
 
@@ -230,9 +291,10 @@ export default function SellerMediaGalleryPage() {
         </div>
       )}
 
-      {/* Bulk Action & Selection Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-[#181928] border border-white/10 rounded-2xl">
-        <div className="flex items-center gap-3">
+      {/* Toolbar: Grid Layout Switcher & Bulk Selection Controls */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-4 bg-[#181928] border border-white/10 rounded-2xl">
+        {/* Left: Bulk Selection & Actions */}
+        <div className="flex items-center gap-3 flex-wrap">
           <button
             type="button"
             onClick={toggleSelectAll}
@@ -251,20 +313,68 @@ export default function SellerMediaGalleryPage() {
               {selectedFilenames.length} Selected
             </span>
           )}
+
+          {selectedFilenames.length > 0 && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={deletingBulk}
+              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black transition-all flex items-center gap-2 shadow-lg shadow-rose-600/30 disabled:opacity-50"
+            >
+              {deletingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              <span>Delete Selected ({selectedFilenames.length})</span>
+            </button>
+          )}
         </div>
 
-        {/* Delete Selected Button */}
-        {selectedFilenames.length > 0 && (
+        {/* Right: Grid Layout View Switcher (1-6 Cols or List Row View) */}
+        <div className="flex items-center gap-1.5 bg-[#121320] p-1 rounded-xl border border-white/10">
+          <span className="text-[11px] font-bold text-slate-400 px-2 select-none">View Mode:</span>
+          
           <button
             type="button"
-            onClick={handleBulkDelete}
-            disabled={deletingBulk}
-            className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30 disabled:opacity-50 animate-in zoom-in-95"
+            onClick={() => setViewMode('grid-2')}
+            className={`p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+              viewMode === 'grid-2' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+            }`}
+            title="2 Grid Columns View"
           >
-            {deletingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            <span>Delete Selected ({selectedFilenames.length} Images)</span>
+            <Grid2x2 className="w-4 h-4" /> 2 Cols
           </button>
-        )}
+
+          <button
+            type="button"
+            onClick={() => setViewMode('grid-4')}
+            className={`p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+              viewMode === 'grid-4' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+            }`}
+            title="4 Grid Columns View (Standard)"
+          >
+            <LayoutGrid className="w-4 h-4" /> 4 Cols
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode('grid-6')}
+            className={`p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+              viewMode === 'grid-6' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+            }`}
+            title="6 Grid Columns View (Compact)"
+          >
+            <Grid3x3 className="w-4 h-4" /> 6 Cols
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+              viewMode === 'list' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+            }`}
+            title="Row / List Table View Mode"
+          >
+            <List className="w-4 h-4" /> List Row
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -272,14 +382,14 @@ export default function SellerMediaGalleryPage() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
           type="text"
-          placeholder="Search by filename..."
+          placeholder="Search media files by filename..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-11 pr-4 py-3 bg-[#1e1f32] border border-white/10 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition-colors"
         />
       </div>
 
-      {/* Media Grid */}
+      {/* Media Grid / List Content */}
       {loading ? (
         <div className="min-h-[300px] flex flex-col items-center justify-center gap-3 bg-[#1e1f32]/50 border border-white/5 rounded-2xl">
           <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
@@ -300,8 +410,81 @@ export default function SellerMediaGalleryPage() {
             Import Images Now
           </button>
         </div>
+      ) : viewMode === 'list' ? (
+        /* 📜 ROW LIST TABLE VIEW MODE */
+        <div className="bg-[#1e1f32] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-[#171827] text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-white/10">
+                <tr>
+                  <th className="p-3.5 w-10">Select</th>
+                  <th className="p-3.5">Image</th>
+                  <th className="p-3.5">Filename</th>
+                  <th className="p-3.5">Size</th>
+                  <th className="p-3.5">Upload Date</th>
+                  <th className="p-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredMedia.map((item) => {
+                  const isSelected = selectedFilenames.includes(item.filename);
+                  const isCopied = copiedUrl === item.url;
+                  return (
+                    <tr key={item.filename} className={`hover:bg-white/5 transition-colors ${isSelected ? 'bg-indigo-950/30' : ''}`}>
+                      <td className="p-3.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelect(item.filename)}
+                          className="text-slate-400 hover:text-white"
+                        >
+                          {isSelected ? <CheckSquare className="w-4 h-4 text-indigo-400" /> : <Square className="w-4 h-4" />}
+                        </button>
+                      </td>
+                      <td className="p-3.5">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-900 border border-white/10 shrink-0">
+                          <img src={item.url} alt={item.filename} className="w-full h-full object-cover" />
+                        </div>
+                      </td>
+                      <td className="p-3.5 font-mono text-white text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate max-w-xs">{item.filename}</span>
+                          <button
+                            type="button"
+                            onClick={() => openRenameModal(item)}
+                            className="p-1 hover:bg-white/10 text-amber-400 hover:text-amber-300 rounded transition-colors"
+                            title="Rename image filename"
+                          >
+                            <FileEdit className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="p-3.5 text-slate-400">{formatFileSize(item.size)}</td>
+                      <td className="p-3.5 text-slate-400">{new Date(item.mtime).toLocaleDateString()}</td>
+                      <td className="p-3.5 text-right space-x-2">
+                        <button
+                          onClick={() => handleCopyUrl(item.url)}
+                          className="px-2.5 py-1 bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600 hover:text-white rounded-lg text-xs font-bold transition-all border border-indigo-500/30 inline-flex items-center gap-1"
+                        >
+                          {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          {isCopied ? 'Copied' : 'Copy URL'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSingle(item.filename)}
+                          className="px-2.5 py-1 bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white rounded-lg text-xs font-bold transition-all border border-rose-500/30 inline-flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        /* 📱 💻 🖥️ GRID COLS VIEW MODES (2, 4, or 6 Columns) */
+        <div className={`grid ${gridClass}`}>
           {filteredMedia.map((item) => {
             const isSelected = selectedFilenames.includes(item.filename);
             const isCopied = copiedUrl === item.url;
@@ -329,7 +512,6 @@ export default function SellerMediaGalleryPage() {
 
                   {/* Always Visible Top Controls: Checkbox & Direct Delete Button */}
                   <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10">
-                    {/* Select Checkbox */}
                     <button
                       type="button"
                       onClick={() => toggleSelect(item.filename)}
@@ -343,15 +525,24 @@ export default function SellerMediaGalleryPage() {
                       {isSelected ? <CheckSquare className="w-4 h-4 text-white" /> : <Square className="w-4 h-4" />}
                     </button>
 
-                    {/* Direct Single Delete Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSingle(item.filename)}
-                      className="p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white shadow-md transition-all hover:scale-105"
-                      title="Delete image permanently"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => openRenameModal(item)}
+                        className="p-1.5 rounded-lg bg-amber-600/90 hover:bg-amber-500 text-white shadow-md transition-all hover:scale-105"
+                        title="Rename image filename"
+                      >
+                        <FileEdit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSingle(item.filename)}
+                        className="p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white shadow-md transition-all hover:scale-105"
+                        title="Delete image permanently"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Hover Overlay Menu */}
@@ -364,13 +555,13 @@ export default function SellerMediaGalleryPage() {
                       {isCopied ? 'URL Copied!' : 'Copy URL'}
                     </button>
 
-                    <Link
-                      href={`/seller/dashboard/products/add?image=${encodeURIComponent(item.url)}`}
-                      className="w-full py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all shadow-md"
+                    <button
+                      onClick={() => openRenameModal(item)}
+                      className="w-full py-1.5 px-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all shadow-md"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      Add Product
-                    </Link>
+                      <FileEdit className="w-3.5 h-3.5" />
+                      Rename Image
+                    </button>
 
                     <button
                       type="button"
@@ -385,9 +576,20 @@ export default function SellerMediaGalleryPage() {
 
                 {/* File info & action footer */}
                 <div className="p-2.5 bg-[#181928] border-t border-white/5 space-y-1.5">
-                  <p className="text-[11px] font-semibold text-slate-200 truncate" title={item.filename}>
-                    {item.filename}
-                  </p>
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="text-[11px] font-semibold text-slate-200 truncate flex-1" title={item.filename}>
+                      {item.filename}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => openRenameModal(item)}
+                      className="text-slate-400 hover:text-amber-300 text-[10px] font-bold p-0.5"
+                      title="Rename"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+
                   <div className="flex items-center justify-between text-[10px] text-slate-400">
                     <span>{formatFileSize(item.size)}</span>
                     <button
@@ -404,6 +606,68 @@ export default function SellerMediaGalleryPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* RENAME IMAGE MODAL DIALOG */}
+      {renamingItem && (
+        <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#1e1f32] border border-amber-500/40 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <FileEdit className="w-5 h-5 text-amber-400" />
+                <h3 className="font-extrabold text-white text-base">Rename Image Filename</h3>
+              </div>
+              <button onClick={() => setRenamingItem(null)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  Current Filename:
+                </label>
+                <code className="block p-2 rounded-xl bg-[#121320] text-amber-300 font-mono text-xs truncate">
+                  {renamingItem.filename}
+                </code>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  New Filename:
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={renameInput}
+                  onChange={(e) => setRenameInput(e.target.value)}
+                  placeholder="e.g. broiler_chicken.webp"
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#121320] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Extension (.webp, .jpg, .png) will be preserved automatically if omitted.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+              <button
+                onClick={() => setRenamingItem(null)}
+                className="px-4 py-2 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/15 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRenameSubmit}
+                disabled={renamingLoading || !renameInput.trim()}
+                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold transition-all flex items-center gap-2 shadow-lg shadow-amber-600/20 disabled:opacity-50"
+              >
+                {renamingLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Save New Name
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

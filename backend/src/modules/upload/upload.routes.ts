@@ -22,6 +22,7 @@ router.use(protect);
 
 router.get('/gallery', uploadController.getMediaGallery);
 router.post('/gallery/bulk-delete', uploadController.bulkDeleteMediaFiles);
+router.patch('/gallery/rename', uploadController.renameMediaFile);
 router.delete('/gallery/:filename', uploadController.deleteMediaFile);
 router.delete('/gallery', uploadController.deleteMediaFile);
 router.post('/single', upload.single('image'), uploadController.uploadSingleImage);

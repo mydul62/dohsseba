@@ -266,3 +266,43 @@ export const bulkDeleteMediaFiles = async (req: Request, res: Response, next: Ne
     next(error);
   }
 };
+
+export const renameMediaFile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { oldFilename, newFilename } = req.body;
+    if (!oldFilename || !newFilename) {
+      return next(new AppError('Both oldFilename and newFilename are required.', 400));
+    }
+
+    const safeOldName = path.basename(oldFilename);
+    let safeNewName = path.basename(newFilename.trim());
+
+    // Preserve original extension if missing
+    const oldExt = path.extname(safeOldName);
+    if (!path.extname(safeNewName) && oldExt) {
+      safeNewName = `${safeNewName}${oldExt}`;
+    }
+
+    const oldPath = path.join(uploadsDir, safeOldName);
+    const newPath = path.join(uploadsDir, safeNewName);
+
+    if (!fs.existsSync(oldPath)) {
+      return next(new AppError('Original file not found on server.', 404));
+    }
+
+    if (fs.existsSync(newPath) && safeOldName !== safeNewName) {
+      return next(new AppError(`File with name "${safeNewName}" already exists. Please choose a different name.`, 400));
+    }
+
+    fs.renameSync(oldPath, newPath);
+
+    const newUrl = getPublicFileUrl(req, safeNewName);
+    return sendResponse(res, 200, 'Image renamed successfully', {
+      oldFilename: safeOldName,
+      newFilename: safeNewName,
+      url: newUrl,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
