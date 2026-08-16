@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CategoryCard } from '@/components/shopping/CategoryCard';
 import { getApiBaseUrl } from '@/lib/api-client';
-import { ChevronLeft, ChevronRight, Grid } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 interface CategoryNode {
   id: string;
@@ -30,32 +30,21 @@ export function PopularCategoriesSection() {
       .then((r) => r.json())
       .then((res) => {
         if (res?.success && Array.isArray(res.data)) {
-          // Flatten all categories + subcategories that are marked popular
-          const allCats: CategoryNode[] = [];
-          res.data.forEach((parent: any) => {
-            if (parent.isPopular !== false) {
-              allCats.push(parent);
-            }
-            if (Array.isArray(parent.children)) {
-              parent.children.forEach((child: any) => {
-                if (child.isPopular !== false) {
-                  allCats.push(child);
-                }
-              });
-            }
-          });
+          // 1. Filter ONLY top-level main parent categories (!c.parentId)
+          // 2. Filter ONLY those marked as isPopular !== false
+          const mainPopularCats = res.data.filter(
+            (c: any) => !c.parentId && c.isPopular !== false
+          );
 
-          // Sort by displayOrder ascending
-          allCats.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+          // 3. Sort strictly by seller-selected displayOrder ascending
+          mainPopularCats.sort((a: any, b: any) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
-          setCategories(allCats.length > 0 ? allCats : res.data);
+          setCategories(mainPopularCats);
         }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
-
-  const displayList = categories;
 
   return (
     <section className="py-6 px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 bg-white font-sans text-slate-800">
@@ -85,7 +74,7 @@ export function PopularCategoriesSection() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4">
-            {displayList.slice(0, 18).map((cat) => (
+            {categories.map((cat) => (
               <CategoryCard key={cat.id || cat.slug} category={cat} basePath="/category" />
             ))}
           </div>

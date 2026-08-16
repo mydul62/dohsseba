@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface CategoryCardProps {
   category: {
@@ -42,8 +41,11 @@ export function CategoryCard({ category, basePath = '/category' }: CategoryCardP
         <img
           src={imgSrc}
           alt={category.name}
-          className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = FALLBACK_IMAGES.vegetables;
+          }}
         />
       </div>
       <h3 className="font-extrabold text-slate-800 text-sm sm:text-base group-hover:text-purple-700 transition-colors line-clamp-1">
