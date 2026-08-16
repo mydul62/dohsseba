@@ -28,7 +28,7 @@ jobs:
 
             # 1. Pull Latest Code across all possible VPS directories
             TARGET_DIR=""
-            for dir in /var/www/dohsheba /var/www/dohsSheba /var/www/dohs-sheba /var/www/html/dohsheba /root/dohsheba; do
+            for dir in /var/www/shop.dohsedu.com /var/www/dohsedu /var/www/dohsheba /var/www/dohsSheba /var/www/dohs-sheba /var/www/html/dohsheba /root/dohsheba /root/dohsSheba /home/ubuntu/dohsheba /home/ubuntu/dohsSheba; do
               if [ -d "$dir" ]; then
                 TARGET_DIR="$dir"
                 break
