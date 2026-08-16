@@ -55,19 +55,24 @@ jobs:
               cd ..
             fi
 
-            # 3. Clean Next.js cache directory
+            # 3. Clean & Rebuild Frontend Next.js on VPS Host (for PM2 / Host Node)
             if [ -d "frontend" ]; then
-              rm -rf frontend/.next/cache || true
+              echo "🔨 Building Frontend Next.js on VPS Host..."
+              cd frontend
+              rm -rf .next
+              npm run build || true
+              cd ..
             fi
 
-            # 4. Build & Run Docker Containers & Restart PM2 if running
-            echo "🐳 Building & Updating Docker Containers & PM2..."
+            # 4. Build & Run Docker Containers
+            echo "🐳 Building & Updating Docker Containers..."
             docker compose build --no-cache frontend || true
             docker compose up -d --build --remove-orphans || docker-compose up -d --build --remove-orphans
             docker compose restart || true
             
-            # 5. Restart PM2 processes if PM2 is active on VPS
+            # 5. Restart PM2 processes if PM2 is active on VPS Host
             if command -v pm2 &> /dev/null; then
+              echo "🔄 Restarting PM2 processes..."
               pm2 restart all || pm2 reload all || true
             fi
 
