@@ -13,6 +13,7 @@ import {
   Search, 
   Loader2, 
   RefreshCw,
+  Trash2,
   UploadCloud,
   CheckCircle2
 } from 'lucide-react';
@@ -25,52 +26,60 @@ interface MediaItem {
 }
 
 export default function SellerMediaGalleryPage() {
-  const router = useRouter();
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchMedia = async () => {
-    setLoading(true);
+  const fetchGallery = async () => {
     try {
-      const res = await fetchApi<{ total: number; media: MediaItem[] }>('/upload/gallery');
-      if (res.success && res.data?.media) {
+      setLoading(true);
+      const res = await fetchApi<any>('/upload/gallery');
+      if (res && res.success && Array.isArray(res.data?.media)) {
         setMediaList(res.data.media);
+      } else {
+        setMediaList([]);
       }
     } catch (err) {
       console.error('Failed to load media gallery:', err);
+      setMediaList([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchMedia();
+    fetchGallery();
   }, []);
 
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const fileArray = Array.from(files);
     try {
       setUploading(true);
-      setUploadProgress(`Uploading ${files.length} images from PC... Please wait.`);
+      setUploadProgress(`Processing & Uploading ${fileArray.length} images...`);
 
-      await uploadMultipleImagesApi(files);
-      setUploadProgress(`🎉 Successfully uploaded ${files.length} images to Media Gallery!`);
-      setTimeout(() => setUploadProgress(''), 4000);
-      fetchMedia();
+      const uploadedUrls = await uploadMultipleImagesApi(fileArray);
+
+      setUploadProgress(`Successfully uploaded ${uploadedUrls.length} images!`);
+      setTimeout(() => setUploadProgress(null), 4000);
+
+      // Refresh gallery
+      await fetchGallery();
     } catch (err: any) {
       alert(err?.message || 'Failed to upload images');
-      setUploadProgress('');
+      setUploadProgress(null);
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -80,21 +89,34 @@ export default function SellerMediaGalleryPage() {
     setTimeout(() => setCopiedUrl(null), 2000);
   };
 
-  const filteredMedia = mediaList.filter((item) =>
-    item.filename.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleDeleteMedia = async (filename: string) => {
+    if (!confirm(`Are you sure you want to delete image "${filename}" permanently from server storage?`)) return;
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    try {
+      const res = await fetchApi<any>(`/upload/gallery/${encodeURIComponent(filename)}`, {
+        method: 'DELETE',
+      });
+      if (res && res.success) {
+        setMediaList((prev) => prev.filter((item) => item.filename !== filename));
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to delete image file.');
+    }
   };
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const filteredMedia = mediaList.filter((item) =>
+    !searchTerm || item.filename.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Hidden File Input for Multiple Uploads */}
+    <div className="p-6 max-w-[1600px] mx-auto space-y-6 pb-20">
+      {/* Hidden Bulk Input File Element */}
       <input
         ref={fileInputRef}
         type="file"
@@ -104,41 +126,34 @@ export default function SellerMediaGalleryPage() {
         className="hidden"
       />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#1e1f32] p-6 rounded-2xl border border-white/10 shadow-xl">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-pink-500/20 text-pink-400 rounded-xl border border-pink-500/30">
-              <ImageIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-white flex items-center gap-2">
-                Media Gallery
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  {mediaList.length} Uploaded Files
-                </span>
-              </h1>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Browse, search and import 20+ images at once directly from your PC
-              </p>
-            </div>
+      {/* Header Bar */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-[#1e1f32] border border-white/10 p-6 rounded-3xl shadow-xl">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-bold border border-indigo-500/20">
+            <ImageIcon className="w-3.5 h-3.5" />
+            Media Assets & Storage
           </div>
+          <h1 className="text-2xl font-black text-white tracking-tight">
+            Media Gallery ({mediaList.length} Files)
+          </h1>
+          <p className="text-xs text-slate-400">
+            Upload, manage, copy links, or delete product images stored on the server.
+          </p>
         </div>
 
-        <div className="flex items-center flex-wrap gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <button
-            onClick={fetchMedia}
-            disabled={loading || uploading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-200 rounded-xl border border-white/10 text-xs font-semibold transition-all disabled:opacity-50"
+            onClick={fetchGallery}
+            className="p-2.5 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl border border-white/10 transition-colors"
+            title="Refresh gallery"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className="w-4 h-4" />
           </button>
 
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-pink-500/20 transition-all disabled:opacity-50 active:scale-95 border border-white/10"
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-indigo-600/20 transition-all disabled:opacity-50"
           >
             {uploading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -158,7 +173,7 @@ export default function SellerMediaGalleryPage() {
         </div>
       </div>
 
-      {/* Upload Banner */}
+      {/* Upload Progress Banner */}
       {uploadProgress && (
         <div className="p-4 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 text-xs font-bold flex items-center gap-3 shadow-xl animate-in fade-in">
           {uploading ? (
@@ -225,10 +240,10 @@ export default function SellerMediaGalleryPage() {
                   />
 
                   {/* Overlay buttons on hover */}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-2 p-2">
+                  <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1.5 p-2">
                     <button
                       onClick={() => handleCopyUrl(item.url)}
-                      className="w-full py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-md"
+                      className="w-full py-1.5 px-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all shadow-md"
                     >
                       {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                       {isCopied ? 'URL Copied!' : 'Copy URL'}
@@ -236,21 +251,21 @@ export default function SellerMediaGalleryPage() {
 
                     <Link
                       href={`/seller/dashboard/products/add?image=${encodeURIComponent(item.url)}`}
-                      className="w-full py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-md"
+                      className="w-full py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all shadow-md"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       Add Product
                     </Link>
 
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-1.5 px-3 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all"
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMedia(item.filename)}
+                      className="w-full py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all shadow-md"
+                      title="Delete image from server"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      View Full
-                    </a>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete Image
+                    </button>
                   </div>
                 </div>
 

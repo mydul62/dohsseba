@@ -114,6 +114,22 @@ export default function CategoriesPage() {
     setShowMediaModal(false);
   };
 
+  const handleDeleteMediaFromGallery = async (e: React.MouseEvent, filename: string) => {
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete image "${filename}" permanently from server storage?`)) return;
+
+    try {
+      const res = await fetchApi<any>(`/upload/gallery/${encodeURIComponent(filename)}`, {
+        method: 'DELETE',
+      });
+      if (res && res.success) {
+        setGalleryList((prev) => prev.filter((item) => item.filename !== filename));
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to delete image file.');
+    }
+  };
+
   const moveCategory = async (cat: any, direction: 'up' | 'down', list: any[]) => {
     const currentIndex = list.findIndex((c) => c.id === cat.id);
     if (currentIndex === -1) return;
@@ -1368,11 +1384,23 @@ export default function CategoriesPage() {
                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&auto=format&fit=crop&q=80';
                           }}
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end">
-                          <span className="text-[10px] font-bold text-white truncate block">{item.filename}</span>
-                          <span className="text-[9px] text-pink-300 font-extrabold flex items-center gap-1 mt-0.5">
-                            <Check className="w-3 h-3" /> Select Picture
-                          </span>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/40 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between">
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteMediaFromGallery(e, item.filename)}
+                              className="p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white transition-colors shadow"
+                              title="Delete image from server"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-white truncate block">{item.filename}</span>
+                            <span className="text-[9px] text-pink-300 font-extrabold flex items-center gap-1 mt-0.5">
+                              <Check className="w-3 h-3" /> Select Picture
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))}

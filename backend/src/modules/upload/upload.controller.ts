@@ -218,3 +218,24 @@ export const getMediaGallery = async (req: Request, res: Response, next: NextFun
     next(error);
   }
 };
+
+export const deleteMediaFile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const rawFilename = req.params.filename || req.query.filename as string;
+    if (!rawFilename) {
+      return next(new AppError('Filename is required.', 400));
+    }
+
+    const safeFilename = path.basename(rawFilename);
+    const filepath = path.join(uploadsDir, safeFilename);
+
+    if (fs.existsSync(filepath)) {
+      fs.unlinkSync(filepath);
+      return sendResponse(res, 200, 'Image deleted successfully from server storage', { filename: safeFilename });
+    } else {
+      return next(new AppError('File not found on server.', 404));
+    }
+  } catch (error) {
+    next(error);
+  }
+};

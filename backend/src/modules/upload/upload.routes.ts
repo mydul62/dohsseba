@@ -21,6 +21,8 @@ const upload = multer({
 router.use(protect);
 
 router.get('/gallery', uploadController.getMediaGallery);
+router.delete('/gallery/:filename', uploadController.deleteMediaFile);
+router.delete('/gallery', uploadController.deleteMediaFile);
 router.post('/single', upload.single('image'), uploadController.uploadSingleImage);
 router.post('/multiple', upload.array('images', 100), uploadController.uploadMultipleImages);
 
