@@ -39,8 +39,10 @@ jobs:
               cd ..
             fi
 
-            # 3. Build & Run Docker Containers (Zero Downtime Swap)
+            # 3. Build & Run Docker Containers (Zero Downtime Swap & Fresh Frontend Build)
             echo "🐳 Building & Updating Docker Containers..."
+            docker compose build --no-cache frontend || true
             docker compose up -d --build --remove-orphans || docker-compose up -d --build --remove-orphans
+            docker compose restart frontend || true
 
             echo "🎉 Docker Auto-deployment finished successfully!"
