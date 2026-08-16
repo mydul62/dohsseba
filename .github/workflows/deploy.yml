@@ -26,54 +26,45 @@ jobs:
           script: |
             echo "🚀 Auto-deploying dohsSheba to VPS using Docker..."
 
-            # 1. Pull Latest Code across all possible VPS directories
-            TARGET_DIR=""
-            for dir in /var/www/shop.dohsedu.com /var/www/dohsedu /var/www/dohsheba /var/www/dohsSheba /var/www/dohs-sheba /var/www/html/dohsheba /root/dohsheba /root/dohsSheba /home/ubuntu/dohsheba /home/ubuntu/dohsSheba; do
-              if [ -d "$dir" ]; then
-                TARGET_DIR="$dir"
-                break
+            # 1. Iterate over ALL matching VPS directories containing git repo
+            FOUND_DIRS=()
+            for dir in /var/www/shop.dohsedu.com /var/www/dohsedu /var/www/dohsheba /var/www/dohsSheba /var/www/dohs-sheba /var/www/html/dohsheba /root/dohsheba /root/dohsSheba /home/ubuntu/dohsheba /home/ubuntu/dohsSheba $(pwd); do
+              if [ -d "$dir/.git" ] || [ -f "$dir/package.json" ]; then
+                FOUND_DIRS+=("$dir")
               fi
             done
 
-            if [ -n "$TARGET_DIR" ]; then
+            for TARGET_DIR in "${FOUND_DIRS[@]}"; do
               echo "📂 Deploying in directory: $TARGET_DIR"
-              cd "$TARGET_DIR"
-              git fetch --all
-              git reset --hard origin/main
-              git pull origin main
-            else
-              echo "⚠️ Defaulting to current working directory"
-              git fetch --all
-              git reset --hard origin/main
-              git pull origin main
-            fi
+              cd "$TARGET_DIR" || continue
+              git fetch --all || true
+              git reset --hard origin/main || true
+              git pull origin main || true
 
-            # 2. Run Database Migration if needed
-            if [ -d "backend" ]; then
-              cd backend
-              npx prisma db push --skip-generate || true
-              cd ..
-            fi
+              # 2. Run Database Migration
+              if [ -d "backend" ]; then
+                (cd backend && npx prisma db push --skip-generate) || true
+              fi
 
-            # 3. Clean & Rebuild Frontend Next.js on VPS Host (for PM2 / Host Node)
-            if [ -d "frontend" ]; then
-              echo "🔨 Building Frontend Next.js on VPS Host..."
-              cd frontend
-              rm -rf .next
-              npm run build || true
-              cd ..
-            fi
+              # 3. Clean & Rebuild Frontend Next.js on VPS Host
+              if [ -d "frontend" ]; then
+                echo "🔨 Building Frontend Next.js in $TARGET_DIR..."
+                (cd frontend && rm -rf .next && npm run build) || true
+              fi
 
-            # 4. Build & Run Docker Containers
-            echo "🐳 Building & Updating Docker Containers..."
-            docker compose build --no-cache frontend || true
-            docker compose up -d --build --remove-orphans || docker-compose up -d --build --remove-orphans
-            docker compose restart || true
-            
-            # 5. Restart PM2 processes if PM2 is active on VPS Host
+              # 4. Build & Run Docker Containers
+              if [ -f "docker-compose.yml" ] || [ -f "docker-compose.yaml" ]; then
+                echo "🐳 Building & Updating Docker Containers in $TARGET_DIR..."
+                docker compose build --no-cache || true
+                docker compose up -d --build --remove-orphans || docker-compose up -d --build --remove-orphans || true
+                docker compose restart || true
+              fi
+            done
+
+            # 5. Restart PM2 processes globally if PM2 is active
             if command -v pm2 &> /dev/null; then
               echo "🔄 Restarting PM2 processes..."
-              pm2 restart all || pm2 reload all || true
+              pm2 restart all --update-env || pm2 reload all || true
             fi
 
             echo "🎉 Deployment completed successfully!"
