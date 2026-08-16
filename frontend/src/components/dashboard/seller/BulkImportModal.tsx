@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { fetchApi } from '@/lib/api-client';
 
+import * as XLSX from 'xlsx';
+
 interface BulkImportModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -24,12 +26,12 @@ export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalP
   // Generate Sample CSV Template for download
   const handleDownloadSample = () => {
     const csvContent =
-      'Product Name,Category,SubCategory,Price,Discount,Stock,Unit,Description\n' +
-      'তীর ফ্রেশ ময়দা (২ কেজি),Daily Groceries,Flour,130,5,50,kg,Fresh refined flour for baking and cooking\n' +
-      'পদ্মার খাঁটি ইলিশ মাছ (1kg),Fish & Seafood,Marine Fish,1200,0,20,kg,Authentic Padma Hilsha fish freshly caught\n' +
-      'ভিআইএম লিকুইড 250ml,Household & Cleaning,Dishwash,110,0,35,pc,Powerful dishwashing liquid soap\n' +
-      'রূপচাঁদা সয়াবিন তেল 2L,Groceries & Oil,Edible Oil,380,10,40,bottle,Pure refined soybean oil\n' +
-      'দেশি ফার্মের ডিম (১২টি),Dairy & Eggs,Eggs,155,0,100,pack,Farm fresh organic eggs';
+      'Product Name,Category,SubCategory,Brand,Price,Discount,Stock,Unit,Description\n' +
+      'তীর ফ্রেশ ময়দা (২ কেজি),Daily Groceries,Flour,Teer,130,5,50,kg,Fresh refined flour for baking and cooking\n' +
+      'পদ্মার খাঁটি ইলিশ মাছ (1kg),Fish & Seafood,Marine Fish,Padma,1200,0,20,kg,Authentic Padma Hilsha fish freshly caught\n' +
+      'ভিআইএম লিকুইড 250ml,Household & Cleaning,Dishwash,Vim,110,0,35,pc,Powerful dishwashing liquid soap\n' +
+      'রূপচাঁদা সয়াবিন তেল 2L,Groceries & Oil,Edible Oil,Rupchanda,380,10,40,bottle,Pure refined soybean oil\n' +
+      'দেশি ফার্মের ডিম (১২টি),Dairy & Eggs,Eggs,Farm,155,0,100,pack,Farm fresh organic eggs';
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -41,43 +43,13 @@ export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalP
     document.body.removeChild(link);
   };
 
-  const parseCsvText = (text: string) => {
-    const lines = text.split(/\r\n|\n/);
-    if (lines.length <= 1) return [];
-
-    const headers = lines[0].split(',').map((h) => h.trim().replace(/^["']|["']$/g, ''));
-    const items: any[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-
-      // Handle CSV comma splitting safely
-      const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
-      const cleanValues = values.map((v) => v.trim().replace(/^["']|["']$/g, ''));
-
-      const nameIdx = headers.findIndex((h) => /name|title/i.test(h));
-      const catIdx = headers.findIndex((h) => /^category/i.test(h));
-      const priceIdx = headers.findIndex((h) => /price|rate/i.test(h));
-      const discIdx = headers.findIndex((h) => /discount|off/i.test(h));
-      const stockIdx = headers.findIndex((h) => /stock|qty|quantity/i.test(h));
-      const unitIdx = headers.findIndex((h) => /unit/i.test(h));
-      const descIdx = headers.findIndex((h) => /desc/i.test(h));
-
-      const name = nameIdx >= 0 ? cleanValues[nameIdx] : cleanValues[0];
-      const category = catIdx >= 0 ? cleanValues[catIdx] : cleanValues[1];
-      const price = priceIdx >= 0 ? Number(cleanValues[priceIdx]) : Number(cleanValues[3] || 100);
-      const discount = discIdx >= 0 ? Number(cleanValues[discIdx]) : Number(cleanValues[4] || 0);
-      const stock = stockIdx >= 0 ? Number(cleanValues[stockIdx]) : Number(cleanValues[5] || 50);
-      const unit = unitIdx >= 0 ? cleanValues[unitIdx] : cleanValues[6] || 'unit';
-      const description = descIdx >= 0 ? cleanValues[descIdx] : cleanValues[7] || '';
-
-      if (name && name.length >= 2) {
-        items.push({ name, category, price, discount, stock, unit, description });
-      }
-    }
-
-    return items;
+  const parseExcelFile = async (uploadedFile: File): Promise<any[]> => {
+    const arrayBuffer = await uploadedFile.arrayBuffer();
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    const rawRows = XLSX.utils.sheet_to_json<any>(worksheet, { defval: '' });
+    return rawRows;
   };
 
   const handleUpload = async () => {
@@ -90,11 +62,10 @@ export function BulkImportModal({ isOpen, onClose, onSuccess }: BulkImportModalP
     setUploading(true);
 
     try {
-      const text = await file.text();
-      const items = parseCsvText(text);
+      const items = await parseExcelFile(file);
 
-      if (items.length === 0) {
-        throw new Error('No valid product rows found in the file. Please check sample format.');
+      if (!items || items.length === 0) {
+        throw new Error('No valid product rows found in the Excel file. Please check file formatting.');
       }
 
       const res = await fetchApi<any>('/products/bulk-import', {

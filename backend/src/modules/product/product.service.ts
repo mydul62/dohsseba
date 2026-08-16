@@ -586,7 +586,7 @@ export const bulkDeleteProducts = async (sellerId: string, productIds: string[],
   return { count: result.count };
 };
 
-const getSmartProductImage = (name: string, customImg?: string): string => {
+const getSmartProductImage = (name: string, customImg?: string, categoryName?: string): string => {
   if (customImg && typeof customImg === 'string' && customImg.trim() && !customImg.includes('undefined')) {
     const clean = customImg.trim();
     if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:')) {
@@ -594,30 +594,43 @@ const getSmartProductImage = (name: string, customImg?: string): string => {
     }
   }
 
-  const t = (name || '').toLowerCase();
+  const t = `${name || ''} ${categoryName || ''}`.toLowerCase();
+  
   if (t.includes('mori') || t.includes('chilli') || t.includes('chili') || t.includes('মরিচ')) {
     return 'https://images.unsplash.com/photo-1588879460618-924446702a60?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('vim') || t.includes('liquid') || t.includes('soap') || t.includes('clean') || t.includes('লিকুইড')) {
+  if (t.includes('vim') || t.includes('liquid') || t.includes('soap') || t.includes('clean') || t.includes('লিকুইড') || t.includes('ডিশওয়াশ')) {
     return 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('oil') || t.includes('tel') || t.includes('তেল')) {
+  if (t.includes('oil') || t.includes('tel') || t.includes('তেল') || t.includes('সয়াবিন')) {
     return 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('ময়দা') || t.includes('ময়দা') || t.includes('আটা') || t.includes('flour') || t.includes('rice') || t.includes('চাল')) {
+  if (t.includes('ময়দা') || t.includes('ময়দা') || t.includes('আটা') || t.includes('flour') || t.includes('rice') || t.includes('চাল') || t.includes('রাইস')) {
     return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('মাছ') || t.includes('fish') || t.includes('ilish') || t.includes('hilsha')) {
+  if (t.includes('মাছ') || t.includes('fish') || t.includes('ilish') || t.includes('hilsha') || t.includes('রুই')) {
     return 'https://images.unsplash.com/photo-1534942519507-769d4679447d?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('দুধ') || t.includes('milk') || t.includes('dudh')) {
+  if (t.includes('দুধ') || t.includes('milk') || t.includes('dudh') || t.includes('ডেইরি')) {
     return 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop&q=80';
   }
   if (t.includes('ডিম') || t.includes('egg') || t.includes('dima')) {
     return 'https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?w=600&auto=format&fit=crop&q=80';
   }
-  if (t.includes('মাংস') || t.includes('chicken') || t.includes('meat')) {
+  if (t.includes('মাংস') || t.includes('chicken') || t.includes('meat') || t.includes('চিকেন')) {
     return 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=600&auto=format&fit=crop&q=80';
+  }
+  if (t.includes('kid') || t.includes('baby') || t.includes('child') || t.includes('টয়') || t.includes('বাচ্চা')) {
+    return 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=600&auto=format&fit=crop&q=80';
+  }
+  if (t.includes('care') || t.includes('beauty') || t.includes('lotion') || t.includes('shampoo') || t.includes('শ্যাম্পু')) {
+    return 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&auto=format&fit=crop&q=80';
+  }
+  if (t.includes('fruit') || t.includes('apple') || t.includes('mango') || t.includes('banana') || t.includes('ফল')) {
+    return 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=600&auto=format&fit=crop&q=80';
+  }
+  if (t.includes('snack') || t.includes('biscuit') || t.includes('chanachur') || t.includes('চানাচুর') || t.includes('বিস্কুট')) {
+    return 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600&auto=format&fit=crop&q=80';
   }
 
   return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&auto=format&fit=crop&q=80';
@@ -662,12 +675,103 @@ export const bulkImportProducts = async (sellerId: string, items: any[]) => {
   const newProductsPayload: any[] = [];
 
   for (const row of items) {
-    const rawName = String(row.name || row.title || row['Product Name'] || '').trim();
+    // Smart Row Keys Extractor
+    let rawName = '';
+    const nameCandidateKeys = [
+      'Product Name', 'ProductName', 'product_name', 'Item Name', 'ItemName', 'item_name',
+      'Name', 'name', 'Title', 'title', 'Product', 'product', 'Item', 'item',
+      'Description', 'description', 'Details', 'details',
+      'পণ্যের নাম', 'পণ্য', 'নাম', 'আইটেম', 'বিবরণ'
+    ];
+
+    for (const key of nameCandidateKeys) {
+      if (row[key] && String(row[key]).trim().length > 0) {
+        const val = String(row[key]).trim();
+        // Skip if val is pure short unit like '1pcs', '1ltr', '1050ml'
+        if (!/^\d+\s*(pcs|pc|ltr|ml|g|kg|gm|pack|bottle|box|set)$/i.test(val) && val.length > 1) {
+          rawName = val;
+          break;
+        }
+      }
+    }
+
+    if (!rawName) {
+      for (const [k, v] of Object.entries(row)) {
+        if (typeof v === 'string' && v.trim().length > 1) {
+          const val = v.trim();
+          if (!/^\d+\s*(pcs|pc|ltr|ml|g|kg|gm|pack|bottle|box|set)$/i.test(val)) {
+            rawName = val;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!rawName) {
+      rawName = String(row.name || row.title || row['Product Name'] || row['Item Name'] || '').trim();
+    }
+
     if (!rawName) continue;
 
-    const rawCat = String(row.category || row.Category || row.categoryName || '').trim();
-    const rawSubCat = String(row.subCategory || row.SubCategory || row.subcategory || '').trim();
-    const rawBrand = String(row.brand || row.Brand || row.brandName || '').trim();
+    let rawUnit = 'unit';
+    const unitCandidateKeys = ['Unit', 'unit', 'Pack Size', 'pack_size', 'Variant', 'variant', 'Weight', 'weight', 'একক', 'পরিমাপ'];
+    for (const key of unitCandidateKeys) {
+      if (row[key] && String(row[key]).trim()) {
+        rawUnit = String(row[key]).trim();
+        break;
+      }
+    }
+
+    let rawCat = '';
+    const catCandidateKeys = ['Category', 'category', 'Main Category', 'Category Name', 'category_name', 'ক্যাটাগরি'];
+    for (const key of catCandidateKeys) {
+      if (row[key] && String(row[key]).trim()) {
+        rawCat = String(row[key]).trim();
+        break;
+      }
+    }
+
+    let rawSubCat = '';
+    const subCatCandidateKeys = ['SubCategory', 'subcategory', 'Sub Category', 'sub_category', 'সাব ক্যাটাগরি', 'সাবক্যাটাগরি'];
+    for (const key of subCatCandidateKeys) {
+      if (row[key] && String(row[key]).trim()) {
+        rawSubCat = String(row[key]).trim();
+        break;
+      }
+    }
+
+    let rawBrand = '';
+    const brandCandidateKeys = ['Brand', 'brand', 'Brand Name', 'brand_name', 'ব্র্যান্ড'];
+    for (const key of brandCandidateKeys) {
+      if (row[key] && String(row[key]).trim()) {
+        rawBrand = String(row[key]).trim();
+        break;
+      }
+    }
+
+    let price = 100;
+    const priceCandidateKeys = ['Price', 'price', 'MRP', 'mrp', 'Rate', 'rate', 'Selling Price', 'selling_price', 'মূল্য', 'দাম'];
+    for (const key of priceCandidateKeys) {
+      if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+        const p = Number(row[key]);
+        if (!isNaN(p) && p > 0) {
+          price = p;
+          break;
+        }
+      }
+    }
+
+    let stock = 50;
+    const stockCandidateKeys = ['Stock', 'stock', 'Quantity', 'quantity', 'Qty', 'qty', 'পরিমাণ', 'স্টক'];
+    for (const key of stockCandidateKeys) {
+      if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+        const s = Number(row[key]);
+        if (!isNaN(s)) {
+          stock = s;
+          break;
+        }
+      }
+    }
 
     let catId = defaultCatId;
 
@@ -740,14 +844,11 @@ export const bulkImportProducts = async (sellerId: string, items: any[]) => {
       }
     }
 
-    const price = Number(row.price || row.Price || 100);
     const discount = Number(row.discount || row.Discount || 0);
-    const stock = Number(row.stock || row.Stock || 50);
-    const unit = String(row.unit || row.Unit || 'unit').trim();
     const description = String(row.description || row.Description || `High-quality ${rawName} sourced directly for DOHS marketplace.`).trim();
     const customImg = row.image || row.Image || (Array.isArray(row.images) ? row.images[0] : '');
 
-    const imgUrl = getSmartProductImage(rawName, customImg);
+    const imgUrl = getSmartProductImage(rawName, customImg, rawCat);
     const baseSlug = rawName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const uniqueSlug = `${baseSlug || 'prod'}-${Math.floor(Math.random() * 89999 + 10000)}`;
     const sku = String(row.sku || row.SKU || `DH-${baseSlug.slice(0, 8).toUpperCase()}-${Math.floor(Math.random() * 899 + 100)}`);
@@ -766,7 +867,7 @@ export const bulkImportProducts = async (sellerId: string, items: any[]) => {
       price: Math.max(1, price),
       discount: Math.max(0, discount),
       stock: Math.max(0, stock),
-      unit,
+      unit: rawUnit,
       images: [imgUrl],
       isActive: false, // Default to DRAFT as requested!
       rating: 4.8,
