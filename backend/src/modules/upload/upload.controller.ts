@@ -239,3 +239,30 @@ export const deleteMediaFile = async (req: Request, res: Response, next: NextFun
     next(error);
   }
 };
+
+export const bulkDeleteMediaFiles = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { filenames } = req.body;
+    if (!filenames || !Array.isArray(filenames) || filenames.length === 0) {
+      return next(new AppError('Array of filenames is required for bulk deletion.', 400));
+    }
+
+    let deletedCount = 0;
+    for (const rawFilename of filenames) {
+      const safeFilename = path.basename(rawFilename);
+      const filepath = path.join(uploadsDir, safeFilename);
+      if (fs.existsSync(filepath)) {
+        try {
+          fs.unlinkSync(filepath);
+          deletedCount++;
+        } catch (_) {}
+      }
+    }
+
+    return sendResponse(res, 200, `Successfully deleted ${deletedCount} image(s) from server storage`, {
+      deletedCount,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -2,20 +2,20 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { fetchApi, uploadMultipleImagesApi } from '@/lib/api-client';
 import { 
   Image as ImageIcon, 
   Copy, 
   Check, 
   Plus, 
-  ExternalLink, 
   Search, 
   Loader2, 
   RefreshCw,
   Trash2,
   UploadCloud,
-  CheckCircle2
+  CheckCircle2,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 interface MediaItem {
@@ -32,6 +32,10 @@ export default function SellerMediaGalleryPage() {
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+
+  // Multiple selection state
+  const [selectedFilenames, setSelectedFilenames] = useState<string[]>([]);
+  const [deletingBulk, setDeletingBulk] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,7 +93,7 @@ export default function SellerMediaGalleryPage() {
     setTimeout(() => setCopiedUrl(null), 2000);
   };
 
-  const handleDeleteMedia = async (filename: string) => {
+  const handleDeleteSingle = async (filename: string) => {
     if (!confirm(`Are you sure you want to delete image "${filename}" permanently from server storage?`)) return;
 
     try {
@@ -98,9 +102,52 @@ export default function SellerMediaGalleryPage() {
       });
       if (res && res.success) {
         setMediaList((prev) => prev.filter((item) => item.filename !== filename));
+        setSelectedFilenames((prev) => prev.filter((name) => name !== filename));
       }
     } catch (err: any) {
       alert(err?.message || 'Failed to delete image file.');
+    }
+  };
+
+  // ─── Multiple Selection Logic ───
+  const filteredMedia = mediaList.filter((item) =>
+    !searchTerm || item.filename.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const toggleSelect = (filename: string) => {
+    setSelectedFilenames((prev) =>
+      prev.includes(filename) ? prev.filter((f) => f !== filename) : [...prev, filename]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedFilenames.length === filteredMedia.length) {
+      setSelectedFilenames([]);
+    } else {
+      setSelectedFilenames(filteredMedia.map((m) => m.filename));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedFilenames.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedFilenames.length} selected image(s) permanently from server storage?`)) return;
+
+    try {
+      setDeletingBulk(true);
+      const res = await fetchApi<any>('/upload/gallery/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ filenames: selectedFilenames }),
+      });
+
+      if (res && res.success) {
+        const deletedSet = new Set(selectedFilenames);
+        setMediaList((prev) => prev.filter((item) => !deletedSet.has(item.filename)));
+        setSelectedFilenames([]);
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to delete selected images');
+    } finally {
+      setDeletingBulk(false);
     }
   };
 
@@ -110,9 +157,7 @@ export default function SellerMediaGalleryPage() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const filteredMedia = mediaList.filter((item) =>
-    !searchTerm || item.filename.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const allSelected = filteredMedia.length > 0 && selectedFilenames.length === filteredMedia.length;
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto space-y-6 pb-20">
@@ -131,13 +176,13 @@ export default function SellerMediaGalleryPage() {
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-bold border border-indigo-500/20">
             <ImageIcon className="w-3.5 h-3.5" />
-            Media Assets & Storage
+            Media Assets & Bulk Selection
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">
-            Media Gallery ({mediaList.length} Files)
+            Media Gallery ({mediaList.length} Files Uploaded)
           </h1>
           <p className="text-xs text-slate-400">
-            Upload, manage, copy links, or delete product images stored on the server.
+            Upload from PC, select multiple images using checkboxes, copy URLs or bulk delete files.
           </p>
         </div>
 
@@ -185,12 +230,49 @@ export default function SellerMediaGalleryPage() {
         </div>
       )}
 
+      {/* Bulk Action & Selection Toolbar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-[#181928] border border-white/10 rounded-2xl">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all flex items-center gap-2 border border-white/10"
+          >
+            {allSelected ? (
+              <CheckSquare className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <Square className="w-4 h-4 text-slate-400" />
+            )}
+            <span>{allSelected ? 'Deselect All' : `Select All (${filteredMedia.length})`}</span>
+          </button>
+
+          {selectedFilenames.length > 0 && (
+            <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-3 py-1.5 rounded-xl border border-indigo-500/30">
+              {selectedFilenames.length} Selected
+            </span>
+          )}
+        </div>
+
+        {/* Delete Selected Button */}
+        {selectedFilenames.length > 0 && (
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            disabled={deletingBulk}
+            className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30 disabled:opacity-50 animate-in zoom-in-95"
+          >
+            {deletingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            <span>Delete Selected ({selectedFilenames.length} Images)</span>
+          </button>
+        )}
+      </div>
+
       {/* Search Bar */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
           type="text"
-          placeholder="Search by filename or image ID..."
+          placeholder="Search by filename..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-11 pr-4 py-3 bg-[#1e1f32] border border-white/10 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition-colors"
@@ -221,11 +303,17 @@ export default function SellerMediaGalleryPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {filteredMedia.map((item) => {
+            const isSelected = selectedFilenames.includes(item.filename);
             const isCopied = copiedUrl === item.url;
+
             return (
               <div
                 key={item.filename}
-                className="group relative bg-[#1e1f32] border border-white/10 hover:border-indigo-500/50 rounded-2xl overflow-hidden transition-all duration-300 flex flex-col shadow-lg"
+                className={`group relative bg-[#1e1f32] border rounded-2xl overflow-hidden transition-all duration-200 flex flex-col shadow-lg ${
+                  isSelected
+                    ? 'border-indigo-500 ring-2 ring-indigo-500/50 bg-indigo-950/20'
+                    : 'border-white/10 hover:border-indigo-500/40'
+                }`}
               >
                 {/* Image Container */}
                 <div className="relative aspect-square w-full bg-[#141522] overflow-hidden">
@@ -239,8 +327,35 @@ export default function SellerMediaGalleryPage() {
                     }}
                   />
 
-                  {/* Overlay buttons on hover */}
-                  <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1.5 p-2">
+                  {/* Always Visible Top Controls: Checkbox & Direct Delete Button */}
+                  <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10">
+                    {/* Select Checkbox */}
+                    <button
+                      type="button"
+                      onClick={() => toggleSelect(item.filename)}
+                      className={`p-1.5 rounded-lg border transition-all shadow-md ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white border-indigo-400 scale-110'
+                          : 'bg-black/60 text-white/70 border-white/20 hover:bg-black/80 hover:text-white'
+                      }`}
+                      title="Select image for bulk deletion"
+                    >
+                      {isSelected ? <CheckSquare className="w-4 h-4 text-white" /> : <Square className="w-4 h-4" />}
+                    </button>
+
+                    {/* Direct Single Delete Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSingle(item.filename)}
+                      className="p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white shadow-md transition-all hover:scale-105"
+                      title="Delete image permanently"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Hover Overlay Menu */}
+                  <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-2 p-3">
                     <button
                       onClick={() => handleCopyUrl(item.url)}
                       className="w-full py-1.5 px-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all shadow-md"
@@ -259,9 +374,8 @@ export default function SellerMediaGalleryPage() {
 
                     <button
                       type="button"
-                      onClick={() => handleDeleteMedia(item.filename)}
+                      onClick={() => handleDeleteSingle(item.filename)}
                       className="w-full py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all shadow-md"
-                      title="Delete image from server"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Delete Image
