@@ -39,9 +39,8 @@ jobs:
               cd ..
             fi
 
-            # 3. Build & Run Docker Containers
-            echo "🐳 Building & Starting Docker Containers..."
-            docker compose down || docker-compose down || true
-            docker compose up -d --build || docker-compose up -d --build
+            # 3. Build & Run Docker Containers (Zero Downtime Swap)
+            echo "🐳 Building & Updating Docker Containers..."
+            docker compose up -d --build --remove-orphans || docker-compose up -d --build --remove-orphans
 
             echo "🎉 Docker Auto-deployment finished successfully!"
