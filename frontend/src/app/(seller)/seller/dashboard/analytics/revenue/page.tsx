@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/utils/cn';
 import { DollarSign, TrendingUp, Download, ArrowUpRight, ArrowDownRight, Percent, RefreshCw } from 'lucide-react';

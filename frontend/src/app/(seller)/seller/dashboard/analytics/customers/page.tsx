@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/utils/cn';
 import { Users, TrendingUp, ShoppingBag, Star, Download, UserCheck, UserX, RefreshCw } from 'lucide-react';

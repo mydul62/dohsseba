@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/utils/cn';
 import { Package, Search, TrendingUp, TrendingDown, Download, Star, RefreshCw } from 'lucide-react';
