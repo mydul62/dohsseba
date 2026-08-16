@@ -47,18 +47,10 @@ jobs:
                 (cd backend && npx prisma db push --skip-generate) || true
               fi
 
-              # 3. Clean & Rebuild Frontend Next.js on VPS Host
-              if [ -d "frontend" ]; then
-                echo "🔨 Building Frontend Next.js in $TARGET_DIR..."
-                (cd frontend && rm -rf .next && npm run build) || true
-              fi
-
-              # 4. Build & Run Docker Containers
+              # 3. Build & Run Docker Containers with Fast Layer Caching
               if [ -f "docker-compose.yml" ] || [ -f "docker-compose.yaml" ]; then
                 echo "🐳 Building & Updating Docker Containers in $TARGET_DIR..."
-                docker compose build --no-cache || true
-                docker compose up -d --build --remove-orphans || docker-compose up -d --build --remove-orphans || true
-                docker compose restart || true
+                COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose up -d --build --remove-orphans || docker-compose up -d --build || true
               fi
             done
 
