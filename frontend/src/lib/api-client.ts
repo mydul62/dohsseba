@@ -13,7 +13,7 @@ export const getApiBaseUrl = (): string => {
       return `${origin}/api/v1`;
     }
   }
-  return 'http://localhost:5000/api/v1';
+  return 'http://localhost:5008/api/v1';
 };
 
 export class ApiError extends Error {
