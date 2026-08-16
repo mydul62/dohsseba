@@ -19,13 +19,13 @@ export const getAllProductCategories = async () => {
       include: {
         children: {
           where: { isActive: true },
-          include: { _count: { select: { products: { where: { isActive: true } } } } },
+          include: { _count: { select: { products: true } } },
           orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
         },
         _count: {
           select: {
-            products: { where: { isActive: true } },
-            children: { where: { isActive: true } },
+            products: true,
+            children: true,
           },
         },
       },
