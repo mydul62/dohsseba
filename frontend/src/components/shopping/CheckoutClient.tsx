@@ -10,6 +10,7 @@ import { useDeliveryRulesStore } from '@/store/useDeliveryRulesStore';
 import { fetchApi } from '@/lib/api-client';
 import { useToast } from '@/components/ui/Toast';
 import { formatCurrency } from '@/utils/cn';
+import { DohsShebaLoader } from '@/components/ui/DohsShebaLoader';
 import {
   ShoppingBag,
   Truck,
@@ -25,6 +26,7 @@ import {
   X,
   Loader2,
   ArrowRight,
+  Lock,
 } from 'lucide-react';
 
 const getSvgGroceryPlaceholder = (title: string) => {
