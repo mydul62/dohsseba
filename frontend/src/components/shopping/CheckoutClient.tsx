@@ -18,6 +18,7 @@ import {
   Clock,
   ShieldCheck,
   CheckCircle2,
+  Check,
   ChevronLeft,
   AlertCircle,
   Tag,
