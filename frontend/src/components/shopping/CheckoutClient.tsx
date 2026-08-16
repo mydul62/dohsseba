@@ -25,11 +25,33 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
-const DEFAULT_GROCERY_IMAGE = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300&auto=format&fit=crop&q=80';
+const getSvgGroceryPlaceholder = (title: string) => {
+  const t = String(title || '').toLowerCase();
+  let bg = '%23eaf4ed'; // light emerald
+  let stroke = '%231c5335'; // dark emerald
+  let icon = '<path d="m15 11-1 9"/><path d="m19 11-4-7"/><path d="M2 11h20"/><path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.6-7.4"/><path d="m9 11 1 9"/><path d="M9 4 5 11"/>'; // basket
+
+  if (t.includes('fish') || t.includes('মাছ') || t.includes('ilish') || t.includes('hilsha')) {
+    bg = '%23e0f2fe'; // sky blue
+    stroke = '%230369a1';
+    icon = '<path d="M6.5 12c.94-2.07 3.08-3.5 5.5-3.5 3.31 0 6 2.69 6 6 0 1.66-.67 3.16-1.76 4.24"/><path d="M2 12s3-6 10-6 10 6 10 6-3 6-10 6S2 12 2 12z"/>';
+  } else if (t.includes('flour') || t.includes('ময়দা') || t.includes('ময়দা') || t.includes('আটা') || t.includes('rice') || t.includes('চাল')) {
+    bg = '%23fef3c7'; // amber
+    stroke = '%23b45309';
+    icon = '<path d="M6 2v20M18 2v20M12 6v12M6 8h12M6 16h12"/>';
+  } else if (t.includes('vim') || t.includes('liquid') || t.includes('লিকুইড')) {
+    bg = '%23f3e8ff'; // purple
+    stroke = '%236b21a8';
+    icon = '<path d="M9 3h6v3H9z"/><path d="M10 6v3h4V6"/><path d="M5 12a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v7a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-7z"/>';
+  }
+
+  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="background:${bg};">${icon}</svg>`;
+};
 
 const getValidProductImage = (item: any): string => {
   const prod = item?.product || item || {};
-  const title = String(prod.title || prod.name || item?.title || item?.name || '').toLowerCase();
+  const title = String(prod.title || prod.name || item?.title || item?.name || '');
+  const t = title.toLowerCase();
   
   const rawImg = prod.image || prod.imageUrl || (Array.isArray(prod.images) && prod.images[0]) || item?.image || item?.imageUrl || '';
   
@@ -44,32 +66,32 @@ const getValidProductImage = (item: any): string => {
     return `/${clean}`;
   }
 
-  if (title.includes('মরিচ') || title.includes('mori') || title.includes('chilli') || title.includes('chili')) {
+  if (t.includes('মরিচ') || t.includes('mori') || t.includes('chilli') || t.includes('chili')) {
     return 'https://images.unsplash.com/photo-1588879460618-924446702a60?w=300&auto=format&fit=crop&q=80';
   }
-  if (title.includes('লিকুইড') || title.includes('vim') || title.includes('liquid') || title.includes('soap')) {
+  if (t.includes('লিকুইড') || t.includes('vim') || t.includes('liquid') || t.includes('soap')) {
     return 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300&auto=format&fit=crop&q=80';
   }
-  if (title.includes('তেল') || title.includes('oil') || title.includes('tel')) {
+  if (t.includes('তেল') || t.includes('oil') || t.includes('tel')) {
     return 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=300&auto=format&fit=crop&q=80';
   }
-  if (title.includes('ময়দা') || title.includes('ময়দা') || title.includes('আটা') || title.includes('flour') || title.includes('rice') || title.includes('চাল')) {
+  if (t.includes('ময়দা') || t.includes('ময়দা') || t.includes('আটা') || t.includes('flour') || t.includes('rice') || t.includes('চাল')) {
     return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300&auto=format&fit=crop&q=80';
   }
-  if (title.includes('মাছ') || title.includes('fish') || title.includes('ilish') || title.includes('hilsha')) {
+  if (t.includes('মাছ') || t.includes('fish') || t.includes('ilish') || t.includes('hilsha')) {
     return 'https://images.unsplash.com/photo-1534942519507-769d4679447d?w=300&auto=format&fit=crop&q=80';
   }
-  if (title.includes('দুধ') || title.includes('milk') || title.includes('dudh')) {
+  if (t.includes('দুধ') || t.includes('milk') || t.includes('dudh')) {
     return 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=80';
   }
-  if (title.includes('ডিম') || title.includes('egg') || title.includes('dima')) {
+  if (t.includes('ডিম') || t.includes('egg') || t.includes('dima')) {
     return 'https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?w=300&auto=format&fit=crop&q=80';
   }
-  if (title.includes('মাংস') || title.includes('chicken') || title.includes('meat')) {
+  if (t.includes('মাংস') || t.includes('chicken') || t.includes('meat')) {
     return 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=300&auto=format&fit=crop&q=80';
   }
 
-  return DEFAULT_GROCERY_IMAGE;
+  return getSvgGroceryPlaceholder(title);
 };
 
 export function CheckoutClient() {
@@ -655,7 +677,7 @@ export function CheckoutClient() {
                         onError={(e) => {
                           const target = e.currentTarget as HTMLImageElement;
                           target.onerror = null;
-                          target.src = DEFAULT_GROCERY_IMAGE;
+                          target.src = getSvgGroceryPlaceholder(title);
                         }}
                       />
                     </div>
