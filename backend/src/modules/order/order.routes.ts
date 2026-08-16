@@ -15,6 +15,7 @@ router.use(protect);
 
 router.get('/seller-customers', authorize('SELLER', 'ADMIN'), orderController.getSellerCustomers);
 router.get('/admin-customers', authorize('ADMIN', 'SUPER_ADMIN'), orderController.getAdminCustomers);
+router.get('/seller-analytics', authorize('SELLER', 'ADMIN'), orderController.getSellerAnalytics);
 
 router.get('/',      orderController.getOrders);
 router.get('/:id',   orderController.getOrder);

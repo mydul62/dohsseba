@@ -1,10 +1,9 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/utils/cn';
-import { Package, Search, TrendingUp, TrendingDown, Download, Star } from 'lucide-react';
+import { Package, Search, TrendingUp, TrendingDown, Download, Star, RefreshCw } from 'lucide-react';
+import { fetchApi } from '@/lib/api-client';
 
-const PRODUCTS = [
+const INITIAL_PRODUCTS = [
   { rank: 1,  name: 'Organic Whole Milk 1L',    sku: 'MLK-001', revenue: 24800, units: 620, avgRating: 4.8, returnRate: '0.3%', status: 'Trending' },
   { rank: 2,  name: 'Fresh Hilsa Fish (500g)',   sku: 'FSH-012', revenue: 18600, units: 186, avgRating: 4.7, returnRate: '1.1%', status: 'Trending' },
   { rank: 3,  name: 'Fuji Apple (1kg)',           sku: 'FRT-034', revenue: 14200, units: 355, avgRating: 4.6, returnRate: '0.5%', status: 'Stable' },
@@ -19,9 +18,27 @@ const PRODUCTS = [
 
 export default function ProductsAnalyticsPage() {
   const [search, setSearch] = useState('');
+  const [products, setProducts] = useState<any[]>(INITIAL_PRODUCTS);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = PRODUCTS.filter(p =>
-    !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase())
+  const loadData = () => {
+    setLoading(true);
+    fetchApi<any>('/orders/seller-analytics')
+      .then((res) => {
+        if (res.success && Array.isArray(res.data?.productsList) && res.data.productsList.length > 0) {
+          setProducts(res.data.productsList);
+        }
+      })
+      .catch((err) => console.error('Failed to load products analytics:', err))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const filtered = products.filter(p =>
+    !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
   );
 
   const statusStyle = (s: string) => {
@@ -40,9 +57,18 @@ export default function ProductsAnalyticsPage() {
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">Revenue, units sold, rating, and trends per product</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/10 transition-colors">
-          <Download className="w-3.5 h-3.5" /> Export
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadData}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold border border-indigo-500/30 transition-colors"
+            title="Reset & Recalculate Product Analytics Data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Reset Data
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/10 transition-colors">
+            <Download className="w-3.5 h-3.5" /> Export
+          </button>
+        </div>
       </div>
 
       {/* Top 3 Podium */}

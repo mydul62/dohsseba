@@ -1,29 +1,33 @@
 import { prisma } from '../../lib/prisma';
 
-export const getAvailableCoupons = async () => {
+export const getAllCoupons = async () => {
   let coupons = await prisma.coupon.findMany({
-    where: { isActive: true },
     orderBy: { createdAt: 'desc' },
   });
 
-  // Seed default coupons if empty
   if (coupons.length === 0) {
     await prisma.coupon.createMany({
       data: [
         {
-          code: 'RESIDENT50',
-          description: '৳50 Off DOHS Resident Special',
-          discountType: 'FLAT',
-          discountValue: 50,
-          minOrderAmount: 500,
+          code: 'FRESH10',
+          description: '10% discount on all dairy & fresh produce',
+          discountType: 'PERCENTAGE',
+          discountValue: 10,
+          minOrderAmount: 300,
+          maxUses: 100,
+          usedCount: 42,
+          isActive: true,
           expiresAt: new Date('2026-12-31'),
         },
         {
-          code: 'DOHS100',
-          description: '৳100 Off Mega Grocery Shopping',
+          code: 'DOHS50',
+          description: '৳50 flat discount on orders above ৳500',
           discountType: 'FLAT',
-          discountValue: 100,
-          minOrderAmount: 1000,
+          discountValue: 50,
+          minOrderAmount: 500,
+          maxUses: 50,
+          usedCount: 18,
+          isActive: true,
           expiresAt: new Date('2026-12-31'),
         },
         {
@@ -32,21 +36,15 @@ export const getAvailableCoupons = async () => {
           discountType: 'FLAT',
           discountValue: 200,
           minOrderAmount: 1500,
-          expiresAt: new Date('2026-08-15'),
-        },
-        {
-          code: 'SHEBA15',
-          description: '15% Off All Service Bookings',
-          discountType: 'PERCENTAGE',
-          discountValue: 15,
-          minOrderAmount: 800,
-          expiresAt: new Date('2026-11-30'),
+          maxUses: 200,
+          usedCount: 85,
+          isActive: true,
+          expiresAt: new Date('2026-12-31'),
         },
       ],
     });
 
     coupons = await prisma.coupon.findMany({
-      where: { isActive: true },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -54,17 +52,40 @@ export const getAvailableCoupons = async () => {
   return coupons;
 };
 
+export const getAvailableCoupons = async () => {
+  return prisma.coupon.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
 export const createCoupon = async (data: any) => {
   return prisma.coupon.create({
     data: {
-      code: data.code.toUpperCase(),
+      code: data.code.toUpperCase().trim(),
       description: data.description || data.title || '',
-      discountType: data.discountType || 'FLAT',
+      discountType: data.discountType || 'PERCENTAGE',
       discountValue: Number(data.discountValue || data.discount || 0),
       minOrderAmount: data.minOrderAmount ? Number(data.minOrderAmount) : null,
       maxUses: data.maxUses ? Number(data.maxUses) : null,
-      expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+      expiresAt: data.expiresAt ? new Date(data.expiresAt) : new Date('2026-12-31'),
+      isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
     },
+  });
+};
+
+export const toggleCoupon = async (id: string) => {
+  const coupon = await prisma.coupon.findUnique({ where: { id } });
+  if (!coupon) throw new Error('Coupon not found');
+  return prisma.coupon.update({
+    where: { id },
+    data: { isActive: !coupon.isActive },
+  });
+};
+
+export const deleteCoupon = async (id: string) => {
+  return prisma.coupon.delete({
+    where: { id },
   });
 };
 

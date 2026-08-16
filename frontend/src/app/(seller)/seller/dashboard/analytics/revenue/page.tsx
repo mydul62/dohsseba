@@ -1,10 +1,9 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/utils/cn';
-import { DollarSign, TrendingUp, Download, ArrowUpRight, ArrowDownRight, Percent } from 'lucide-react';
+import { DollarSign, TrendingUp, Download, ArrowUpRight, ArrowDownRight, Percent, RefreshCw } from 'lucide-react';
+import { fetchApi } from '@/lib/api-client';
 
-const DATA = [
+const INITIAL_DATA = [
   { month: 'Aug 25', gross: 6400,  commission: 640,  net: 5760 },
   { month: 'Sep 25', gross: 8900,  commission: 890,  net: 8010 },
   { month: 'Oct 25', gross: 11200, commission: 1120, net: 10080 },
@@ -19,14 +18,31 @@ const DATA = [
   { month: 'Jul 26', gross: 28440, commission: 2844, net: 25596 },
 ];
 
-const maxGross = Math.max(...DATA.map(d => d.gross));
-
 export default function RevenueAnalyticsPage() {
   const [active, setActive] = useState<string | null>(null);
+  const [dataList, setDataList] = useState<any[]>(INITIAL_DATA);
+  const [loading, setLoading] = useState(true);
 
-  const totalGross  = DATA.reduce((a, d) => a + d.gross, 0);
-  const totalCommission = DATA.reduce((a, d) => a + d.commission, 0);
-  const totalNet    = DATA.reduce((a, d) => a + d.net, 0);
+  const loadData = () => {
+    setLoading(true);
+    fetchApi<any>('/orders/seller-analytics')
+      .then((res) => {
+        if (res.success && res.data?.monthlySales) {
+          setDataList(res.data.monthlySales);
+        }
+      })
+      .catch((err) => console.error('Failed to load revenue analytics:', err))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const totalGross  = dataList.reduce((a, d) => a + (d.gross || 0), 0);
+  const totalCommission = dataList.reduce((a, d) => a + (d.commission || 0), 0);
+  const totalNet    = dataList.reduce((a, d) => a + (d.net || 0), 0);
+  const maxGross    = Math.max(...dataList.map(d => d.gross || 0), 1);
 
   return (
     <div className="space-y-6">
@@ -37,9 +53,18 @@ export default function RevenueAnalyticsPage() {
             <DollarSign className="w-5 h-5 text-indigo-400" /> Revenue Analytics
           </h1>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/10 transition-colors">
-          <Download className="w-3.5 h-3.5" /> Export Report
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadData}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold border border-indigo-500/30 transition-colors"
+            title="Reset & Recalculate Revenue Data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Reset Data
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/10 transition-colors">
+            <Download className="w-3.5 h-3.5" /> Export Report
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">

@@ -43,11 +43,20 @@ export default function CouponsPage() {
     minOrderAmount: '', maxUses: '', expiresAt: '',
   });
 
-  useEffect(() => {
+  const loadCoupons = () => {
+    setLoading(true);
     fetchApi<any>('/coupons')
-      .then((r) => { if (r.success && r.data?.length) setCoupons(r.data); })
-      .catch(() => {})
+      .then((r) => {
+        if (r.success && r.data) {
+          setCoupons(r.data);
+        }
+      })
+      .catch((err) => console.error('Failed to load coupons:', err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadCoupons();
   }, []);
 
   const copyCode = (code: string) => {
@@ -57,18 +66,31 @@ export default function CouponsPage() {
   };
 
   const toggleStatus = async (id: string) => {
-    setCoupons((prev) => prev.map((c) => c.id === id ? { ...c, isActive: !c.isActive } : c));
+    try {
+      setCoupons((prev) => prev.map((c) => c.id === id ? { ...c, isActive: !c.isActive } : c));
+      await fetchApi(`/coupons/${id}/toggle`, { method: 'PATCH' });
+    } catch (err) {
+      console.error('Failed to toggle coupon:', err);
+      loadCoupons();
+    }
   };
 
   const deleteCoupon = async (id: string) => {
     const ok = await confirm({
       title: 'Delete Coupon',
-      message: 'Are you sure you want to delete this coupon code? Customers will no longer be able to use it.',
+      message: 'Are you sure you want to delete this coupon code permanently? Customers will no longer be able to use it.',
       confirmText: 'Delete Coupon',
       variant: 'danger',
     });
     if (!ok) return;
-    setCoupons((prev) => prev.filter((c) => c.id !== id));
+
+    try {
+      setCoupons((prev) => prev.filter((c) => c.id !== id));
+      await fetchApi(`/coupons/${id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error('Failed to delete coupon:', err);
+      loadCoupons();
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -76,26 +98,36 @@ export default function CouponsPage() {
     if (!form.code || !form.discountValue) return;
     setCreating(true);
 
-    const newCp = {
-      id: `cp-${Date.now()}`,
-      code: form.code.toUpperCase().trim(),
-      description: form.description,
-      discountType: form.discountType,
-      discountValue: Number(form.discountValue),
-      minOrderAmount: Number(form.minOrderAmount || 0),
-      maxUses: Number(form.maxUses || 100),
-      usedCount: 0,
-      isActive: true,
-      expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : new Date('2026-12-31').toISOString(),
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const payload = {
+        code: form.code.toUpperCase().trim(),
+        description: form.description,
+        discountType: form.discountType,
+        discountValue: Number(form.discountValue),
+        minOrderAmount: form.minOrderAmount ? Number(form.minOrderAmount) : undefined,
+        maxUses: form.maxUses ? Number(form.maxUses) : undefined,
+        expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : new Date('2026-12-31').toISOString(),
+      };
 
-    setTimeout(() => {
-      setCoupons((prev) => [newCp, ...prev]);
-      setCreating(false);
+      const res = await fetchApi<any>('/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.success && res.data) {
+        setCoupons((prev) => [res.data, ...prev.filter((c) => c.id !== res.data.id)]);
+      } else {
+        loadCoupons();
+      }
       setShowModal(false);
       setForm({ code: '', description: '', discountType: 'PERCENTAGE', discountValue: '', minOrderAmount: '', maxUses: '', expiresAt: '' });
-    }, 400);
+    } catch (err) {
+      console.error('Failed to create coupon:', err);
+      alert('Failed to create coupon. Make sure code is unique.');
+    } finally {
+      setCreating(false);
+    }
   };
 
   const filtered = useMemo(() => {

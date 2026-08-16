@@ -6,7 +6,7 @@ import { fetchApi } from '@/lib/api-client';
 import { formatCurrency } from '@/utils/cn';
 import {
   BarChart2, TrendingUp, Users, ShoppingBag, DollarSign,
-  ArrowUpRight, Package, Tag, Download, Calendar, Loader2,
+  ArrowUpRight, Package, Tag, Download, Calendar, Loader2, RefreshCw
 } from 'lucide-react';
 
 const INITIAL_MONTHLY = [
@@ -49,34 +49,34 @@ export default function AnalyticsOverviewPage() {
   const [topCategories, setTopCategories] = useState<any[]>(INITIAL_TOP_CATEGORIES);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadAnalytics = () => {
     setLoading(true);
-    fetchApi<any>('/seller/dashboard')
+    fetchApi<any>('/orders/seller-analytics')
       .then((res) => {
         if (res.success && res.data) {
           const d = res.data;
-          if (Array.isArray(d.monthlySalesChart) && d.monthlySalesChart.length > 0) {
-            const mappedChart = d.monthlySalesChart.map((c: any) => ({
-              month: c.label,
-              revenue: c.value || 1000,
-              orders: Math.floor((c.value || 1000) / 450),
-              customers: Math.floor((c.value || 1000) / 900),
-            }));
-            setMonthlyData(mappedChart);
+          if (Array.isArray(d.monthlySales) && d.monthlySales.length > 0) {
+            setMonthlyData(d.monthlySales);
           }
-          if (Array.isArray(d.topProducts) && d.topProducts.length > 0) {
-            const mappedTop = d.topProducts.map((p: any) => ({
-              name: p.name,
-              revenue: (p.price || 200) * (p.sales || 10),
-              units: p.sales || 10,
-            }));
-            setTopProducts(mappedTop);
+          if (Array.isArray(d.productsList) && d.productsList.length > 0) {
+            setTopProducts(d.productsList);
+          }
+          if (Array.isArray(d.categoriesList) && d.categoriesList.length > 0) {
+            setTopCategories(d.categoriesList);
           }
         }
       })
-      .catch(() => {})
+      .catch((err) => console.error('Failed to load seller analytics:', err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadAnalytics();
   }, []);
+
+  const resetData = () => {
+    loadAnalytics();
+  };
 
   const slicedData = period === '3m' ? monthlyData.slice(-3) : period === '6m' ? monthlyData.slice(-6) : monthlyData;
   const maxRev = Math.max(...slicedData.map((m) => m.revenue), 1);
@@ -93,7 +93,14 @@ export default function AnalyticsOverviewPage() {
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">Comprehensive performance analytics for your store</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={resetData}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold border border-indigo-500/30 transition-colors"
+            title="Reset & Recalculate Analytics Data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Reset Data
+          </button>
           {(['3m', '6m', '12m'] as Period[]).map((p) => (
             <button key={p} onClick={() => setPeriod(p)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${period === p ? 'bg-indigo-600 text-white' : 'bg-[#1e1f32] text-slate-400 hover:text-white border border-white/10'}`}>

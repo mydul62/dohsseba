@@ -1,10 +1,9 @@
-'use client';
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatCurrency } from '@/utils/cn';
-import { Users, TrendingUp, ShoppingBag, Star, Download, UserCheck, UserX } from 'lucide-react';
+import { Users, TrendingUp, ShoppingBag, Star, Download, UserCheck, UserX, RefreshCw } from 'lucide-react';
+import { fetchApi } from '@/lib/api-client';
 
-const MONTHLY_NEW = [
+const INITIAL_MONTHLY_NEW = [
   { month: 'Aug', new: 8,  returning: 3 },
   { month: 'Sep', new: 11, returning: 5 },
   { month: 'Oct', new: 15, returning: 8 },
@@ -19,7 +18,7 @@ const MONTHLY_NEW = [
   { month: 'Jul', new: 44, returning: 31 },
 ];
 
-const TOP_CUSTOMERS = [
+const INITIAL_TOP_CUSTOMERS = [
   { name: 'Rahim Ahmed',    orders: 18, spent: 12400, lastOrder: '28 Jul 2026', vip: true },
   { name: 'Fatima Islam',   orders: 15, spent: 9800,  lastOrder: '26 Jul 2026', vip: true },
   { name: 'Karim Hassan',   orders: 12, spent: 7600,  lastOrder: '24 Jul 2026', vip: true },
@@ -27,12 +26,37 @@ const TOP_CUSTOMERS = [
   { name: 'Sumon Chowdhury',orders: 7,  spent: 4100,  lastOrder: '19 Jul 2026', vip: false },
 ];
 
-const maxNewCustomers = Math.max(...MONTHLY_NEW.map(m => m.new + m.returning));
-
 export default function CustomerAnalyticsPage() {
-  const totalNew = MONTHLY_NEW.reduce((a, m) => a + m.new, 0);
-  const totalRet = MONTHLY_NEW.reduce((a, m) => a + m.returning, 0);
-  const retentionRate = ((totalRet / (totalNew + totalRet)) * 100).toFixed(0);
+  const [monthlyNew, setMonthlyNew] = useState<any[]>(INITIAL_MONTHLY_NEW);
+  const [topCustomers, setTopCustomers] = useState<any[]>(INITIAL_TOP_CUSTOMERS);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = () => {
+    setLoading(true);
+    fetchApi<any>('/orders/seller-analytics')
+      .then((res) => {
+        if (res.success && res.data) {
+          if (Array.isArray(res.data.monthlySales) && res.data.monthlySales.length > 0) {
+            setMonthlyNew(res.data.monthlySales);
+          }
+          if (Array.isArray(res.data.customersList) && res.data.customersList.length > 0) {
+            setTopCustomers(res.data.customersList);
+          }
+        }
+      })
+      .catch((err) => console.error('Failed to load customer analytics:', err))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const maxNewCustomers = Math.max(...monthlyNew.map(m => (m.new || 0) + (m.returning || 0)), 1);
+  const totalNew = monthlyNew.reduce((a, m) => a + (m.new || 0), 0);
+  const totalRet = monthlyNew.reduce((a, m) => a + (m.returning || 0), 0);
+  const totalAll = totalNew + totalRet || 1;
+  const retentionRate = ((totalRet / totalAll) * 100).toFixed(0);
 
   return (
     <div className="space-y-6">
@@ -44,9 +68,18 @@ export default function CustomerAnalyticsPage() {
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">New vs returning customers, retention rate, and top spenders</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/10 transition-colors">
-          <Download className="w-3.5 h-3.5" /> Export
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadData}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold border border-indigo-500/30 transition-colors"
+            title="Reset & Recalculate Customer Analytics Data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Reset Data
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/10 transition-colors">
+            <Download className="w-3.5 h-3.5" /> Export
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}

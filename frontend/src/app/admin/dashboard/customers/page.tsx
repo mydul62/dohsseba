@@ -18,7 +18,8 @@ import {
   TrendingUp,
   RefreshCw,
   UserCheck,
-  ShieldAlert
+  ShieldAlert,
+  Trash2
 } from 'lucide-react';
 import { fetchApi } from '@/lib/api-client';
 
@@ -129,6 +130,12 @@ export default function AdminCustomersPage() {
     if (s.includes('CANCEL') || s.includes('REJECT')) return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
     if (s.includes('ON_THE_WAY') || s.includes('PICKED_UP')) return 'bg-sky-500/10 text-sky-400 border-sky-500/20';
     return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+  };
+
+  const handleDeleteCustomer = (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to remove customer record "${name}" from marketplace list?`)) {
+      setCustomers((prev) => prev.filter((c) => c.id !== id));
+    }
   };
 
   return (
@@ -358,12 +365,22 @@ export default function AdminCustomersPage() {
 
                     {/* Action */}
                     <td className="py-4 px-4 text-center">
-                      <button
-                        onClick={() => setSelectedCustomer(customer)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl transition border border-slate-700 text-xs font-medium"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-cyan-400" /> View History
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => setSelectedCustomer(customer)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl transition border border-slate-700 text-xs font-medium"
+                          title="View Order History"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-cyan-400" /> View History
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCustomer(customer.id, customer.name)}
+                          className="inline-flex items-center justify-center p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 rounded-xl transition border border-rose-500/20 text-xs font-medium"
+                          title="Delete Customer Record"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

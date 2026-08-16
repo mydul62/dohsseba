@@ -103,3 +103,10 @@ export const getAdminCustomers = async (req: AuthRequest, res: Response, next: N
     return sendResponse(res, 200, 'Admin customer directory fetched', customers);
   } catch (error) { next(error); }
 };
+
+export const getSellerAnalytics = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const analytics = await orderService.getSellerAnalytics(req.user!.id);
+    return sendResponse(res, 200, 'Seller analytics dataset fetched successfully', analytics);
+  } catch (error) { next(error); }
+};
