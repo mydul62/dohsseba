@@ -26,11 +26,27 @@ jobs:
           script: |
             echo "🚀 Auto-deploying dohsSheba to VPS using Docker..."
 
-            # 1. Pull Latest Code
-            cd /var/www/dohsheba || cd /var/www/html/dohsheba || exit 1
-            git fetch --all
-            git reset --hard origin/main
-            git pull origin main
+            # 1. Pull Latest Code across all possible VPS directories
+            TARGET_DIR=""
+            for dir in /var/www/dohsheba /var/www/dohsSheba /var/www/dohs-sheba /var/www/html/dohsheba /root/dohsheba; do
+              if [ -d "$dir" ]; then
+                TARGET_DIR="$dir"
+                break
+              fi
+            done
+
+            if [ -n "$TARGET_DIR" ]; then
+              echo "📂 Deploying in directory: $TARGET_DIR"
+              cd "$TARGET_DIR"
+              git fetch --all
+              git reset --hard origin/main
+              git pull origin main
+            else
+              echo "⚠️ Defaulting to current working directory"
+              git fetch --all
+              git reset --hard origin/main
+              git pull origin main
+            fi
 
             # 2. Run Database Migration if needed
             if [ -d "backend" ]; then
@@ -39,10 +55,20 @@ jobs:
               cd ..
             fi
 
-            # 3. Build & Run Docker Containers (Zero Downtime Swap & Fresh Frontend Build)
-            echo "🐳 Building & Updating Docker Containers..."
+            # 3. Clean Next.js cache directory
+            if [ -d "frontend" ]; then
+              rm -rf frontend/.next/cache || true
+            fi
+
+            # 4. Build & Run Docker Containers & Restart PM2 if running
+            echo "🐳 Building & Updating Docker Containers & PM2..."
             docker compose build --no-cache frontend || true
             docker compose up -d --build --remove-orphans || docker-compose up -d --build --remove-orphans
-            docker compose restart frontend || true
+            docker compose restart || true
+            
+            # 5. Restart PM2 processes if PM2 is active on VPS
+            if command -v pm2 &> /dev/null; then
+              pm2 restart all || pm2 reload all || true
+            fi
 
-            echo "🎉 Docker Auto-deployment finished successfully!"
+            echo "🎉 Deployment completed successfully!"
