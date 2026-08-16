@@ -8,6 +8,7 @@ import { useOrderStore } from '@/store/useOrderStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useDeliveryRulesStore } from '@/store/useDeliveryRulesStore';
 import { fetchApi } from '@/lib/api-client';
+import { useToast } from '@/components/ui/Toast';
 import { formatCurrency } from '@/utils/cn';
 import {
   ShoppingBag,
