@@ -60,7 +60,7 @@ export function SubCategoryCard({ subcategory, parentSlug, basePath = '/category
   const [imgSrc, setImgSrc] = useState(initialSrc);
   const [hasError, setHasError] = useState(false);
 
-  const href = `${basePath}/${parentSlug}/${subcategory.slug}`;
+  const href = `${basePath}/${subcategory.slug}`;
 
   const handleError = () => {
     if (imgSrc !== fallbackUrl) {
