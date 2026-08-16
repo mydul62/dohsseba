@@ -25,45 +25,51 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
-const getValidProductImage = (itemProduct: any): string => {
-  const title = itemProduct?.title || itemProduct?.name || '';
-  const decoded = title.toLowerCase();
+const DEFAULT_GROCERY_IMAGE = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300&auto=format&fit=crop&q=80';
+
+const getValidProductImage = (item: any): string => {
+  const prod = item?.product || item || {};
+  const title = String(prod.title || prod.name || item?.title || item?.name || '').toLowerCase();
   
-  const rawImg = itemProduct?.image || (Array.isArray(itemProduct?.images) && itemProduct.images[0]) || '';
+  const rawImg = prod.image || prod.imageUrl || (Array.isArray(prod.images) && prod.images[0]) || item?.image || item?.imageUrl || '';
   
   if (rawImg && typeof rawImg === 'string' && rawImg.trim() && !rawImg.includes('undefined')) {
     const clean = rawImg.trim();
-    if (clean.includes('unsplash.com') || clean.includes('cloudinary.com') || clean.startsWith('data:')) {
+    if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:')) {
       return clean;
     }
+    if (clean.startsWith('/')) {
+      return clean;
+    }
+    return `/${clean}`;
   }
 
-  if (decoded.includes('mori') || decoded.includes('chilli') || decoded.includes('chili') || decoded.includes('মরিচ')) {
+  if (title.includes('মরিচ') || title.includes('mori') || title.includes('chilli') || title.includes('chili')) {
     return 'https://images.unsplash.com/photo-1588879460618-924446702a60?w=300&auto=format&fit=crop&q=80';
   }
-  if (decoded.includes('vim') || decoded.includes('liquid') || decoded.includes('soap') || decoded.includes('clean') || decoded.includes('লিকুইড')) {
+  if (title.includes('লিকুইড') || title.includes('vim') || title.includes('liquid') || title.includes('soap')) {
     return 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300&auto=format&fit=crop&q=80';
   }
-  if (decoded.includes('oil') || decoded.includes('tel') || decoded.includes('তেল')) {
+  if (title.includes('তেল') || title.includes('oil') || title.includes('tel')) {
     return 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=300&auto=format&fit=crop&q=80';
   }
-  if (decoded.includes('rice') || decoded.includes('chal') || decoded.includes('চাল') || decoded.includes('ময়দা') || decoded.includes('flour')) {
+  if (title.includes('ময়দা') || title.includes('ময়দা') || title.includes('আটা') || title.includes('flour') || title.includes('rice') || title.includes('চাল')) {
     return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300&auto=format&fit=crop&q=80';
   }
-  if (decoded.includes('fish') || decoded.includes('mach') || decoded.includes('মাছ')) {
+  if (title.includes('মাছ') || title.includes('fish') || title.includes('ilish') || title.includes('hilsha')) {
     return 'https://images.unsplash.com/photo-1534942519507-769d4679447d?w=300&auto=format&fit=crop&q=80';
   }
-  if (decoded.includes('milk') || decoded.includes('dudh') || decoded.includes('দুধ')) {
+  if (title.includes('দুধ') || title.includes('milk') || title.includes('dudh')) {
     return 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=80';
   }
-  if (decoded.includes('egg') || decoded.includes('dima') || decoded.includes('ডিম')) {
+  if (title.includes('ডিম') || title.includes('egg') || title.includes('dima')) {
     return 'https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?w=300&auto=format&fit=crop&q=80';
   }
-  if (decoded.includes('chicken') || decoded.includes('meat') || decoded.includes('মাংস')) {
+  if (title.includes('মাংস') || title.includes('chicken') || title.includes('meat')) {
     return 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=300&auto=format&fit=crop&q=80';
   }
 
-  return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300&auto=format&fit=crop&q=80';
+  return DEFAULT_GROCERY_IMAGE;
 };
 
 export function CheckoutClient() {
@@ -632,28 +638,35 @@ export function CheckoutClient() {
 
             {/* Items List */}
             <div className="space-y-3.5 max-h-64 overflow-y-auto pr-1">
-              {items.map(({ product, quantity }) => {
-                const imgSrc = getValidProductImage(product);
+              {items.map((item: any) => {
+                const prod = item.product || item;
+                const quantity = item.quantity || 1;
+                const title = prod.title || prod.name || item.title || item.name || 'Product';
+                const price = prod.price ?? item.price ?? 0;
+                const imgSrc = getValidProductImage(item);
+
                 return (
-                  <div key={product.id || Math.random()} className="flex items-center gap-3 text-xs">
-                    <div className="relative w-11 h-11 rounded-lg border border-slate-200 overflow-hidden bg-slate-50 shrink-0">
+                  <div key={prod.id || item.id || Math.random()} className="flex items-center gap-3 text-xs">
+                    <div className="relative w-11 h-11 rounded-lg border border-slate-200 overflow-hidden bg-slate-50 shrink-0 flex items-center justify-center">
                       <img
                         src={imgSrc}
                         alt=""
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300&auto=format&fit=crop&q=80';
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = DEFAULT_GROCERY_IMAGE;
                         }}
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-slate-800 text-xs line-clamp-1">{product.title || product.name}</h4>
+                      <h4 className="font-bold text-slate-800 text-xs line-clamp-1">{title}</h4>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        {quantity} × {formatCurrency(product.price)}
+                        {quantity} × {formatCurrency(price)}
                       </p>
                     </div>
                     <div className="font-black text-slate-800 text-xs ml-auto">
-                      {formatCurrency((product.price || 0) * quantity)}
+                      {formatCurrency(price * quantity)}
                     </div>
                   </div>
                 );
