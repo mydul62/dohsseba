@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Tag, Plus, Search, Edit2, Trash2, Package, Loader2, FolderTree, AlertTriangle, X, Image as ImageIcon, Sparkles, Upload, ChevronRight, Layers, Lock, RefreshCw, ArrowUp, ArrowDown, Star, Check } from 'lucide-react';
+import { 
+  Tag, Plus, Search, Edit2, Trash2, Package, Loader2, FolderTree, AlertTriangle, 
+  X, Image as ImageIcon, Sparkles, Upload, ChevronRight, Layers, Lock, RefreshCw, 
+  ArrowUp, ArrowDown, Star, Check, GripVertical 
+} from 'lucide-react';
 import { fetchApi, uploadSingleImageApi } from '@/lib/api-client';
 import { generateCategorySlug, cleanSlugInput, isValidSlug } from '@/utils/slug.util';
 
@@ -55,6 +59,14 @@ export default function CategoriesPage() {
   const [galleryList, setGalleryList] = useState<any[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(false);
   const [gallerySearch, setGallerySearch] = useState('');
+
+  // Drag and Drop State for Parent Categories
+  const [draggedParentIndex, setDraggedParentIndex] = useState<number | null>(null);
+  const [dragOverParentIndex, setDragOverParentIndex] = useState<number | null>(null);
+
+  // Drag and Drop State for Subcategories
+  const [draggedSubId, setDraggedSubId] = useState<string | null>(null);
+  const [dragOverSubId, setDragOverSubId] = useState<string | null>(null);
 
   const addFileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
@@ -136,6 +148,113 @@ export default function CategoriesPage() {
       await loadCategories();
     } catch (err: any) {
       alert(err?.message || 'Failed to update popular status');
+    }
+  };
+
+  // ─── Drag and Drop Handlers for Parent Categories ───
+  const handleParentDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedParentIndex(index);
+  };
+
+  const handleParentDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedParentIndex !== null && draggedParentIndex !== index) {
+      setDragOverParentIndex(index);
+    }
+  };
+
+  const handleParentDrop = async (e: React.DragEvent, dropIndex: number, currentFilteredParents: any[]) => {
+    e.preventDefault();
+    if (draggedParentIndex === null || draggedParentIndex === dropIndex) {
+      setDraggedParentIndex(null);
+      setDragOverParentIndex(null);
+      return;
+    }
+
+    const reorderedParents = [...currentFilteredParents];
+    const [movedCat] = reorderedParents.splice(draggedParentIndex, 1);
+    reorderedParents.splice(dropIndex, 0, movedCat);
+
+    setDraggedParentIndex(null);
+    setDragOverParentIndex(null);
+
+    // Optimistically update local state immediately (No page reload!)
+    const updatedItems = reorderedParents.map((cat, idx) => ({
+      id: cat.id,
+      displayOrder: idx,
+    }));
+
+    setCats((prev) => {
+      const parentIdsMap = new Map(updatedItems.map((c) => [c.id, c.displayOrder]));
+      return prev.map((c) => (parentIdsMap.has(c.id) ? { ...c, displayOrder: parentIdsMap.get(c.id) } : c));
+    });
+
+    // Save to backend silently in background
+    try {
+      await fetchApi('/product-categories/reorder', {
+        method: 'PATCH',
+        body: JSON.stringify({ items: updatedItems }),
+      });
+    } catch (err) {
+      console.error('Silent reorder save error:', err);
+    }
+  };
+
+  // ─── Drag and Drop Handlers for Subcategories ───
+  const handleSubDragStart = (e: React.DragEvent, subId: string) => {
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedSubId(subId);
+  };
+
+  const handleSubDragOver = (e: React.DragEvent, subId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedSubId && draggedSubId !== subId) {
+      setDragOverSubId(subId);
+    }
+  };
+
+  const handleSubDrop = async (e: React.DragEvent, dropSubId: string, subList: any[]) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedSubId || draggedSubId === dropSubId) {
+      setDraggedSubId(null);
+      setDragOverSubId(null);
+      return;
+    }
+
+    const dragIdx = subList.findIndex((s) => s.id === draggedSubId);
+    const dropIdx = subList.findIndex((s) => s.id === dropSubId);
+    if (dragIdx === -1 || dropIdx === -1) return;
+
+    const reorderedSubs = [...subList];
+    const [movedSub] = reorderedSubs.splice(dragIdx, 1);
+    reorderedSubs.splice(dropIdx, 0, movedSub);
+
+    setDraggedSubId(null);
+    setDragOverSubId(null);
+
+    const updatedSubItems = reorderedSubs.map((sub, idx) => ({
+      id: sub.id,
+      displayOrder: idx,
+    }));
+
+    // Optimistically update local state immediately (No page reload!)
+    setCats((prev) => {
+      const subMap = new Map(updatedSubItems.map((s) => [s.id, s.displayOrder]));
+      return prev.map((c) => (subMap.has(c.id) ? { ...c, displayOrder: subMap.get(c.id) } : c));
+    });
+
+    // Save to backend silently
+    try {
+      await fetchApi('/product-categories/reorder', {
+        method: 'PATCH',
+        body: JSON.stringify({ items: updatedSubItems }),
+      });
+    } catch (err) {
+      console.error('Silent subcategory reorder error:', err);
     }
   };
 
@@ -351,9 +470,12 @@ export default function CategoriesPage() {
     }
   };
 
-  // Grouping categories into Parents and Subcategories
-  const mainParentCategories = cats.filter((c) => !c.parentId);
-  const subCategoriesList    = cats.filter((c) => !!c.parentId);
+  // Grouping categories into Parents and Subcategories sorted by displayOrder
+  const mainParentCategories = cats
+    .filter((c) => !c.parentId)
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+    
+  const subCategoriesList = cats.filter((c) => !!c.parentId);
 
   const filterCat = (cat: any) =>
     !search ||
@@ -375,7 +497,9 @@ export default function CategoriesPage() {
           <h1 className="font-black text-white text-xl flex items-center gap-2">
             <Layers className="w-5 h-5 text-indigo-400" /> Parent Categories & Subcategories
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">Create parent categories and group subcategories neatly under them</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            ✨ Tip: Click & drag any category card to re-order items instantly with smooth Drag & Drop!
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -861,7 +985,7 @@ export default function CategoriesPage() {
         />
       </div>
 
-      {/* Nested Parent & Subcategory Hierarchy View */}
+      {/* Nested Parent & Subcategory Hierarchy View with Drag & Drop */}
       {loading ? (
         <div className="space-y-6 animate-pulse">
           {Array(3).fill(0).map((_, i) => (
@@ -876,21 +1000,49 @@ export default function CategoriesPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {filteredParents.map((parent) => {
-            const children = subCategoriesList.filter((sub) => sub.parentId === parent.id);
+          {filteredParents.map((parent, parentIndex) => {
+            const children = subCategoriesList
+              .filter((sub) => sub.parentId === parent.id)
+              .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
             const childProdSum = children.reduce((acc, child) => acc + (child._count?.products ?? child.products ?? 0), 0);
             const parentProductCount = (parent._count?.products ?? parent.products ?? 0) + childProdSum;
             const parentImg = parent.image || 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&auto=format&fit=crop&q=80';
 
+            const isParentDragging = draggedParentIndex === parentIndex;
+            const isParentDragOver = dragOverParentIndex === parentIndex;
+
             return (
               <div
                 key={parent.id}
-                className="rounded-3xl bg-[#1e1f32] border border-white/10 overflow-hidden shadow-2xl transition-all hover:border-indigo-500/30"
+                draggable
+                onDragStart={(e) => handleParentDragStart(e, parentIndex)}
+                onDragOver={(e) => handleParentDragOver(e, parentIndex)}
+                onDrop={(e) => handleParentDrop(e, parentIndex, filteredParents)}
+                onDragEnd={() => {
+                  setDraggedParentIndex(null);
+                  setDragOverParentIndex(null);
+                }}
+                className={`rounded-3xl bg-[#1e1f32] border overflow-hidden shadow-2xl transition-all duration-200 ${
+                  isParentDragging
+                    ? 'opacity-40 border-dashed border-indigo-500 scale-[0.99]'
+                    : isParentDragOver
+                    ? 'ring-2 ring-indigo-500 border-indigo-400 scale-[1.01]'
+                    : 'border-white/10 hover:border-indigo-500/30'
+                }`}
               >
                 {/* Parent Category Header Banner */}
-                <div className="relative p-5 sm:p-6 bg-gradient-to-r from-[#181928] via-[#1a1c30] to-[#1e1f32] border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-900 border border-white/15 shrink-0 shadow-lg">
+                <div className="relative p-4 sm:p-5 bg-gradient-to-r from-[#181928] via-[#1a1c30] to-[#1e1f32] border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {/* Drag Grip Handle */}
+                    <div 
+                      className="p-2 rounded-xl bg-white/5 text-slate-400 hover:text-white cursor-grab active:cursor-grabbing hover:bg-white/10 transition-colors shrink-0"
+                      title="Click & Drag to reorder category"
+                    >
+                      <GripVertical className="w-5 h-5 text-indigo-400" />
+                    </div>
+
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-900 border border-white/15 shrink-0 shadow-lg">
                       <img src={parentImg} alt={parent.name} className="w-full h-full object-cover" />
                     </div>
                     <div className="min-w-0">
@@ -900,7 +1052,7 @@ export default function CategoriesPage() {
                         </span>
                         <span className="text-xs text-slate-400 font-mono">/{parent.slug}</span>
                       </div>
-                      <h2 className="text-lg font-black text-white mt-1 truncate">{parent.name}</h2>
+                      <h2 className="text-base sm:text-lg font-black text-white mt-0.5 truncate">{parent.name}</h2>
                       {parent.description && (
                         <p className="text-xs text-slate-400 mt-0.5 truncate">{parent.description}</p>
                       )}
@@ -985,6 +1137,9 @@ export default function CategoriesPage() {
                       <FolderTree className="w-3.5 h-3.5 text-purple-400" />
                       Subcategories under "{parent.name}" ({children.length})
                     </span>
+                    <span className="text-[10px] text-purple-300/70 font-semibold">
+                      ✋ Drag & drop subcategory cards to re-order
+                    </span>
                   </div>
 
                   {children.length === 0 ? (
@@ -1002,13 +1157,35 @@ export default function CategoriesPage() {
                       {children.map((sub) => {
                         const subImg = sub.image || parentImg;
                         const subProdCount = sub._count?.products ?? sub.products ?? 0;
+                        const isSubDragging = draggedSubId === sub.id;
+                        const isSubDragOver = dragOverSubId === sub.id;
+
                         return (
                           <div
                             key={sub.id}
-                            className="rounded-2xl bg-[#1e1f32] border border-white/10 hover:border-purple-500/40 p-3.5 transition-all flex flex-col justify-between space-y-3 group shadow"
+                            draggable
+                            onDragStart={(e) => handleSubDragStart(e, sub.id)}
+                            onDragOver={(e) => handleSubDragOver(e, sub.id)}
+                            onDrop={(e) => handleSubDrop(e, sub.id, children)}
+                            onDragEnd={() => {
+                              setDraggedSubId(null);
+                              setDragOverSubId(null);
+                            }}
+                            className={`rounded-2xl bg-[#1e1f32] border p-3.5 transition-all flex flex-col justify-between space-y-3 group shadow ${
+                              isSubDragging
+                                ? 'opacity-40 border-dashed border-purple-500 scale-95'
+                                : isSubDragOver
+                                ? 'ring-2 ring-purple-500 border-purple-400 scale-[1.02]'
+                                : 'border-white/10 hover:border-purple-500/40'
+                            }`}
                           >
-                            <div className="flex items-start gap-3">
-                              <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-900 border border-white/10 shrink-0">
+                            <div className="flex items-start gap-2.5">
+                              {/* Subcategory Drag Handle */}
+                              <div className="p-1 text-slate-500 hover:text-white cursor-grab active:cursor-grabbing shrink-0">
+                                <GripVertical className="w-4 h-4 text-purple-400/70" />
+                              </div>
+
+                              <div className="w-11 h-11 rounded-xl overflow-hidden bg-slate-900 border border-white/10 shrink-0">
                                 <img src={subImg} alt={sub.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                               </div>
                               <div className="min-w-0 flex-1">
