@@ -729,3 +729,142 @@ export const getPublicTrackingOrder = async (query: string) => {
 
   return order;
 };
+
+// ─── Customer Directory for Seller & Admin ─────────────────────────────────
+
+export const getSellerCustomers = async (sellerId: string) => {
+  const orders = await prisma.order.findMany({
+    where: {
+      items: { some: { product: { sellerId } } },
+    },
+    include: {
+      customer: { select: { id: true, name: true, email: true, phone: true } },
+      address: true,
+      items: {
+        where: { product: { sellerId } },
+        include: { product: { select: { id: true, name: true, price: true } } },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const customerMap = new Map<string, any>();
+
+  for (const order of orders) {
+    const key = order.customerId || order.customerPhone || order.guestPhone || order.guestName || order.id;
+    const name = order.customer?.name || order.guestName || 'Resident Customer';
+    const phone = order.customer?.phone || order.customerPhone || order.guestPhone || 'N/A';
+    const email = order.customer?.email || order.guestEmail || '';
+    const address = order.deliveryAddress || (order.address ? `${order.address.line1}, ${order.address.area}` : 'Savar DOHS');
+
+    // Calculate total spent for items belonging to THIS seller in this order
+    const orderSellerTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    if (!customerMap.has(key)) {
+      customerMap.set(key, {
+        id: key,
+        customerId: order.customerId || null,
+        name,
+        phone,
+        email,
+        address,
+        totalOrders: 1,
+        totalSpent: orderSellerTotal,
+        lastOrderDate: order.createdAt,
+        orders: [
+          {
+            id: order.id,
+            trackingCode: order.trackingCode,
+            status: order.status,
+            createdAt: order.createdAt,
+            totalAmount: orderSellerTotal,
+            itemCount: order.items.length,
+          },
+        ],
+      });
+    } else {
+      const existing = customerMap.get(key);
+      existing.totalOrders += 1;
+      existing.totalSpent += orderSellerTotal;
+      if (new Date(order.createdAt) > new Date(existing.lastOrderDate)) {
+        existing.lastOrderDate = order.createdAt;
+      }
+      existing.orders.push({
+        id: order.id,
+        trackingCode: order.trackingCode,
+        status: order.status,
+        createdAt: order.createdAt,
+        totalAmount: orderSellerTotal,
+        itemCount: order.items.length,
+      });
+    }
+  }
+
+  return Array.from(customerMap.values()).sort(
+    (a, b) => new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime()
+  );
+};
+
+export const getAdminCustomers = async () => {
+  const orders = await prisma.order.findMany({
+    include: {
+      customer: { select: { id: true, name: true, email: true, phone: true } },
+      address: true,
+      items: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const customerMap = new Map<string, any>();
+
+  for (const order of orders) {
+    const key = order.customerId || order.customerPhone || order.guestPhone || order.guestName || order.id;
+    const name = order.customer?.name || order.guestName || 'Resident Customer';
+    const phone = order.customer?.phone || order.customerPhone || order.guestPhone || 'N/A';
+    const email = order.customer?.email || order.guestEmail || '';
+    const address = order.deliveryAddress || (order.address ? `${order.address.line1}, ${order.address.area}` : 'Savar DOHS');
+
+    if (!customerMap.has(key)) {
+      customerMap.set(key, {
+        id: key,
+        customerId: order.customerId || null,
+        name,
+        phone,
+        email,
+        address,
+        totalOrders: 1,
+        totalSpent: order.totalAmount,
+        lastOrderDate: order.createdAt,
+        orders: [
+          {
+            id: order.id,
+            trackingCode: order.trackingCode,
+            status: order.status,
+            createdAt: order.createdAt,
+            totalAmount: order.totalAmount,
+            itemCount: order.items.length,
+          },
+        ],
+      });
+    } else {
+      const existing = customerMap.get(key);
+      existing.totalOrders += 1;
+      existing.totalSpent += order.totalAmount;
+      if (new Date(order.createdAt) > new Date(existing.lastOrderDate)) {
+        existing.lastOrderDate = order.createdAt;
+      }
+      existing.orders.push({
+        id: order.id,
+        trackingCode: order.trackingCode,
+        status: order.status,
+        createdAt: order.createdAt,
+        totalAmount: order.totalAmount,
+        itemCount: order.items.length,
+      });
+    }
+  }
+
+  return Array.from(customerMap.values()).sort(
+    (a, b) => new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime()
+  );
+};

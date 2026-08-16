@@ -188,6 +188,11 @@ export function DashboardSidebar({
               icon: <Users className="w-4 h-4" />,
             },
             {
+              label: 'Customer Directory 👥',
+              href: '/admin/dashboard/customers',
+              icon: <Users className="w-4 h-4 text-emerald-400" />,
+            },
+            {
               label: 'Rider Dispatch Queue',
               href: '/dashboard/admin/dispatch',
               icon: <Radio className="w-4 h-4 text-amber-400" />,
@@ -361,6 +366,11 @@ export function DashboardSidebar({
                 { label: 'Returned', href: '/seller/dashboard/orders/returned' },
                 { label: 'Refunds', href: '/seller/dashboard/orders/refunds' },
               ],
+            },
+            {
+              label: 'Customers 👥',
+              href: '/seller/dashboard/customers',
+              icon: <Users className="w-4 h-4 text-emerald-400" />,
             },
           ],
         },

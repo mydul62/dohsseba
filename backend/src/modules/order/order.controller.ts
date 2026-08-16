@@ -89,3 +89,17 @@ export const trackPublicOrder = async (req: Request, res: Response, next: NextFu
     return sendResponse(res, 200, 'Order tracking details retrieved', order);
   } catch (error) { next(error); }
 };
+
+export const getSellerCustomers = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const customers = await orderService.getSellerCustomers(req.user!.id);
+    return sendResponse(res, 200, 'Seller customer directory fetched', customers);
+  } catch (error) { next(error); }
+};
+
+export const getAdminCustomers = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const customers = await orderService.getAdminCustomers();
+    return sendResponse(res, 200, 'Admin customer directory fetched', customers);
+  } catch (error) { next(error); }
+};

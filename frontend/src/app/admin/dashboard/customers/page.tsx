@@ -13,12 +13,12 @@ import {
   Download,
   Eye,
   X,
-  CheckCircle2,
   Calendar,
   DollarSign,
   TrendingUp,
   RefreshCw,
-  UserCheck
+  UserCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { fetchApi } from '@/lib/api-client';
 
@@ -44,7 +44,7 @@ interface CustomerRecord {
   orders: CustomerOrderSummary[];
 }
 
-export default function SellerCustomersPage() {
+export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,12 +55,12 @@ export default function SellerCustomersPage() {
   const loadCustomers = async () => {
     setLoading(true);
     try {
-      const res = await fetchApi<{ success: boolean; data: CustomerRecord[] }>('/orders/seller-customers');
+      const res = await fetchApi<{ success: boolean; data: CustomerRecord[] }>('/orders/admin-customers');
       if (res.success && res.data) {
         setCustomers(res.data);
       }
     } catch (err) {
-      console.error('Failed to load seller customers:', err);
+      console.error('Failed to load admin customers:', err);
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,6 @@ export default function SellerCustomersPage() {
     loadCustomers();
   }, []);
 
-  // Filter and Sort Customers
   const filteredCustomers = customers
     .filter((c) => {
       const q = searchQuery.toLowerCase().trim();
@@ -118,7 +117,7 @@ export default function SellerCustomersPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `customer_directory_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `marketplace_customer_directory_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -137,12 +136,12 @@ export default function SellerCustomersPage() {
       {/* ── Page Header ── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-slate-900/60 p-6 rounded-2xl border border-slate-800 backdrop-blur-md">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">
-            <UserCheck className="w-4 h-4" /> Customer Directory & Order Analytics
+          <div className="flex items-center gap-2 text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-1">
+            <UserCheck className="w-4 h-4" /> Admin Marketplace CRM & Customer Analytics
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Customer Database</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Marketplace Customer Directory</h1>
           <p className="text-sm text-slate-400 mt-1">
-            Comprehensive list of all buyers who placed orders with your store. View contact info, order counts, and spending history.
+            Centralized directory of all ordering customers across DOHS Sheba marketplace. Monitor buyer phone numbers, addresses, total orders, and cumulative spending.
           </p>
         </div>
 
@@ -150,7 +149,7 @@ export default function SellerCustomersPage() {
           <button
             onClick={loadCustomers}
             className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition border border-slate-700"
-            title="Refresh Data"
+            title="Refresh Database"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -158,9 +157,9 @@ export default function SellerCustomersPage() {
           <button
             onClick={exportCSV}
             disabled={customers.length === 0}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm rounded-xl transition shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-sm rounded-xl transition shadow-lg shadow-cyan-600/20 disabled:opacity-50"
           >
-            <Download className="w-4 h-4" /> Export CSV
+            <Download className="w-4 h-4" /> Export All Customers CSV
           </button>
         </div>
       </div>
@@ -168,13 +167,13 @@ export default function SellerCustomersPage() {
       {/* ── KPI Summary Cards ── */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-400">Total Buyers</p>
+            <p className="text-xs font-medium text-slate-400">Marketplace Buyers</p>
             <h3 className="text-2xl font-bold text-white mt-0.5">{totalCustomers}</h3>
-            <p className="text-[11px] text-blue-400 mt-0.5">Unique customers</p>
+            <p className="text-[11px] text-cyan-400 mt-0.5">Ordering customers</p>
           </div>
         </div>
 
@@ -185,7 +184,7 @@ export default function SellerCustomersPage() {
           <div>
             <p className="text-xs font-medium text-slate-400">Total Orders</p>
             <h3 className="text-2xl font-bold text-white mt-0.5">{totalOrdersCount}</h3>
-            <p className="text-[11px] text-emerald-400 mt-0.5">Fulfilled orders</p>
+            <p className="text-[11px] text-emerald-400 mt-0.5">Across all sellers</p>
           </div>
         </div>
 
@@ -194,9 +193,9 @@ export default function SellerCustomersPage() {
             <DollarSign className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-400">Total Spend</p>
+            <p className="text-xs font-medium text-slate-400">Gross GMV Revenue</p>
             <h3 className="text-2xl font-bold text-white mt-0.5">৳{totalRevenue.toLocaleString()}</h3>
-            <p className="text-[11px] text-purple-400 mt-0.5">Store sales revenue</p>
+            <p className="text-[11px] text-purple-400 mt-0.5">Combined buyer spend</p>
           </div>
         </div>
 
@@ -205,9 +204,9 @@ export default function SellerCustomersPage() {
             <TrendingUp className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-400">Avg Ticket Value</p>
+            <p className="text-xs font-medium text-slate-400">Avg Order Value</p>
             <h3 className="text-2xl font-bold text-white mt-0.5">৳{avgOrderValue.toLocaleString()}</h3>
-            <p className="text-[11px] text-amber-400 mt-0.5">Per fulfilled order</p>
+            <p className="text-[11px] text-amber-400 mt-0.5">Per customer transaction</p>
           </div>
         </div>
       </div>
@@ -221,7 +220,7 @@ export default function SellerCustomersPage() {
             placeholder="Search by customer name, phone, address..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 text-white placeholder-slate-500 text-sm rounded-xl border border-slate-700 focus:outline-none focus:border-emerald-500 transition"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 text-white placeholder-slate-500 text-sm rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 transition"
           />
         </div>
 
@@ -231,7 +230,7 @@ export default function SellerCustomersPage() {
             onClick={() => { setSortField('totalSpent'); setSortAsc(!sortAsc); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition whitespace-nowrap ${
               sortField === 'totalSpent'
-                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
                 : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
             }`}
           >
@@ -242,7 +241,7 @@ export default function SellerCustomersPage() {
             onClick={() => { setSortField('totalOrders'); setSortAsc(!sortAsc); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition whitespace-nowrap ${
               sortField === 'totalOrders'
-                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
                 : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
             }`}
           >
@@ -253,7 +252,7 @@ export default function SellerCustomersPage() {
             onClick={() => { setSortField('lastOrderDate'); setSortAsc(!sortAsc); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition whitespace-nowrap ${
               sortField === 'lastOrderDate'
-                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
                 : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
             }`}
           >
@@ -266,15 +265,15 @@ export default function SellerCustomersPage() {
       <div className="bg-slate-900/60 rounded-2xl border border-slate-800 overflow-hidden backdrop-blur-md">
         {loading ? (
           <div className="p-12 text-center text-slate-400">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-emerald-500 mb-3" />
-            <p className="text-sm">Fetching customer database...</p>
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-cyan-500 mb-3" />
+            <p className="text-sm">Fetching marketplace customer records...</p>
           </div>
         ) : filteredCustomers.length === 0 ? (
           <div className="p-16 text-center text-slate-400">
             <Users className="w-12 h-12 mx-auto text-slate-600 mb-3" />
             <h3 className="text-base font-semibold text-white">No Customer Records Found</h3>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              {searchQuery ? 'No customer matched your search criteria.' : 'When customers place orders with your store, their name, phone number, and total order stats will appear here.'}
+              {searchQuery ? 'No customer matched your search query.' : 'When residents place orders on the platform, customer names and phone numbers will be compiled here.'}
             </p>
           </div>
         ) : (
@@ -282,12 +281,12 @@ export default function SellerCustomersPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-800/80 text-slate-400 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
                 <tr>
-                  <th className="py-3.5 px-4">Customer Info</th>
+                  <th className="py-3.5 px-4">Customer Name</th>
                   <th className="py-3.5 px-4">Phone Number</th>
                   <th className="py-3.5 px-4">Delivery Address</th>
                   <th className="py-3.5 px-4 text-center">Total Orders</th>
-                  <th className="py-3.5 px-4 text-right">Total Spent</th>
-                  <th className="py-3.5 px-4">Last Order</th>
+                  <th className="py-3.5 px-4 text-right">Cumulative Spend</th>
+                  <th className="py-3.5 px-4">Last Active</th>
                   <th className="py-3.5 px-4 text-center">Action</th>
                 </tr>
               </thead>
@@ -297,7 +296,7 @@ export default function SellerCustomersPage() {
                     {/* Name & Email */}
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-sm shadow-md">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md">
                           {customer.name.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
@@ -317,7 +316,7 @@ export default function SellerCustomersPage() {
                     <td className="py-4 px-4">
                       <a
                         href={`tel:${customer.phone}`}
-                        className="inline-flex items-center gap-1.5 font-medium text-emerald-400 hover:text-emerald-300 transition text-sm bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20"
+                        className="inline-flex items-center gap-1.5 font-medium text-cyan-400 hover:text-cyan-300 transition text-sm bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/20"
                       >
                         <Phone className="w-3.5 h-3.5" /> {customer.phone}
                       </a>
@@ -334,13 +333,13 @@ export default function SellerCustomersPage() {
                     {/* Total Orders */}
                     <td className="py-4 px-4 text-center">
                       <span className="inline-flex items-center gap-1 font-bold text-white bg-slate-800 px-3 py-1 rounded-full border border-slate-700 text-xs">
-                        <ShoppingBag className="w-3 h-3 text-blue-400" /> {customer.totalOrders} {customer.totalOrders === 1 ? 'Order' : 'Orders'}
+                        <ShoppingBag className="w-3 h-3 text-cyan-400" /> {customer.totalOrders} {customer.totalOrders === 1 ? 'Order' : 'Orders'}
                       </span>
                     </td>
 
                     {/* Total Spent */}
                     <td className="py-4 px-4 text-right">
-                      <span className="font-bold text-emerald-400 text-base">
+                      <span className="font-bold text-cyan-400 text-base">
                         ৳{customer.totalSpent.toLocaleString()}
                       </span>
                     </td>
@@ -363,7 +362,7 @@ export default function SellerCustomersPage() {
                         onClick={() => setSelectedCustomer(customer)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl transition border border-slate-700 text-xs font-medium"
                       >
-                        <Eye className="w-3.5 h-3.5 text-indigo-400" /> Orders
+                        <Eye className="w-3.5 h-3.5 text-cyan-400" /> View History
                       </button>
                     </td>
                   </tr>
@@ -381,15 +380,15 @@ export default function SellerCustomersPage() {
             {/* Modal Header */}
             <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-800/40">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
+                <div className="w-10 h-10 rounded-full bg-cyan-600 text-white flex items-center justify-center font-bold text-sm">
                   {selectedCustomer.name.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white">{selectedCustomer.name}</h3>
-                  <p className="text-xs text-emerald-400 flex items-center gap-2">
+                  <p className="text-xs text-cyan-400 flex items-center gap-2">
                     <span><Phone className="w-3 h-3 inline mr-1" />{selectedCustomer.phone}</span>
                     <span>•</span>
-                    <span>{selectedCustomer.totalOrders} Total Orders</span>
+                    <span>{selectedCustomer.totalOrders} Marketplace Orders</span>
                   </p>
                 </div>
               </div>
@@ -404,7 +403,7 @@ export default function SellerCustomersPage() {
 
             {/* Modal Body */}
             <div className="p-5 max-h-[60vh] overflow-y-auto space-y-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Order History</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Marketplace Order History</h4>
               {selectedCustomer.orders.map((ord) => (
                 <div key={ord.id} className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/60 flex items-center justify-between gap-4">
                   <div>
@@ -422,7 +421,7 @@ export default function SellerCustomersPage() {
                   </div>
 
                   <div className="text-right">
-                    <span className="text-base font-bold text-emerald-400">৳{ord.totalAmount.toLocaleString()}</span>
+                    <span className="text-base font-bold text-cyan-400">৳{ord.totalAmount.toLocaleString()}</span>
                   </div>
                 </div>
               ))}

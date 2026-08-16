@@ -13,6 +13,9 @@ router.get('/track/:codeOrPhone', orderController.trackPublicOrder);
 // ─── Protected Routes (Login Required) ───
 router.use(protect);
 
+router.get('/seller-customers', authorize('SELLER', 'ADMIN'), orderController.getSellerCustomers);
+router.get('/admin-customers', authorize('ADMIN', 'SUPER_ADMIN'), orderController.getAdminCustomers);
+
 router.get('/',      orderController.getOrders);
 router.get('/:id',   orderController.getOrder);
 router.post('/',     createOrderValidator, validate, orderController.createOrder);
