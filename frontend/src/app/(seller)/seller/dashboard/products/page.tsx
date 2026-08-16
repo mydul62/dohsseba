@@ -8,7 +8,7 @@ import {
   Plus, Search, Download, Upload, Edit2, Trash2, Copy,
   Package, AlertTriangle, CheckCircle2, Archive, Star,
   ChevronLeft, ChevronRight, RefreshCw, X, Filter,
-  SortAsc, MoreVertical, Eye, Loader2, Check,
+  SortAsc, MoreVertical, Eye, EyeOff, Loader2, Check,
 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useConfirm } from '@/hooks/useConfirm';
