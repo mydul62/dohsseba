@@ -28,6 +28,8 @@ router.post('/',    protect, authorize('SELLER', 'ADMIN'), createProductValidato
 router.put('/:id',     protect, authorize('SELLER', 'ADMIN'), updateProductValidator, validate, productController.updateProduct);
 router.patch('/:id/stock', protect, authorize('SELLER', 'ADMIN'), productController.patchStock);
 router.post('/bulk-delete', protect, authorize('SELLER', 'ADMIN'), productController.bulkDeleteProducts);
+router.post('/bulk-import', protect, authorize('SELLER', 'ADMIN'), productController.bulkImportProducts);
+router.post('/bulk-publish', protect, authorize('SELLER', 'ADMIN'), productController.bulkPublishProducts);
 router.delete('/:id',  protect, authorize('SELLER', 'ADMIN'), productController.deleteProduct);
 
 export { categoryRouter };

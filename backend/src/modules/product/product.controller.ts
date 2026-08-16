@@ -155,3 +155,19 @@ export const bulkDeleteProducts = async (req: AuthRequest, res: Response, next: 
   } catch (error) { next(error); }
 };
 
+export const bulkImportProducts = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { items } = req.body;
+    const result = await productService.bulkImportProducts(req.user!.id, items);
+    return sendResponse(res, 201, `Successfully imported ${result.count} products in DRAFT status`, result);
+  } catch (error) { next(error); }
+};
+
+export const bulkPublishProducts = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { ids } = req.body;
+    const result = await productService.bulkPublishProducts(req.user!.id, ids, req.user!.role);
+    return sendResponse(res, 200, `Successfully published ${result.count} products to live store`, result);
+  } catch (error) { next(error); }
+};
+

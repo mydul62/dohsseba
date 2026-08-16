@@ -13,6 +13,7 @@ import {
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useAuthStore } from '@/store/useAuthStore';
+import { BulkImportModal } from '@/components/dashboard/seller/BulkImportModal';
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────────
 
@@ -346,9 +347,30 @@ export default function ProductsPage() {
         alert(res?.message || 'Failed to delete selected products.');
       }
     } catch (err: any) {
-      alert(err?.message || 'Failed to delete selected products.');
+      alert(err?.message || 'Failed to bulk delete products');
     } finally {
       setBulkDeleting(false);
+    }
+  };
+
+  const [bulkPublishing, setBulkPublishing] = useState(false);
+  const handleBulkPublish = async () => {
+    if (selected.size === 0) return;
+    setBulkPublishing(true);
+    try {
+      const ids = Array.from(selected);
+      await fetchApi('/products/bulk-publish', {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+      });
+      setProducts((prev) =>
+        prev.map((p) => (selected.has(p.id) ? { ...p, isActive: true } : p))
+      );
+      setSelected(new Set());
+    } catch (err: any) {
+      alert(err?.message || 'Failed to publish selected products');
+    } finally {
+      setBulkPublishing(false);
     }
   };
 
@@ -548,7 +570,13 @@ export default function ProductsPage() {
           <span className="text-xs font-bold text-indigo-300">{selected.size} product{selected.size > 1 ? 's' : ''} selected</span>
           <div className="flex items-center gap-2 ml-auto flex-wrap">
             <button onClick={() => setSelected(new Set())} className="px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/5 transition-all">Deselect All</button>
-            <button className="px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/5 transition-all">Deactivate</button>
+            <button
+              onClick={handleBulkPublish}
+              disabled={bulkPublishing}
+              className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-md disabled:opacity-50"
+            >
+              {bulkPublishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />} Publish Selected ({selected.size})
+            </button>
             <button
               onClick={handleBulkDelete}
               disabled={bulkDeleting}
@@ -789,25 +817,14 @@ export default function ProductsPage() {
       </div>
 
       {/* ── Bulk Import Modal ── */}
-      {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md p-6 rounded-3xl bg-[#1f2136] border border-white/10 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-white">Bulk Import Products</h3>
-              <button onClick={() => setShowImportModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-slate-400 transition-colors"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="p-8 rounded-2xl border-2 border-dashed border-white/20 text-center space-y-3 hover:border-indigo-500/40 transition-all cursor-pointer">
-              <Upload className="w-8 h-8 mx-auto text-slate-500" />
-              <p className="text-sm font-bold text-slate-300">Drop CSV file here</p>
-              <p className="text-xs text-slate-500">or click to browse — supports .csv format</p>
-              <button className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all">Browse File</button>
-            </div>
-            <a href="#" download="product_import_template.csv" className="flex items-center gap-2 text-xs text-indigo-400 hover:underline">
-              <Download className="w-3.5 h-3.5" /> Download import template
-            </a>
-          </div>
-        </div>
-      )}
+      <BulkImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => {
+          setShowImportModal(false);
+          loadProducts();
+        }}
+      />
 
       {/* ── Custom Professional Confirmation Modal ── */}
       <ConfirmDialog {...dialogProps} />
