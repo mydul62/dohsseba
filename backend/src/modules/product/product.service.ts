@@ -220,7 +220,13 @@ export const getProducts = async (filters: ProductFilter) => {
   const where: any = { isActive: true };
   if (category) {
     const catObj = await prisma.productCategory.findFirst({
-      where: { slug: category },
+      where: {
+        OR: [
+          { slug: { equals: category, mode: 'insensitive' } },
+          { name: { equals: category.replace(/-/g, ' '), mode: 'insensitive' } },
+          { id: category },
+        ],
+      },
       include: { children: { select: { id: true } } },
     });
 
@@ -232,7 +238,10 @@ export const getProducts = async (filters: ProductFilter) => {
         where.categoryId = catObj.id;
       }
     } else {
-      where.category = { slug: category };
+      where.OR = [
+        { category: { slug: { equals: category, mode: 'insensitive' } } },
+        { category: { name: { contains: category, mode: 'insensitive' } } },
+      ];
     }
   }
   if (featured)   where.isFeatured = true;

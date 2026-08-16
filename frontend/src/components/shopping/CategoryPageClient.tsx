@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { SidebarCategoryMenu, MobileCategoryBar } from '@/components/shopping/SidebarCategoryMenu';
 import { SubCategoryCard } from '@/components/shopping/SubCategoryCard';
 import { BreadcrumbNav } from '@/components/common/BreadcrumbNav';
 import { ProductCard } from '@/components/common/ProductCard';
-import { ShoppingBag, Package, ArrowUpDown } from 'lucide-react';
-import { ALL_PRODUCTS } from '@/constants/products';
+import { fetchApi } from '@/lib/api-client';
+import { ShoppingBag, Package, ArrowUpDown, Loader2 } from 'lucide-react';
 
 interface CategoryPageClientProps {
   categorySlug: string;
@@ -19,13 +19,40 @@ export function CategoryPageClient({
   initialCategory,
   initialProducts,
 }: CategoryPageClientProps) {
-  const [category] = useState<any>(initialCategory);
-  
-  const fallbackList = useMemo(() => {
-    return initialProducts && Array.isArray(initialProducts) ? initialProducts : [];
-  }, [initialProducts]);
+  const [category, setCategory] = useState<any>(initialCategory);
+  const [products, setProducts] = useState<any[]>(initialProducts || []);
+  const [loading, setLoading] = useState(false);
 
-  const [products] = useState<any[]>(fallbackList);
+  // Sync state whenever props or URL slug change
+  useEffect(() => {
+    setCategory(initialCategory);
+    setProducts(initialProducts || []);
+  }, [initialCategory, initialProducts, categorySlug]);
+
+  // Client-side fallback fetch if category or products are empty
+  useEffect(() => {
+    if (categorySlug) {
+      setLoading(true);
+      Promise.all([
+        fetchApi<any>(`/product-categories/slug/${encodeURIComponent(categorySlug)}`).catch(() => null),
+        fetchApi<any>(`/products?category=${encodeURIComponent(categorySlug)}&limit=100`).catch(() => null),
+      ])
+        .then(([catRes, prodRes]) => {
+          if (catRes?.success && catRes.data) {
+            setCategory(catRes.data);
+          }
+          if (prodRes?.success) {
+            const list = Array.isArray(prodRes.data)
+              ? prodRes.data
+              : Array.isArray(prodRes.data?.products)
+              ? prodRes.data.products
+              : [];
+            if (list.length > 0) setProducts(list);
+          }
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [categorySlug]);
 
   // Filters & Sorting
   const [sortBy, setSortBy] = useState('newest');
@@ -111,8 +138,9 @@ export function CategoryPageClient({
           {/* Product Listing Section & Filters */}
           <div className="space-y-4 pt-2">
             <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
-              <div className="font-bold text-xs text-slate-700">
-                Found <span className="text-purple-700 font-extrabold">{filteredProducts.length}</span> Products
+              <div className="font-bold text-xs text-slate-700 flex items-center gap-2">
+                <span>Found <span className="text-purple-700 font-extrabold">{filteredProducts.length}</span> Products</span>
+                {loading && <Loader2 className="w-3.5 h-3.5 text-purple-600 animate-spin" />}
               </div>
 
               <div className="flex items-center gap-3 flex-wrap">
