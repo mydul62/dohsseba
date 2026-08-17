@@ -65,11 +65,15 @@ export function PopularCategoriesSection() {
           </Link>
         </div>
 
-        {/* Categories Grid */}
-        {loading ? (
+        {/* Categories Grid - Skeleton loader shown if loading or if categories empty */}
+        {loading || categories.length === 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="aspect-4/3 rounded-2xl bg-slate-100 animate-pulse" />
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/60 shadow-xs text-center flex flex-col justify-between h-44 animate-pulse">
+                <div className="w-full aspect-4/3 max-h-28 rounded-xl bg-slate-200/80 animate-pulse mb-3" />
+                <div className="w-3/4 h-4 bg-slate-200 rounded mx-auto mb-1 animate-pulse" />
+                <div className="w-1/2 h-3 bg-slate-100 rounded mx-auto animate-pulse" />
+              </div>
             ))}
           </div>
         ) : (

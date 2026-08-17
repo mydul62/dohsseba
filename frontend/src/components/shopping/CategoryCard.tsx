@@ -98,14 +98,14 @@ export function CategoryCard({ category, basePath = '/category' }: CategoryCardP
   if (!category) {
     return (
       <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/60 shadow-xs animate-pulse text-center">
-        <div className="w-full aspect-4/3 max-h-36 mb-3 rounded-xl bg-slate-100 animate-pulse" />
-        <div className="w-3/4 h-4 bg-slate-200 rounded mx-auto mb-1.5" />
-        <div className="w-1/2 h-3 bg-slate-100 rounded mx-auto" />
+        <div className="w-full aspect-4/3 max-h-36 mb-3 rounded-xl bg-slate-200/80 animate-pulse" />
+        <div className="w-3/4 h-4 bg-slate-200 rounded mx-auto mb-1.5 animate-pulse" />
+        <div className="w-1/2 h-3 bg-slate-100 rounded mx-auto animate-pulse" />
       </div>
     );
   }
 
-  const imgSrc = getSmartCategoryImage(category.name, category.slug, category.image);
+  const hasCustomImage = Boolean(category.image && category.image.trim() && !category.image.includes('undefined'));
   const href = `${basePath}/${category.slug}`;
 
   return (
@@ -113,16 +113,22 @@ export function CategoryCard({ category, basePath = '/category' }: CategoryCardP
       href={href}
       className="group block p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:shadow-md hover:border-purple-300 transition-all duration-300 transform hover:-translate-y-1 text-center"
     >
-      <div className="relative w-full aspect-4/3 max-h-36 mb-3 rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center">
-        <img
-          src={imgSrc}
-          alt={category.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=80';
-          }}
-        />
+      <div className="relative w-full aspect-4/3 max-h-36 mb-3 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center">
+        {hasCustomImage ? (
+          <img
+            src={category.image}
+            alt={category.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
+        ) : (
+          /* Skeleton Shimmer Container when image is not present */
+          <div className="w-full h-full bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 animate-pulse flex flex-col items-center justify-center p-2">
+            <span className="text-2xl font-black text-slate-400/80 select-none">
+              {category.name ? category.name.charAt(0).toUpperCase() : 'DS'}
+            </span>
+          </div>
+        )}
       </div>
       <h3 className="font-extrabold text-slate-800 text-sm sm:text-base group-hover:text-purple-700 transition-colors line-clamp-1">
         {category.name}
