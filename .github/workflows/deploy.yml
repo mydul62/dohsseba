@@ -54,7 +54,7 @@ jobs:
               fi
             done
 
-            # 5. Restart PM2 processes globally if PM2 is active
+            # 4. Restart PM2 processes globally if PM2 is active
             if command -v pm2 &> /dev/null; then
               echo "🔄 Restarting PM2 processes..."
               pm2 restart all --update-env || pm2 reload all || true
